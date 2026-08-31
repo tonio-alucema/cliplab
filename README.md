@@ -1,8 +1,21 @@
-# bloub
+# Pill Clip Lab
 
-An SVG recreation of the x.ai bot avatar: **one filled black shape** that morphs
-between 14 states, **two white shapes** for the eyes that morph independently, on
-a plain background. No animation library.
+A character studio for procedural SVG avatars: build a body, layer the eyes,
+sequence animations, and export a lightweight embeddable clip. No animation
+library.
+
+> **A fork of [bloub](https://github.com/jeremy-prt/bloub) by Jérémy Perret**,
+> MIT-licensed and gratefully reused. bloub is an SVG recreation of the x.ai bot
+> avatar, measured frame by frame off a reference video.
+>
+> **Pill Clip Lab is mid-migration away from that heritage.** The engine, the
+> timeline and the eye model are bloub's and are being kept. The *character* work
+> is being replaced: a new analytic shape library, layered eyes, and our own cast.
+>
+> ⚠️ **Until that replacement lands, this repo still ships bloub's measured
+> silhouettes** (`src/bot/profiles.ts`) and the 14 states derived from them. Those
+> reproduce the x.ai design and must be replaced before any commercial use — MIT
+> covers Jérémy's code, not the design it reproduces. See the project plan.
 
 ![The avatar going through idle, wink, orbit and burst](docs/demo.gif)
 

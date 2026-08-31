@@ -1,21 +1,22 @@
 {
-  "name": "bloub",
+  "name": "pill-clip-lab",
   "private": true,
   "version": "0.1.1",
   "type": "module",
-  "description": "SVG recreation of the x.ai bot avatar. One shape morphing through 14 states, measured off the reference video frame by frame.",
+  "description": "A character studio for procedural SVG avatars: build a body, layer the eyes, sequence animations, and export a lightweight embeddable clip.",
   "license": "MIT",
-  "author": "Jérémy Perret",
+  "author": "Tonio",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jeremy-prt/bloub.git"
+    "url": "git+https://github.com/tonio-alucema/pill-clip-lab.git"
   },
   "keywords": [
     "svg",
     "animation",
     "avatar",
     "vue",
-    "morphing"
+    "morphing",
+    "character"
   ],
   "packageManager": "pnpm@11.17.0",
   "scripts": {
@@ -39,5 +40,8 @@
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9"
-  }
+  },
+  "contributors": [
+    "Jérémy Perret (bloub, https://github.com/jeremy-prt/bloub)"
+  ]
 }

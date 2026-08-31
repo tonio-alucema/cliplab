@@ -451,11 +451,14 @@ watch(expression, (v) => ecris('expression', v))
 /**
  * Nom du produit, en capitales pour le grand mot du pied de page. PAS traduit —
  * c'est une marque. Les capitales sont un logotype propre a ce pied de page : en
- * prose le nom s'ecrit « bloub », tout en minuscules, et c'est cette forme que
- * portent `app.name` et `app.title` dans les trois locales. La constante est donc
- * ecrite ici plutot que tiree de `t('app.name')`, qui n'a pas la meme casse.
+ * prose le nom s'ecrit « Pill Clip Lab », et c'est cette forme que portent
+ * `app.name` et `app.title` dans les trois locales. La constante est donc ecrite
+ * ici plutot que tiree de `t('app.name')`, qui n'a pas la meme casse.
+ *
+ * Sa LARGEUR est un reglage : `.wordmark` dans styles.css dimensionne le mot par
+ * sa largeur mesuree en cadratins (6,02). Changer ce nom impose de la remesurer.
  */
-const NOM = 'BLOUB'
+const NOM = 'PILL CLIP LAB'
 
 /* ----------------------------------------------------------------- humeurs */
 

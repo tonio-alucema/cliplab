@@ -35,7 +35,7 @@ afterEach(() => {
 
 describe('garde du stockage', () => {
   it('prefixe les cles avec le nom du produit', () => {
-    expect(cle('cycles')).toBe('bloub:cycles')
+    expect(cle('cycles')).toBe('pill-clip-lab:cycles')
   })
 
   it('rend `null` au lieu de jeter quand la lecture est refusee', () => {
@@ -71,7 +71,7 @@ describe('garde du stockage', () => {
       setItem: (k: string, v: string) => void tas.set(k, v)
     })
     ecris('forme', 'goutte')
-    expect(tas.get('bloub:forme')).toBe('goutte')
+    expect(tas.get('pill-clip-lab:forme')).toBe('goutte')
     expect(lis('forme')).toBe('goutte')
     expect(lis('couleur')).toBeNull()
   })

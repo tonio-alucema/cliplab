@@ -14,14 +14,14 @@
 export default {
   app: {
     /**
-     * Nom du produit. En minuscules dans les trois langues, ce n'est pas une
-     * coquille : les capitales de `NOM` (App.vue) sont un logotype, pas le nom.
-     * Un nom propre ne se traduit pas non plus. `title` sert de `document.title`.
+     * Nom du produit. En capitales initiales dans les trois langues : c'est un
+     * nom propre, il ne se traduit pas. Les capitales pleines de `NOM` (App.vue)
+     * restent un logotype, pas le nom. `title` sert de `document.title`.
      * Voir aussi le <title> de index.html, qui est statique.
      */
-    name: 'bloub',
-    title: 'bloub — avatar SVG animé',
-    botAria: 'Avatar bloub animé'
+    name: 'Pill Clip Lab',
+    title: 'Pill Clip Lab — studio de personnages SVG',
+    botAria: 'Personnage animé Pill Clip Lab'
   },
 
   gallery: {

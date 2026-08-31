@@ -7,9 +7,9 @@ import type fr from './fr'
  */
 const en: typeof fr = {
   app: {
-    name: 'bloub',
-    title: 'bloub — animated SVG avatar',
-    botAria: 'Animated bloub avatar'
+    name: 'Pill Clip Lab',
+    title: 'Pill Clip Lab — SVG character studio',
+    botAria: 'Animated Pill Clip Lab character'
   },
 
   gallery: {

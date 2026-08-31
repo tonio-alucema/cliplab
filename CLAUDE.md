@@ -1,4 +1,4 @@
-# bloub: notes for Claude
+# Pill Clip Lab: notes for Claude
 
 ## Commands
 

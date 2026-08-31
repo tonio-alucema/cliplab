@@ -173,11 +173,16 @@ body,
   /*
    * Dimensionne d'apres la place REELLEMENT disponible, et non en `vw` seul : le
    * mot part a 6rem du bord gauche, donc une taille proportionnelle a la fenetre
-   * finissait par pousser le dernier B au-dela du bord droit. 3,05 est la largeur
-   * de « BLOUB » en cadratins a ce poids et cet interlettrage — mesuree, pas
-   * estimee — et le reste est la marge qu'on lui laisse a droite.
+   * finissait par pousser le dernier B au-dela du bord droit. 6,02 est la largeur
+   * de « PILL CLIP LAB » en cadratins a ce poids et cet interlettrage — mesuree,
+   * pas estimee — et le reste est la marge qu'on lui laisse a droite.
+   *
+   * Les bornes du `clamp` suivent la meme mesure : le nom fait presque le double
+   * de « BLOUB » (6,02 contre 3,11 cadratins), donc 80/268 et 80/200 ont ete
+   * divises par ce rapport pour que le mot garde la MEME largeur rendue qu'avant
+   * a chaque palier. Changer le nom sans les toucher le faisait deborder.
    */
-  font-size: clamp(80px, calc((100vw - 7rem) / 3.05), 268px);
+  font-size: clamp(40px, calc((100vw - 7rem) / 6.02), 136px);
   font-weight: 900;
   letter-spacing: -0.045em;
   /*
@@ -240,13 +245,13 @@ body,
     position: static;
     text-align: center;
     padding-right: 0;
-    font-size: clamp(80px, calc((100vw - 2.5rem) / 3.05), 200px);
+    font-size: clamp(40px, calc((100vw - 2.5rem) / 6.02), 101px);
     /*
      * Les lettres touchent le bord bas de la page.
      *
      * Une marge negative n'y suffit pas : la zone defilable est l'union des BOITES
      * des descendants, les marges n'y entrent pas, et le talon de la fonte —
-     * l'espace des jambages, vide pour BLOUB qui n'en a aucun — depassait la boite
+     * l'espace des jambages, vide pour PILL CLIP LAB qui n'en a aucun — depassait la boite
      * de 21 px que la page comptait quand meme. D'ou 21 px de blanc sous le mot.
      *
      * On rogne donc a la LIGNE DE BASE : plus rien ne deborde, la page s'arrete ou
