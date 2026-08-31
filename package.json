@@ -24,7 +24,10 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "size": "vite build --ssr tools/size/bake.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/bake.js && node tools/size/runtime-sizes.mjs",
+    "board": "vite build --ssr tools/board.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/board.js",
+    "clearance": "vite build --ssr tools/clearance.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/clearance.js"
   },
   "dependencies": {
     "mediabunny": "^1.54.0",

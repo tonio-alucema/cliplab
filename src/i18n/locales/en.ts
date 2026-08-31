@@ -140,7 +140,17 @@ const en: typeof fr = {
     triangle: 'Triangle',
     hexagone: 'Hexagon',
     nuage: 'Cloud',
-    goutte: 'Droplet'
+    goutte: 'Droplet',
+    oeuf: 'Egg',
+    poire: 'Pear',
+    fuseau: 'Spindle',
+    tonneau: 'Barrel',
+    dome: 'Dome',
+    haricot: 'Bean',
+    trefle: 'Clover',
+    fleur: 'Flower',
+    gemme: 'Gem',
+    losange: 'Diamond'
   },
 
   colors: {

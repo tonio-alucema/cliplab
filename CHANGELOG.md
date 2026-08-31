@@ -5,6 +5,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Ten body shapes, all with a clear top/bottom axis**: egg, pear, spindle, barrel,
+  dome, bean, clover, flower, gem and diamond. Built analytically from the `shape.ts`
+  helpers, like the eight before them — none of them is measured off the reference
+  video. The customiser now offers 18.
+- **`docs/size.md`: both ship targets measured**, with `pnpm size` to reproduce every
+  number. The JS runtime is 10.9 kB gzipped for the whole engine; a baked SVG is 5.4 kB
+  for a resting loop but 792 kB for the default 31-second cycle, because every keyframe
+  restates the 2.4 kB body path and the orbit arcs cannot be interpolated at all. This
+  reverses the assumption the project was planned on.
+- **`pnpm board`** writes `docs/shapes.svg`, the contact sheet of every shape at rest.
+
 ### Fixed
 
 - **The Settings and Animations views were unusable below 64rem.** Everything stacks

@@ -165,7 +165,17 @@ export default {
     triangle: 'Triangle',
     hexagone: 'Hexagone',
     nuage: 'Nuage',
-    goutte: 'Goutte'
+    goutte: 'Goutte',
+    oeuf: 'Œuf',
+    poire: 'Poire',
+    fuseau: 'Fuseau',
+    tonneau: 'Tonneau',
+    dome: 'Dôme',
+    haricot: 'Haricot',
+    trefle: 'Trèfle',
+    fleur: 'Fleur',
+    gemme: 'Gemme',
+    losange: 'Losange'
   },
 
   colors: {

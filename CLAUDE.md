@@ -9,9 +9,14 @@ turned into a character studio with a lightweight embeddable runtime.
 carries the licensing split, the phase order, and bloub's invariants — the rules
 below are a summary, the plan has the reasoning.
 
-Done: Phase 0 (rename), on branch `phase-0-rename`. Next: Phase 1 — measure both
-ship targets (baked SVG vs JS runtime) into `docs/size.md`, then expand the
-analytic shape library in `skins.ts`.
+Done: Phase 0 (rename) and Phase 1 (size spike + shape library). Next: Phase 2 —
+layered eyes.
+
+**Phase 1 reversed the plan's premise, so read [docs/size.md](docs/size.md) before
+designing around either ship target.** The JS runtime is the light one (10.9 kB
+gzip, whole engine); the baked SVG is light only for a resting loop (5.4 kB) and
+reaches 792 kB for the default cycle. The plan has the bake as primary and the
+runtime as the risk; the measurements say the opposite.
 
 ⚠️ This repo still ships bloub's measured `src/bot/profiles.ts` and the 14 states
 derived from it. Those reproduce the x.ai bot design; MIT covers Jérémy's code,
@@ -156,6 +161,7 @@ Details and the reasoning behind each are in [docs/](docs/):
 | [docs/intro.md](docs/intro.md) | The arrival sequence, and why it plays only `idle` |
 | [docs/interface.md](docs/interface.md) | Three-column scene, CSS traps, icons |
 | [docs/export.md](docs/export.md) | The export bar, SVG/PNG/GIF/MP4, why the still export has no GIF |
+| [docs/size.md](docs/size.md) | Both ship targets measured, and why the bake does not scale |
 | [docs/i18n.md](docs/i18n.md) | The hand-rolled translation layer |
 
 The README is for people arriving at the repository: what the project is, how to
@@ -181,6 +187,15 @@ regenerate it.
 `public/favicon.svg` is not an approximation: its circle and **both eye matrices**
 are what `engine.sample(1)` returns for `idle`, byte for byte. `favicon.ico` and
 `apple-touch-icon.png` are rasterised from it.
+
+`docs/shapes.svg` is the customiser's contact sheet, written by `pnpm board`
+(`tools/board.ts`). It is the art-direction gate of Phase 1 — every shape at rest,
+side by side — and it is regenerated, not edited.
+
+Its companion is `pnpm clearance`, which reports how close each shape brings an eye
+to its own edge. `skins.test.ts` only asks that the eye stay IN; a shape can pass
+that and still read as a notch. The measure to compare against is `cercle` (8.3 u),
+and the tightest shape shipping today is `capsule` at 4.8 — that is the band.
 
 `docs/demo.gif` and `docs/states.png` are the same idea: rendered by walking
 `engine.sample(t)` and writing the SVG layers in `BloubBot.vue`'s order, then
