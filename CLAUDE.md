@@ -1,5 +1,22 @@
 # Pill Clip Lab: notes for Claude
 
+## Where this project is
+
+A fork of [bloub](https://github.com/jeremy-prt/bloub) (MIT, Jérémy Perret) being
+turned into a character studio with a lightweight embeddable runtime.
+
+**Read the plan first:** `~/.claude/plans/i-want-to-remix-streamed-valley.md`. It
+carries the licensing split, the phase order, and bloub's invariants — the rules
+below are a summary, the plan has the reasoning.
+
+Done: Phase 0 (rename), on branch `phase-0-rename`. Next: Phase 1 — measure both
+ship targets (baked SVG vs JS runtime) into `docs/size.md`, then expand the
+analytic shape library in `skins.ts`.
+
+⚠️ This repo still ships bloub's measured `src/bot/profiles.ts` and the 14 states
+derived from it. Those reproduce the x.ai bot design; MIT covers Jérémy's code,
+not that design. The roster phase replaces them — required before commercial use.
+
 ## Commands
 
 ```bash
