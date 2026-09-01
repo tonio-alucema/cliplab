@@ -90,6 +90,22 @@ Details and the reasoning behind each are in [docs/](docs/):
   measured and rejected; don't re-try them. `skins.test.ts` locks the lot, and it sweeps
   **time as well as combinations** — one instant per combination is what let
   `capsule` + `effraye` through.
+- **Eye layers are painted BEHIND the body, and nothing new clips them.** The eyes
+  are holes in the mask, so a hole reveals whatever is behind — the iris/pupil/
+  highlight stack goes there, and the body painted over it is what trims it. The one
+  clip written by hand is to the **silhouette**: outside the body the mask paints
+  nothing, so a layer past the edge would show bare against the page. `eyefit.ts`
+  keeps the eyes inside; that clip keeps the guarantee if it ever stops.
+- **A blink squashes the HOLE, never the layers** — hence two matrices per eye,
+  `matrix` (with the squash) and `base` (without). The lid then *trims* the iris the
+  way a real one does. Sharing the matrix gives a rubber iris; a test locks it.
+- **A layer's radius is a fraction of the disc INSCRIBED in the sclera**,
+  `min(w, h) / 2`, not of the half-width. Several expressions are wider than they
+  are tall — `hilare` is 0.089 high by 0.447 wide — and a radius taken off the width
+  left the sclera top and bottom by a factor of five. Locked by `eyes.test.ts`.
+- **The eye style does not morph.** Its layers change in number and colour between
+  styles, and there is nothing sensible to interpolate between "three discs" and
+  "two". `setEyeStyle` takes no date, unlike `setShape` and `setExpression`.
 - **States declare `ArcSpec`; only the engine rasterises.** Don't call `arcRender`
   from `states.ts`.
 - **A state change landing inside a fade blends from the FROZEN composite pose**
@@ -195,9 +211,10 @@ which is exactly what it failed to do the first time: the card still announced
 are what `engine.sample(1)` returns for `idle`, byte for byte. `favicon.ico` and
 `apple-touch-icon.png` are rasterised from it.
 
-`docs/shapes.svg` is the customiser's contact sheet, written by `pnpm board`
-(`tools/board.ts`). It is the art-direction gate of Phase 1 — every shape at rest,
-side by side — and it is regenerated, not edited.
+`docs/shapes.svg` and `docs/eyes.svg` are the contact sheets, both written by
+`pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at
+rest, and every eye style across the expressions that deform the eye most — and they
+are regenerated, not edited.
 
 Its companion is `pnpm clearance`, which reports how close each shape brings an eye
 to its own edge. `skins.test.ts` only asks that the eye stay IN; a shape can pass

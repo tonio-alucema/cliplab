@@ -1,7 +1,8 @@
 import { arcRender, type ArcRender, type DotRender } from './decor'
 import { blendExpression, type BotExpression } from './expressions'
 import { decalageDesYeux } from './eyefit'
-import { blinkScale, eyePoses, liveliness } from './face'
+import { REST_GAZE, blinkScale, eyePoses, liveliness, type HeadGaze } from './face'
+import { GAZE_RANGE, type EyeStyle } from './eyes'
 import { clamp, easings, lerp, r2 } from './math'
 import {
   blend,
@@ -14,10 +15,29 @@ import {
 } from './shape'
 import { STATE_BY_ID, type Pose, type StateDef, type StateId } from './states'
 
+/** Une couche interne, en repere OEIL : le `base` de son oeil la place. */
+export interface RenderedEyeLayer {
+  cx: number
+  cy: number
+  r: number
+  fill: string
+}
+
 export interface RenderedEye {
   d: string
+  /** matrice de la SCLERE : porte l'ecrasement du clignement */
   matrix: string
+  /**
+   * Matrice des COUCHES : la meme, sans l'ecrasement.
+   *
+   * Deux matrices et pas une, et c'est tout le mecanisme du clignement : la
+   * sclere est un trou qui s'ecrase, les couches sont peintes derriere et ne
+   * bougent pas. La paupiere les ROGNE donc au lieu de les deformer. Partager la
+   * matrice donnerait un iris en caoutchouc.
+   */
+  base: string
   alpha: number
+  layers: RenderedEyeLayer[]
 }
 
 export interface BotFrame {
@@ -143,6 +163,7 @@ export class BotEngine {
   private shape: number[] | null = null
   private shapePrev: number[] | null = null
   private shapeAt = -10
+  private eyeStyle: EyeStyle | null = null
   private expr: BotExpression | null = null
   private exprPrev: BotExpression | null = null
   private exprAt = -10
@@ -167,12 +188,24 @@ export class BotEngine {
     scale = 100,
     initial: StateId = 'idle',
     shape: number[] | null = null,
-    expression: BotExpression | null = null
+    expression: BotExpression | null = null,
+    eyeStyle: EyeStyle | null = null
   ) {
     this.scale = scale
     this.cur = initial
     this.shape = shape
     this.expr = expression
+    this.eyeStyle = eyeStyle
+  }
+
+  /**
+   * Style d'oeil. Contrairement a la forme et a l'expression il ne morphe PAS :
+   * ses couches changent de nombre et de couleur d'un style a l'autre, or on
+   * n'interpole pas entre « trois disques » et « deux ». Un fondu, si on en veut
+   * un, appartient a la vue qui en change.
+   */
+  setEyeStyle(style: EyeStyle | null) {
+    this.eyeStyle = style
   }
 
   /**
@@ -421,6 +454,43 @@ export class BotEngine {
     if (STATE_BY_ID.get(id)?.blinkIn) this.blinkAt = now
   }
 
+  /**
+   * Place les couches internes d'un oeil, en repere oeil.
+   *
+   * Le regard deplace les couches DANS la sclere, chacune selon son `follow`.
+   * La course disponible est ce qui reste entre la couche et le bord — un
+   * deplacement en fraction du rayon de la sclere ferait sortir les grosses
+   * couches et laisserait les petites immobiles.
+   *
+   * Fonction pure de la pose : elle ne lit aucun etat, donc `sample` reste une
+   * fonction pure du temps. Et ce n'est PAS un solveur — c'est une homothetie
+   * sur une constante de style, ce que `eyefit.ts` interdit de faire par image
+   * ne concerne que la RECHERCHE d'un decalage, pas son application.
+   */
+  private couches(cfg: Pose['eyes'][number], gaze: HeadGaze): RenderedEyeLayer[] {
+    const style = this.eyeStyle
+    if (!style || style.layers.length === 0) return []
+    const R = this.scale
+    const hw = (cfg.w * R) / 2
+    const hh = (cfg.h * R) / 2
+    // ecart au repos, borne : au-dela l'oeil serait deja sorti de la sclere
+    const gx = clamp((gaze.yaw - REST_GAZE.yaw) / GAZE_RANGE, -1, 1)
+    // le tangage compte vers le HAUT, l'ecran vers le bas
+    const gy = clamp(-(gaze.pitch - REST_GAZE.pitch) / GAZE_RANGE, -1, 1)
+    // borne par le disque INSCRIT : un oeil plus large que haut est borne par sa
+    // hauteur, pas par sa largeur. Cf. `EyeLayer.r`.
+    const inscrit = Math.min(hw, hh)
+    return style.layers.map((l) => {
+      const r = l.r * inscrit
+      return {
+        cx: r2(gx * l.follow * Math.max(0, hw - r)),
+        cy: r2(gy * l.follow * Math.max(0, hh - r)),
+        r: r2(r),
+        fill: l.fill
+      }
+    })
+  }
+
   sample(now: number): BotFrame {
     const R = this.scale
     const def = STATE_BY_ID.get(this.cur)!
@@ -519,10 +589,15 @@ export class BotEngine {
         // Le clignement s'applique APRES tout ca : c'est un ecrasement vertical
         // a l'ecran, pas le long de l'axe de la gelule.
         const k = blinkScale(Math.min(lid, cfg.open))
+        const tx = r2(e.x * fit + (offX + decalage.x) * R)
+        const ty = r2(e.y * fit + (offY + decalage.y) * R)
         eyes.push({
           d: capsulePath(cfg.w * R, cfg.h * R),
-          matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${r2(e.x * fit + (offX + decalage.x) * R)},${r2(e.y * fit + (offY + decalage.y) * R)})`,
-          alpha: pose.eyeAlpha * clamp(e.depth / 0.12)
+          matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${tx},${ty})`,
+          // sans le `k` : voir `RenderedEye.base`
+          base: `matrix(${r2(ax)},${r2(ay)},${r2(cx2)},${r2(cy2)},${tx},${ty})`,
+          alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
+          layers: this.couches(cfg, gaze)
         })
       }
     }

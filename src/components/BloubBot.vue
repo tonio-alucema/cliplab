@@ -9,6 +9,7 @@ import {
   DEFAULT_EXPRESSION,
   EXPRESSION_BY_ID
 } from '@/bot/expressions'
+import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
 import {
   COLOR_BY_ID,
   DEFAULT_COLOR,
@@ -29,6 +30,8 @@ const props = withDefaults(
     color?: string
     /** identifiant d'expression de repos du personnalisateur */
     expression?: string
+    /** identifiant de style d'oeil : couches internes revelees par le trou */
+    eyeStyle?: string
     /** couleur du fond, utilisee pour la brume de profondeur des particules */
     paper?: string
     /**
@@ -61,6 +64,7 @@ const props = withDefaults(
     shape: DEFAULT_SHAPE,
     color: DEFAULT_COLOR,
     expression: DEFAULT_EXPRESSION,
+    eyeStyle: DEFAULT_EYE_STYLE,
     paper: '#f9f9f9',
     frozenAt: undefined,
     cycle: () => defaultCycle().blocks,
@@ -90,11 +94,15 @@ const VB = DEMI_VIEWBOX
 const shapeRadii = computed(() => SHAPE_BY_ID.get(props.shape)?.radii ?? null)
 const ink = computed(() => COLOR_BY_ID.get(props.color)?.hex ?? '#0a0a0c')
 const expression = computed(() => EXPRESSION_BY_ID.get(props.expression) ?? null)
+const eyeStyle = computed(() => EYE_STYLE_BY_ID.get(props.eyeStyle) ?? null)
+/** Y a-t-il quoi que ce soit a peindre derriere le corps ? */
+const yeuxEnCouches = computed(() => (eyeStyle.value?.layers.length ?? 0) > 0)
 
-const engine = new BotEngine(R, state.value, shapeRadii.value, expression.value)
+const engine = new BotEngine(R, state.value, shapeRadii.value, expression.value, eyeStyle.value)
 const frame = shallowRef<BotFrame>(engine.sample(props.frozenAt ?? 0))
 const uid = Math.random().toString(36).slice(2, 8)
 const maskId = `bot-mask-${uid}`
+const clipId = `bot-clip-${uid}`
 
 let raf = 0
 let nextAt = Infinity
@@ -412,6 +420,12 @@ watch(shapeRadii, (radii) => {
   redrawFrozen()
 })
 
+// Pas de date : le style ne morphe pas, cf. `setEyeStyle`.
+watch(eyeStyle, (style) => {
+  engine.setEyeStyle(style)
+  redrawFrozen()
+})
+
 watch(expression, (expr) => {
   engine.setExpression(expr, clock)
   redrawFrozen()
@@ -523,6 +537,9 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         />
       </mask>
 
+      <!-- silhouette seule : borne les couches d'oeil au corps -->
+      <clipPath :id="clipId"><path :d="frame.bodyPath" /></clipPath>
+
       <linearGradient
         v-for="arc in frame.arcs"
         :id="`${uid}-${arc.id}`"
@@ -580,6 +597,31 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         rendrait plus clairs que le fond, ce qui se verrait sur une grande boule.
       -->
       <path :d="frame.bodyPath" :fill="props.paper" />
+      <!--
+        Les couches de l'oeil, DERRIERE le corps : le trou du masque est ce qui
+        les revele, et le corps peint par-dessus est ce qui les rogne. Aucun
+        rognage n'est donc ecrit ici — sauf celui a la SILHOUETTE, qui lui n'est
+        pas gratuit : hors du corps le masque ne peint rien, donc une couche qui
+        depasserait le bord s'afficherait a nu sur le fond. `eyefit.ts` garde les
+        yeux dedans, ce rognage garde la garantie meme si un jour il n'y arrive
+        plus.
+
+        `base` et non `matrix` : la sclere s'ecrase au clignement, les couches
+        non. C'est la paupiere qui les rogne, comme une vraie.
+      -->
+      <g v-if="yeuxEnCouches" :clip-path="`url(#${clipId})`">
+        <g v-for="(eye, i) in frame.eyes" :key="`c${i}`" :transform="eye.base">
+          <circle
+            v-for="(couche, j) in eye.layers"
+            :key="j"
+            :cx="couche.cx"
+            :cy="couche.cy"
+            :r="couche.r"
+            :fill="couche.fill"
+            :opacity="eye.alpha"
+          />
+        </g>
+      </g>
       <g :mask="`url(#${maskId})`">
         <rect :x="-VB" :y="-VB" :width="VB * 2" :height="VB * 2" :fill="ink" />
       </g>

@@ -5,6 +5,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Layered eyes** (`src/bot/eyes.ts`): a sclera that is still a hole, with iris, pupil and
+  highlight painted behind the body and revealed through it. Four styles so far — `fente`
+  (the original flat slot, and still the default, so nothing changes on screen until one is
+  picked), `optique`, `gemme`, `vinyle`. `docs/eyes.svg` shows them across six expressions.
+
 ### Changed
 
 - **Renamed to Cliplab.** Display name, logotype, package name, storage prefix (`cliplab:`) and
