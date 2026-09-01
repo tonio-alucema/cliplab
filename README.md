@@ -1,4 +1,4 @@
-# Pill Clip Lab
+# Cliplab
 
 A character studio for procedural SVG avatars: build a body, layer the eyes,
 sequence animations, and export a lightweight embeddable clip. No animation
@@ -8,7 +8,7 @@ library.
 > MIT-licensed and gratefully reused. bloub is an SVG recreation of the x.ai bot
 > avatar, measured frame by frame off a reference video.
 >
-> **Pill Clip Lab is mid-migration away from that heritage.** The engine, the
+> **Cliplab is mid-migration away from that heritage.** The engine, the
 > timeline and the eye model are bloub's and are being kept. The *character* work
 > is being replaced: a new analytic shape library, layered eyes, and our own cast.
 >

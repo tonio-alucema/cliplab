@@ -19,9 +19,9 @@ export default {
      * restent un logotype, pas le nom. `title` sert de `document.title`.
      * Voir aussi le <title> de index.html, qui est statique.
      */
-    name: 'Pill Clip Lab',
-    title: 'Pill Clip Lab — studio de personnages SVG',
-    botAria: 'Personnage animé Pill Clip Lab'
+    name: 'Cliplab',
+    title: 'Cliplab — studio de personnages SVG',
+    botAria: 'Personnage animé Cliplab'
   },
 
   gallery: {

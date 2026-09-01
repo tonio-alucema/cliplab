@@ -5,19 +5,23 @@
  * chaine recopiee a chaque appel, sinon le prochain renommage en oubliera une et
  * l'utilisateur perdra ses reglages sans que rien ne le signale.
  *
- * Aucune migration depuis le prefixe `bloub:` du projet d'origine, et c'est
- * VOULU : les montages enregistres sous ce prefixe referencent des etats que la
- * refonte du casting remplace. Un espace de noms neuf vaut mieux qu'un montage
- * a moitie relu dont la moitie des etats n'existe plus.
+ * Aucune migration depuis les prefixes abandonnes — `bloub:` du projet d'origine,
+ * puis `pill-clip-lab:` du premier nom — et c'est VOULU : les montages enregistres
+ * sous ces prefixes referencent des etats que la refonte du casting remplace. Un
+ * espace de noms neuf vaut mieux qu'un montage a moitie relu dont la moitie des
+ * etats n'existe plus.
+ *
+ * Le prix est reel et assume : quiconque avait deja enregistre des montages sous
+ * l'ancien nom les retrouve vides. C'est tenable tant que rien n'est publie.
  */
-const PREFIXE = 'pill-clip-lab:'
+const PREFIXE = 'cliplab:'
 
 /** Tout ce que l'application persiste. */
 const NOMS = ['cycles', 'cycle', 'forme', 'couleur', 'expression', 'langue'] as const
 
 export type NomStocke = (typeof NOMS)[number]
 
-/** `cle('cycles')` -> `'pill-clip-lab:cycles'`. */
+/** `cle('cycles')` -> `'cliplab:cycles'`. */
 export function cle(nom: NomStocke): string {
   return `${PREFIXE}${nom}`
 }

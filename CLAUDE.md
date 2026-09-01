@@ -1,4 +1,4 @@
-# Pill Clip Lab: notes for Claude
+# Cliplab: notes for Claude
 
 ## Where this project is
 
@@ -183,6 +183,13 @@ invisible short of stepping through an MP4 frame by frame.
 `src/bot/profiles.ts` is produced by `tools/extract-profiles.py` from the video's
 frames (see [docs/measurements.md](docs/measurements.md)). Don't edit it by hand;
 regenerate it.
+
+`public/og.svg` is the social card's source, written by `pnpm og` (`tools/og.ts`).
+It carries TEXT, so it carries the product name, and it has to follow a rename —
+which is exactly what it failed to do the first time: the card still announced
+「BLOUB」 long after the project stopped being bloub, while `og:image:alt` in
+`index.html` described a card that did not exist. Rasterise with
+`rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png`.
 
 `public/favicon.svg` is not an approximation: its circle and **both eye matrices**
 are what `engine.sample(1)` returns for `idle`, byte for byte. `favicon.ico` and
