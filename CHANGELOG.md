@@ -12,10 +12,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a slot cannot hold an iris. The sixteen expressions keep their own proportions, so
   tilts stay as legible as before. `public/favicon.svg` and its rasterisations follow.
 - **An Eyes section in the customiser**, kept with your shape, colour and expression.
-- **Layered eyes** (`src/bot/eyes.ts`): a sclera that is still a hole, with iris, pupil and
-  highlight painted behind the body and revealed through it. Five styles so far, all built on
-  one idea — an iris in a circle: `fente` (no layers, still the default), `iris`, `bille`,
-  `point`, `reflet`. `docs/eyes.svg` shows them across six expressions.
+- **Layered eyes** (`src/bot/eyes.ts`): a sclera that is still a hole, with the iris painted
+  behind the body and revealed through it. Three styles, differing only in the size of the
+  iris and how far it travels with the gaze — `iris` (the default), `bille`, `point`.
+  `docs/eyes.svg` shows them across six expressions. The bot therefore ships with a pupil
+  now, everywhere: avatar, thumbnails, exports and favicon.
 
 ### Changed
 

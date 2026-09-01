@@ -180,11 +180,9 @@ export default {
   },
 
   eyes: {
-    fente: 'Uni',
     iris: 'Iris',
     bille: 'Bille',
-    point: 'Point',
-    reflet: 'Reflet'
+    point: 'Point'
   },
 
   colors: {

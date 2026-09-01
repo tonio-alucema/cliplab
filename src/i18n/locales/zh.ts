@@ -158,11 +158,9 @@ const zh: typeof fr = {
   },
 
   eyes: {
-    fente: '纯色',
     iris: '虹膜',
     bille: '珠子',
-    point: '圆点',
-    reflet: '高光'
+    point: '圆点'
   },
 
   colors: {

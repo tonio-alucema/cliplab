@@ -36,5 +36,17 @@
     />
   </mask>
 
+  <!--
+    L'iris, DERRIERE le corps : le trou du masque est ce qui le revele, exactement
+    comme dans l'application. Meme classe que le corps, donc il s'inverse avec lui
+    en theme sombre — sinon un iris noir disparaitrait dans une boule claire.
+  -->
+  <g transform="matrix(0.87,-0.33,0.45,0.84,21.42,-43.32)">
+    <circle cx="0.26" cy="-0.24" r="7.8" class="corps" />
+  </g>
+  <g transform="matrix(0.64,-0.06,0.45,0.84,62.98,-53.9)">
+    <circle cx="0.26" cy="-0.24" r="7.8" class="corps" />
+  </g>
+
   <circle r="100" class="corps" mask="url(#yeux)" />
 </svg>

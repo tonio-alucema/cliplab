@@ -36,7 +36,7 @@ export interface EyeLayer {
 
 export interface EyeStyle {
   id: EyeStyleId
-  /** de l'exterieur vers l'interieur : sclere d'abord, reflet en dernier */
+  /** de l'exterieur vers l'interieur */
   layers: EyeLayer[]
 }
 
@@ -45,45 +45,28 @@ export interface EyeStyle {
  * `skins.ts` : c'est ce qui permettra a la couche i18n de verifier a la
  * compilation que chaque style a sa traduction dans les trois langues.
  */
-export type EyeStyleId = 'fente' | 'iris' | 'bille' | 'point' | 'reflet'
+export type EyeStyleId = 'iris' | 'bille' | 'point'
 
 /* Teintes des couches. Ce sont des CHOIX, pas des mesures — rien de tout ceci
    n'existe sur la video de reference, dont l'oeil est un aplat unique.
    L'iris prend l'encre du corps : sur un oeil qui est un TROU, un iris de la
    couleur du corps se lit comme une pupille, sans introduire de teinte a gerer. */
 const PUPILLE = '#0a0a0c'
-const REFLET = '#ffffff'
 
 export const EYE_STYLES: EyeStyle[] = [
   /**
-   * Aucune couche : le trou montre le fond et rien d'autre. C'est l'oeil
-   * d'origine, garde comme point de comparaison et comme defaut — tant qu'un
-   * style n'est pas choisi, rien ne doit changer a l'ecran.
+   * Un iris, et c'est tout : la forme la plus simple qui lise comme un oeil, et
+   * le defaut. Les trois styles ne different que par la TAILLE de l'iris et par
+   * sa course — un seul levier, trois reglages, ce qui les garde comparables.
    */
-  { id: 'fente', layers: [] },
-
-  /** Un iris, et c'est tout. La forme la plus simple qui lise comme un oeil. */
   { id: 'iris', layers: [{ r: 0.52, fill: PUPILLE, follow: 0.62 }] },
 
   /** Le meme, gros : l'iris mange presque la sclere, l'oeil devient une bille. */
   { id: 'bille', layers: [{ r: 0.78, fill: PUPILLE, follow: 0.42 }] },
 
   /** Le meme, petit et tres mobile : un oeil vif, qui se lit de loin. */
-  { id: 'point', layers: [{ r: 0.3, fill: PUPILLE, follow: 0.88 }] },
-
-  /**
-   * Un iris et un reflet. Le reflet part a l'OPPOSE du regard, ce qui le fait
-   * lire comme une lumiere posee sur l'oeil plutot que comme une seconde
-   * pupille : une lumiere ne suit pas l'oeil, elle vient d'ailleurs.
-   */
-  {
-    id: 'reflet',
-    layers: [
-      { r: 0.56, fill: PUPILLE, follow: 0.62 },
-      { r: 0.19, fill: REFLET, follow: -0.5 }
-    ]
-  }
+  { id: 'point', layers: [{ r: 0.3, fill: PUPILLE, follow: 0.88 }] }
 ]
 
 export const EYE_STYLE_BY_ID = new Map<string, EyeStyle>(EYE_STYLES.map((s) => [s.id, s]))
-export const DEFAULT_EYE_STYLE = 'fente'
+export const DEFAULT_EYE_STYLE = 'iris'

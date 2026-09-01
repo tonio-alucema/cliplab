@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BotEngine } from './engine'
-import { EYE_STYLES, EYE_STYLE_BY_ID } from './eyes'
+import { DEFAULT_EYE_STYLE, EYE_STYLES, EYE_STYLE_BY_ID } from './eyes'
 import { EXPRESSIONS } from './expressions'
 import { SHAPES } from './skins'
 
@@ -18,10 +18,14 @@ describe("styles d'oeil", () => {
     for (const oeil of e.sample(1).eyes) expect(oeil.layers).toEqual([])
   })
 
-  it('la fente est vide, donc identique a pas de style du tout', () => {
-    const nu = new BotEngine(R, 'idle', null, null, null).sample(1)
-    const fente = new BotEngine(R, 'idle', null, null, EYE_STYLE_BY_ID.get('fente')!).sample(1)
-    expect(fente).toEqual(nu)
+  /**
+   * Le style par defaut du catalogue est celui que TOUT porte quand personne n'a
+   * choisi — l'avatar, les vignettes, les exports, le favicon. Il doit donc
+   * exister : `DEFAULT_EYE_STYLE` est une chaine, rien ne la relie au tableau a
+   * la compilation.
+   */
+  it('le style par defaut existe au catalogue', () => {
+    expect(EYE_STYLE_BY_ID.get(DEFAULT_EYE_STYLE)).toBeDefined()
   })
 
   /**
@@ -30,7 +34,7 @@ describe("styles d'oeil", () => {
    * matrice donnerait un iris en caoutchouc — c'est ce que ce test interdit.
    */
   it('le clignement ecrase la sclere et laisse les couches intactes', () => {
-    const e = new BotEngine(R, 'idle', null, null, EYE_STYLE_BY_ID.get('optique')!)
+    const e = new BotEngine(R, 'idle', null, null, EYE_STYLE_BY_ID.get('iris')!)
     const ouvert = e.sample(1)
     const ferme = e.sample(MI_CLIGNEMENT)
 
@@ -84,7 +88,7 @@ describe("styles d'oeil", () => {
 
   /** Meme garde que pour le reste du moteur : `sample` ne doit pas muter. */
   it('les couches ne rendent pas le moteur non rejouable', () => {
-    const style = EYE_STYLE_BY_ID.get('optique')!
+    const style = EYE_STYLE_BY_ID.get('iris')!
     const a = new BotEngine(R, 'idle', null, null, style)
     const suite = [0.3, 1.1, MI_CLIGNEMENT, 2.4].map((t) => JSON.stringify(a.sample(t)))
     const b = new BotEngine(R, 'idle', null, null, style)

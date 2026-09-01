@@ -155,11 +155,9 @@ const en: typeof fr = {
   },
 
   eyes: {
-    fente: 'Plain',
     iris: 'Iris',
     bille: 'Bead',
-    point: 'Dot',
-    reflet: 'Glint'
+    point: 'Dot'
   },
 
   colors: {
