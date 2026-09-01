@@ -17,8 +17,15 @@ import { clamp, createRng, loopNoise } from './math'
 
 type Vec3 = [number, number, number]
 
-/** Demi-ecart des yeux sur la sphere, en degres (separation totale ~31deg). */
-export const EYE_SPLIT = 15.46
+/**
+ * Demi-ecart des yeux sur la sphere, en degres (separation totale 38deg).
+ *
+ * CHOISI, comme `EYE_W` / `EYE_H`. La video donnait 15,46, soit 31 degres : des
+ * yeux serres, ce qui convient a deux fentes mais tasse deux cercles. Les seize
+ * expressions ecartent deja de 14 a 20,5 degres, donc 19 tombe dans leur
+ * enveloppe au lieu d'en etre le plancher.
+ */
+export const EYE_SPLIT = 19
 /**
  * Taille de l'oeil au repos, en unites de rayon de boule.
  *
@@ -35,8 +42,21 @@ export const EYE_SPLIT = 15.46
 export const EYE_W = 0.3
 export const EYE_H = 0.3
 
-/** Orientation de tete au repos, ajustee sur les frames de reference. */
-export const REST_GAZE: HeadGaze = { yaw: 28.49, pitch: 28.62, roll: -13 }
+/**
+ * Orientation de tete au repos. CHOISIE — la video donnait 28,49 / 28,62 / -13.
+ *
+ * Le lacet tombe de 28 a 14 degres, et la raison est l'iris. Sur une fente sans
+ * interieur, c'est la TETE qui doit porter le regard : d'ou une pose tres tournee,
+ * qui est justement ce qui rendait la reference reconnaissable. Un oeil qui a une
+ * pupille regarde tout seul, donc la tete n'a plus a le faire a sa place.
+ *
+ * Elle ne va pas jusqu'a zero, et ce n'est pas une demi-mesure. Le modele de
+ * sphere ne se voit QUE de trois quarts : c'est le lacet qui comprime l'oeil
+ * exterieur — 0,64 contre 0,87 de large — et cette compression est tout ce qui
+ * fait lire un volume plutot qu'un disque. De face, les deux yeux deviennent
+ * identiques et le meilleur de ce qui est herite ici ne se voit plus.
+ */
+export const REST_GAZE: HeadGaze = { yaw: 14, pitch: 14, roll: -5 }
 
 export interface EyePose {
   x: number

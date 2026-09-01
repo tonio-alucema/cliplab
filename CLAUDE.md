@@ -54,11 +54,19 @@ Two deliberate exceptions, and they are the only ones:
 - **`--ink` (`styles.css`) is the interface colour, chosen, not measured**, a night
   blue. The video's black is the bot's, in `skins.ts` (`encre`, `#0a0a0c`).
   Retouching one doesn't touch the other.
-- **`EYE_W` and `EYE_H` (`face.ts`) are ours, chosen** — a circle, where the video
-  measured a 1:2.2 vertical slot. That is Phase 2 of the plan doing what it is for:
-  the eye is the part of the character we are deliberately leaving, and a slot
-  cannot hold an iris. Everything else in `face.ts` — the sphere model, `REST_GAZE`,
-  `EYE_SPLIT`, the blink timings — is still measured and still holds.
+- **The whole eye anatomy in `face.ts` is ours, chosen**: `EYE_W`/`EYE_H` (a circle,
+  where the video measured a 1:2.2 slot), `EYE_SPLIT` (19°, where it measured 15.46)
+  and `REST_GAZE` (14/14/-5, where it measured 28.49/28.62/-13). That is Phase 2 of
+  the plan doing what it is for. The **sphere model itself and the blink timings are
+  still measured** and still hold — they are engineering, not character.
+
+  The yaw is lower because the iris made it so: on a slot with no inside, the HEAD
+  has to carry the gaze, which is what made the reference's very turned pose
+  necessary. **It does not go to zero, and that is not a half-measure**: the sphere
+  only reads at three-quarters, since the yaw is what compresses the outer eye
+  (0.81 against 0.98 wide) and that compression is the whole volume cue. Head-on,
+  the two eyes become identical and the best of what is inherited stops showing. A
+  test locks the compression into a band rather than to a value.
 
 **A measurement fixture must not read a shipped constant.** `face.test.ts` had the
 rest eye's dimensions as `w: EYE_W, h: EYE_H` where its two sibling fixtures used
@@ -228,8 +236,8 @@ when the eye became round. `favicon.ico` (three PNGs, 16/32/48) and
 `apple-touch-icon.png` (180) are rasterised from it, and the dark-mode block has to
 come out first or the rasteriser bakes whichever scheme it happens to prefer.
 
-`docs/shapes.svg` and `docs/eyes.svg` are the contact sheets, both written by
-`pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at
+`docs/shapes.svg`, `docs/eyes.svg` and `docs/poses.svg` are the contact sheets, all
+written by `pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at
 rest, and every eye style across the expressions that deform the eye most — and they
 are regenerated, not edited.
 

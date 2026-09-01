@@ -13,8 +13,9 @@ import { writeFileSync } from 'node:fs'
 import { BotEngine } from '@/bot/engine'
 import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
 import { SHAPES } from '@/bot/skins'
-import { EYE_STYLES, type EyeStyle } from '@/bot/eyes'
+import { EYE_STYLES, EYE_STYLE_BY_ID, type EyeStyle } from '@/bot/eyes'
 import { EXPRESSION_BY_ID, type BotExpression } from '@/bot/expressions'
+import { EYE_H, EYE_SPLIT, EYE_W, REST_GAZE } from '@/bot/face'
 
 const ENCRE = '#0a0a0c'
 const PAPIER = '#f9f9f9'
@@ -103,6 +104,52 @@ planche(
   casesFormes,
   MARGE * 2 + COL_F * CASE,
   MARGE * 2 + Math.ceil(SHAPES.length / COL_F) * (CASE + LEGENDE)
+)
+
+/* ----------------------------------------------- planche des poses de repos */
+
+/**
+ * Candidats pour `REST_GAZE` / `EYE_SPLIT`, la pose de repos.
+ *
+ * Gardee alors que le choix est fait : c'est la comparaison qui l'a tranche, et
+ * la phase 4 refait le meme exercice sur les etats. La mesuree est en tete pour
+ * qu'on voie de quoi on s'eloigne.
+ */
+const POSES: Array<{ nom: string; yaw: number; pitch: number; roll: number; split: number }> = [
+  { nom: 'mesuree (video)', yaw: 28.49, pitch: 28.62, roll: -13, split: 15.46 },
+  { nom: 'tournee douce', yaw: 16, pitch: 18, roll: -6, split: 17 },
+  { nom: 'regard haut', yaw: 10, pitch: 22, roll: -4, split: 18 },
+  { nom: 'de trois quarts', yaw: 20, pitch: 10, roll: -8, split: 16 },
+  { nom: 'de face', yaw: 0, pitch: 18, roll: 0, split: 17 },
+  { nom: 'RETENUE', yaw: REST_GAZE.yaw, pitch: REST_GAZE.pitch, roll: REST_GAZE.roll, split: EYE_SPLIT }
+]
+
+const COL_P = 3
+const iris = EYE_STYLE_BY_ID.get('iris') ?? null
+const casesPoses = POSES.map((c, i) =>
+  cellule(
+    MARGE + (i % COL_P) * CASE,
+    MARGE + Math.floor(i / COL_P) * (CASE + LEGENDE),
+    `${c.nom} · ${c.yaw}/${c.pitch}/${c.roll} · ${c.split}`,
+    null,
+    iris,
+    {
+      id: 'neutre',
+      gaze: { yaw: c.yaw, pitch: c.pitch, roll: c.roll },
+      split: c.split,
+      eyes: [
+        { w: EYE_W, h: EYE_H, tilt: 0, open: 1 },
+        { w: EYE_W, h: EYE_H, tilt: 0, open: 1 }
+      ]
+    } as unknown as BotExpression
+  )
+)
+planche(
+  'docs/poses.svg',
+  COL_P,
+  casesPoses,
+  MARGE * 2 + COL_P * CASE,
+  MARGE * 2 + Math.ceil(POSES.length / COL_P) * (CASE + LEGENDE)
 )
 
 /* --------------------------------------------------- planche des yeux */

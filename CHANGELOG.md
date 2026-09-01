@@ -7,6 +7,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The rest pose is ours too.** `REST_GAZE` goes from the measured 28.49/28.62/-13 to
+  14/14/-5 and `EYE_SPLIT` from 15.46 to 19. The head turns less because the iris now
+  does the looking; it still turns, because the yaw is what compresses the outer eye and
+  that compression is the only thing that makes the body read as a sphere rather than a
+  disc. `docs/poses.svg` shows the candidates that were compared.
 - **The rest eye is a circle, and it is ours.** `EYE_W`/`EYE_H` were the video's
   0.186 x 0.412 vertical slot; they are now 0.30 x 0.30, chosen rather than measured —
   a slot cannot hold an iris. The sixteen expressions keep their own proportions, so

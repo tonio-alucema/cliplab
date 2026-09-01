@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { EYE_H, EYE_SPLIT, EYE_W, REST_GAZE, eyePoses, type HeadGaze } from './face'
 
 /**
+ * La pose de repos RELEVEE sur la video, et l'oeil qui allait avec.
+ *
+ * Ce n'est plus ce que nous expedions — `REST_GAZE`, `EYE_SPLIT`, `EYE_W` et
+ * `EYE_H` sont desormais des choix (cf. `face.ts`) — mais c'est toujours ce que
+ * le MODELE doit savoir reproduire. Les deux questions sont distinctes et ce
+ * fichier les separe : ici on verifie le modele contre la reference, avec les
+ * nombres de la reference ; ce que porte le produit se juge a l'ecran.
+ */
+const REPOS_MESURE: HeadGaze = { yaw: 28.49, pitch: 28.62, roll: -13 }
+const SPLIT_MESURE = 15.46
+const W_MESURE = 0.186
+const H_MESURE = 0.412
+
+/**
  * Valeurs relevees image par image sur la video de reference (unites : rayon de
  * la boule au repos = 1, y vers le bas). Le modele de sphere doit les
  * reproduire : c'est lui qui garantit que l'oeil proche du bord se comprime
@@ -16,19 +30,11 @@ const MESURES: Array<{
   yeux: Array<{ x: number; y: number; court: number; long: number }>
 }> = [
   {
-    /*
-     * 0,186 x 0,412 EN DUR, comme les deux mesures suivantes, et plus `EYE_W` /
-     * `EYE_H` : une mesure enregistre ce que la video montrait, pas ce que nous
-     * expedions. Les deux ont coincide tant que l'oeil au repos etait celui de
-     * la reference ; ils ont divergé quand il est devenu rond, et le test s'est
-     * mis a echouer alors que le MODELE, lui, etait toujours juste. C'est le
-     * modele de sphere qu'on verifie ici, pas notre anatomie.
-     */
     nom: 'repos',
-    gaze: REST_GAZE,
-    split: EYE_SPLIT,
-    w: 0.186,
-    h: 0.412,
+    gaze: REPOS_MESURE,
+    split: SPLIT_MESURE,
+    w: W_MESURE,
+    h: H_MESURE,
     yeux: [
       { x: 0.189, y: -0.412, court: 0.178, long: 0.39 },
       { x: 0.614, y: -0.51, court: 0.12, long: 0.395 }
@@ -77,16 +83,34 @@ describe('yeux poses sur une sphere', () => {
     })
   }
 
+  /** Invariant du modele : vrai pour n'importe quel regard, pas seulement le notre. */
   it('comprime l oeil exactement du facteur de profondeur de la sphere', () => {
-    // Invariant exact : le determinant du repere tangent projete vaut z. C'est
-    // lui qui fait que l'aire de l'oeil suit la courbure (mesure : 0.663).
-    for (const e of eyePoses(REST_GAZE, 1)) {
-      expect(e.a * e.d - e.b * e.c).toBeCloseTo(e.depth, 6)
+    const regards = [REST_GAZE, REPOS_MESURE, { yaw: -35, pitch: 12, roll: 8 }]
+    for (const gaze of regards) {
+      for (const e of eyePoses(gaze, 1)) {
+        expect(e.a * e.d - e.b * e.c).toBeCloseTo(e.depth, 6)
+      }
     }
-    const [proche, loin] = eyePoses(REST_GAZE, 1)
+  })
+
+  /**
+   * Et la reproduction de la MESURE, sur la pose mesuree. C'est elle qui a servi
+   * a ajuster le modele : 0,663 d'aire et 0,674 de largeur entre l'oeil lointain
+   * et l'oeil proche. Notre pose de repos donne d'autres nombres, ce qui est
+   * normal — elle est moins tournee — et ne dit rien de la justesse du modele.
+   */
+  it('retrouve la compression relevee sur la video, a la pose de la video', () => {
+    const [proche, loin] = eyePoses(REPOS_MESURE, 1, SPLIT_MESURE)
     expect(loin.depth / proche.depth).toBeCloseTo(0.663, 1)
-    // mesure video de la largeur : 0.120 / 0.178 = 0.674
-    expect(court(loin, EYE_W) / court(proche, EYE_W)).toBeCloseTo(0.674, 1)
+    expect(court(loin, W_MESURE) / court(proche, W_MESURE)).toBeCloseTo(0.674, 1)
+  })
+
+  /** Notre pose garde un vrai trois-quarts : sans lui, plus de volume. */
+  it('garde une compression visible sur la pose de repos expediee', () => {
+    const [proche, loin] = eyePoses(REST_GAZE, 1)
+    const rapport = court(loin, EYE_W) / court(proche, EYE_W)
+    expect(rapport).toBeLessThan(0.95)
+    expect(rapport).toBeGreaterThan(0.5)
   })
 
   it('garde la meme longueur pour les deux yeux (axe tangentiel non deforme)', () => {
@@ -94,11 +118,13 @@ describe('yeux poses sur une sphere', () => {
     expect(long(a, EYE_H)).toBeCloseTo(long(b, EYE_H), 3)
   })
 
-  it('conserve la separation angulaire de 31 degres quel que soit le regard', () => {
-    for (const gaze of [REST_GAZE, { yaw: -40, pitch: 10, roll: 5 }, { yaw: 0, pitch: 0, roll: 0 }]) {
-      const [a, b] = eyePoses(gaze, 1)
-      const dot = a.x * b.x + a.y * b.y + a.depth * b.depth
-      expect((Math.acos(dot) * 180) / Math.PI).toBeCloseTo(EYE_SPLIT * 2, 4)
+  it("conserve la separation angulaire de l'ecart demande, quel que soit le regard", () => {
+    for (const split of [EYE_SPLIT, SPLIT_MESURE, 24]) {
+      for (const gaze of [REST_GAZE, { yaw: -40, pitch: 10, roll: 5 }, { yaw: 0, pitch: 0, roll: 0 }]) {
+        const [a, b] = eyePoses(gaze, 1, split)
+        const dot = a.x * b.x + a.y * b.y + a.depth * b.depth
+        expect((Math.acos(dot) * 180) / Math.PI).toBeCloseTo(split * 2, 4)
+      }
     }
   })
 

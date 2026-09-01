@@ -2,10 +2,11 @@
   Le bot au repos, pas un dessin approchant : le corps est le cercle parfait de
   rayon 100 et les deux matrices d'yeux sont celles produites par
   `engine.sample(1)` sur l'etat `idle` (repere tangent de la sphere compris).
-  D'ou l'oeil de droite plus etroit que celui de gauche (0,64 contre 0,87) :
+  D'ou l'oeil de droite plus etroit que celui de gauche (0,81 contre 0,98) :
   c'est la compression de profondeur, pas une faute de frappe. L'oeil est un
-  CERCLE depuis que `EYE_W` vaut `EYE_H` — la fente verticale etait l'anatomie
-  de la reference, pas la notre.
+  CERCLE depuis que `EYE_W` vaut `EYE_H`, et la tete est moins tournee depuis que
+  `REST_GAZE` est le notre — la fente verticale et la pose tres tournee etaient
+  l'anatomie de la reference, pas la notre.
 
   Les yeux sont des trous, comme dans l'application : le fond de l'onglet passe
   au travers. Le corps s'inverse en theme sombre, sinon un disque noir disparait
@@ -28,11 +29,11 @@
     <circle r="100" fill="#fff" />
     <path
       d="M-15 0A15 15 0 0 1 0 -15L0 -15A15 15 0 0 1 15 0L15 0A15 15 0 0 1 0 15L0 15A15 15 0 0 1 -15 0Z"
-      transform="matrix(0.87,-0.33,0.45,0.84,21.42,-43.32)"
+      transform="matrix(0.98,-0.17,0.16,0.96,-5.83,-22.66)"
     />
     <path
       d="M-15 0A15 15 0 0 1 0 -15L0 -15A15 15 0 0 1 15 0L15 0A15 15 0 0 1 0 15L0 15A15 15 0 0 1 -15 0Z"
-      transform="matrix(0.64,-0.06,0.45,0.84,62.98,-53.9)"
+      transform="matrix(0.81,0,0.16,0.96,56.05,-28.46)"
     />
   </mask>
 
@@ -41,10 +42,10 @@
     comme dans l'application. Meme classe que le corps, donc il s'inverse avec lui
     en theme sombre — sinon un iris noir disparaitrait dans une boule claire.
   -->
-  <g transform="matrix(0.87,-0.33,0.45,0.84,21.42,-43.32)">
+  <g transform="matrix(0.98,-0.17,0.16,0.96,-5.83,-22.66)">
     <circle cx="0.26" cy="-0.24" r="7.8" class="corps" />
   </g>
-  <g transform="matrix(0.64,-0.06,0.45,0.84,62.98,-53.9)">
+  <g transform="matrix(0.81,0,0.16,0.96,56.05,-28.46)">
     <circle cx="0.26" cy="-0.24" r="7.8" class="corps" />
   </g>
 

@@ -35,6 +35,11 @@ the centre. So each eye takes the sphere's tangent frame, projected
 orthographically: the compression, the tilt and the passage behind the limb all
 follow on their own.
 
+⚠️ **`REST_GAZE` and `EYE_SPLIT` no longer ship the measured values** — Phase 2
+replaced them with our own (see `face.ts`). What follows describes how the measured
+ones were obtained, and they are still what `face.test.ts` checks the sphere model
+against. The per-state `gaze` values below are untouched.
+
 The gaze poses (`REST_GAZE` and the per-state `gaze`) come from fitting that model
 to the measured positions, with a residual error of about 1 px on a 190 px ball.
 
