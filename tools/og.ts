@@ -5,6 +5,10 @@
  *
  *   rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png
  *
+ * Sans rasteriseur installe, le navigateur en est un : charger le SVG dans une
+ * `Image`, la peindre sur un canvas de 1200 x 630, relire `toDataURL('image/png')`.
+ * C'est le moteur qui affichera la carte, donc le rendu du texte est celui-la meme.
+ *
  * Meme principe que `public/favicon.svg` : la boule n'est pas une approximation,
  * c'est ce que `engine.sample(1)` rend pour `idle`. Le fichier existe parce que
  * la carte porte du TEXTE, donc le nom du produit — au renommage suivant, elle
@@ -28,8 +32,13 @@ const POLICE = "ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetic
 const f = new BotEngine(RAYON, 'idle', null, null).sample(1)
 
 /* La boule occupe la moitie gauche, centree sur 360 : meme cadrage que la carte
-   d'origine, dont seul le texte change. */
-const k = 430 / (DEMI_VIEWBOX * 2)
+   d'origine, dont seul le texte change.
+
+   L'echelle se calcule sur le DIAMETRE DE LA BOULE (2 x RAYON) et non sur le
+   viewBox : celui-ci est plus large que la boule — sa marge loge les anneaux des
+   etats animes — donc s'en servir rendait une boule un tiers trop petite. `idle`
+   n'a pas d'anneaux, rien ne deborde. */
+const k = 430 / (RAYON * 2)
 const yeux = f.eyes
   .map((e) => `<path d="${e.d}" transform="${e.matrix}" opacity="${e.alpha}" fill="#000"/>`)
   .join('')
