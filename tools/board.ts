@@ -12,7 +12,7 @@
 import { writeFileSync } from 'node:fs'
 import { BotEngine } from '@/bot/engine'
 import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
-import { SHAPES } from '@/bot/skins'
+import { SHAPES, mixHex } from '@/bot/skins'
 import { EYE_STYLES, EYE_STYLE_BY_ID, type EyeStyle } from '@/bot/eyes'
 import { EXPRESSION_BY_ID, type BotExpression } from '@/bot/expressions'
 import { EYE_H, EYE_SPLIT, EYE_W, REST_GAZE } from '@/bot/face'
@@ -38,9 +38,10 @@ function cellule(
   legende: string,
   radii: number[] | null,
   style: EyeStyle | null,
-  expr: BotExpression | null
+  expr: BotExpression | null,
+  relief = 0
 ) {
-  const f = new BotEngine(RAYON, 'idle', radii, expr, style).sample(1)
+  const f = new BotEngine(RAYON, 'idle', radii, expr, style, relief).sample(1)
   const id = `c${uid++}`
   const k = (CASE * 0.86) / (VB * 2)
   const yeux = f.eyes
@@ -59,9 +60,19 @@ function cellule(
         '</g>'
     )
     .join('')
+  /* Le degrade se melange ICI, comme dans le composant : le moteur ne rend que
+     des intensites, il ignore la couleur du corps. */
+  const sh = f.shade
+  const degrade = sh
+    ? `<radialGradient id="g${id}" gradientUnits="userSpaceOnUse" cx="${sh.cx}" cy="${sh.cy}" r="${sh.r}">` +
+      `<stop offset="0" stop-color="${mixHex(ENCRE, '#ffffff', sh.lift)}"/>` +
+      `<stop offset="0.55" stop-color="${ENCRE}"/>` +
+      `<stop offset="1" stop-color="${mixHex(ENCRE, '#000000', sh.drop)}"/></radialGradient>`
+    : ''
+  const remplissage = sh ? `url(#g${id})` : ENCRE
   return (
     `<g transform="translate(${x} ${y})">` +
-    `<defs>` +
+    `<defs>${degrade}` +
     `<mask id="m${id}" maskUnits="userSpaceOnUse" x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}">` +
     `<path d="${f.bodyPath}" fill="#fff"/>${yeux}</mask>` +
     `<clipPath id="k${id}"><path d="${f.bodyPath}"/></clipPath>` +
@@ -69,7 +80,7 @@ function cellule(
     `<g transform="translate(${CASE / 2} ${CASE / 2}) scale(${k})">` +
     `<path d="${f.bodyPath}" fill="${PAPIER}"/>` +
     (couches ? `<g clip-path="url(#k${id})">${couches}</g>` : '') +
-    `<g mask="url(#m${id})"><rect x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}" fill="${ENCRE}"/></g>` +
+    `<g mask="url(#m${id})"><rect x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}" fill="${remplissage}"/></g>` +
     `</g>` +
     `<text x="${CASE / 2}" y="${CASE + 14}" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"` +
     ` font-size="13" fill="${CRAYON}">${legende}</text></g>`
@@ -104,6 +115,34 @@ planche(
   casesFormes,
   MARGE * 2 + COL_F * CASE,
   MARGE * 2 + Math.ceil(SHAPES.length / COL_F) * (CASE + LEGENDE)
+)
+
+/* ------------------------------------------------------ planche du relief */
+
+/**
+ * Force du relief, de l'aplat au tres marque. C'est le reglage a choisir a
+ * l'oeil : `RELIEF_CLAIR` et `RELIEF_SOMBRE` (`relief.ts`) sont multiplies par
+ * cette force, donc doubler la force double les deux.
+ */
+const FORCES = [0, 0.35, 0.7, 1, 1.4, 2]
+const COL_R = 6
+const casesRelief = FORCES.map((force, i) =>
+  cellule(
+    MARGE + (i % COL_R) * CASE,
+    MARGE + Math.floor(i / COL_R) * (CASE + LEGENDE),
+    force === 0 ? 'aplat (0)' : force === 1 ? `${force} — RETENUE` : String(force),
+    null,
+    EYE_STYLE_BY_ID.get('iris') ?? null,
+    neutre,
+    force
+  )
+)
+planche(
+  'docs/relief.svg',
+  COL_R,
+  casesRelief,
+  MARGE * 2 + COL_R * CASE,
+  MARGE * 2 + Math.ceil(FORCES.length / COL_R) * (CASE + LEGENDE)
 )
 
 /* ----------------------------------------------- planche des poses de repos */

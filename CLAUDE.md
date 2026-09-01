@@ -127,6 +127,18 @@ Details and the reasoning behind each are in [docs/](docs/):
 - **The eye style does not morph.** Its layers change in number and colour between
   styles, and there is nothing sensible to interpolate between "three discs" and
   "two". `setEyeStyle` takes no date, unlike `setShape` and `setExpression`.
+- **The body's relief follows the SAME `HeadGaze` as the eyes** (`relief.ts`). That
+  shared frame is the whole cue: a gradient pointed anywhere else reads as a stain,
+  not as a form. It reads the composite gaze and not the nominal pose, so it moves
+  with the drift and with the pointer — otherwise the body stays lit on one side
+  while the face looks the other way.
+- **The engine emits shading INTENSITIES, never colours.** It doesn't know the body
+  colour — the user picks it — so `BodyShade` carries `lift`/`drop` and the render
+  mixes them, exactly as `DotRender.depth` already did for the burst particles.
+- **The relief is bakeable, and that is not luck.** A gradient is not a path, so it
+  has no command signature to change between frames; its centres, radius and stops
+  are numbers, and numbers interpolate. That is the Phase 1 test applied to a new
+  cue, and the arcs are what failing it looks like.
 - **States declare `ArcSpec`; only the engine rasterises.** Don't call `arcRender`
   from `states.ts`.
 - **A state change landing inside a fade blends from the FROZEN composite pose**
@@ -229,15 +241,20 @@ which is exactly what it failed to do the first time: the card still announced
 `rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png`.
 
 `public/favicon.svg` is not an approximation: its circle, **both eye matrices and
-both eye paths** are what `engine.sample(1)` returns for `idle`, byte for byte. The
+both eye paths** are what `engine.sample(1)` returns for `idle`, byte for byte. Its
+**fill is deliberately flat** where the app now carries a gradient — a decision, not
+an oversight. A flat silhouette stays crisp at 16–48 px where a gradient goes muddy,
+and the dark-mode inversion here is a single class swapping one `fill`, which a
+gradient can only follow by defining both and swapping the reference. Geometry
+tracks the engine; the fill does not. The
 matrices survive a change of eye SIZE — they carry the tangent frame, not the
 dimensions — so check the `d` too when `EYE_W`/`EYE_H` move; that is what went stale
 when the eye became round. `favicon.ico` (three PNGs, 16/32/48) and
 `apple-touch-icon.png` (180) are rasterised from it, and the dark-mode block has to
 come out first or the rasteriser bakes whichever scheme it happens to prefer.
 
-`docs/shapes.svg`, `docs/eyes.svg` and `docs/poses.svg` are the contact sheets, all
-written by `pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at
+`docs/shapes.svg`, `docs/eyes.svg`, `docs/poses.svg` and `docs/relief.svg` are the
+contact sheets, all written by `pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at
 rest, and every eye style across the expressions that deform the eye most — and they
 are regenerated, not edited.
 

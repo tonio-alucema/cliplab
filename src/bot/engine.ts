@@ -3,6 +3,7 @@ import { blendExpression, type BotExpression } from './expressions'
 import { decalageDesYeux } from './eyefit'
 import { REST_GAZE, blinkScale, eyePoses, liveliness, type HeadGaze } from './face'
 import { GAZE_RANGE, type EyeStyle } from './eyes'
+import { shadeFor, type BodyShade } from './relief'
 import { clamp, easings, lerp, r2 } from './math'
 import {
   blend,
@@ -43,6 +44,8 @@ export interface RenderedEye {
 export interface BotFrame {
   bodyPath: string
   bodyAlpha: number
+  /** degrade du corps, ou `null` quand le relief est coupe */
+  shade: BodyShade | null
   eyes: RenderedEye[]
   dots: DotRender[]
   /** true = les points passent derriere le corps (particules de l'eclatement) */
@@ -164,6 +167,7 @@ export class BotEngine {
   private shapePrev: number[] | null = null
   private shapeAt = -10
   private eyeStyle: EyeStyle | null = null
+  private relief = 1
   private expr: BotExpression | null = null
   private exprPrev: BotExpression | null = null
   private exprAt = -10
@@ -189,13 +193,23 @@ export class BotEngine {
     initial: StateId = 'idle',
     shape: number[] | null = null,
     expression: BotExpression | null = null,
-    eyeStyle: EyeStyle | null = null
+    eyeStyle: EyeStyle | null = null,
+    relief = 1
   ) {
     this.scale = scale
     this.cur = initial
     this.shape = shape
     this.expr = expression
     this.eyeStyle = eyeStyle
+    this.relief = relief
+  }
+
+  /**
+   * Force du relief, de 0 (aplat) a 1. Pas de date : comme le style d'oeil, ce
+   * n'est pas une pose qu'on interpole mais un reglage de rendu.
+   */
+  setRelief(force: number) {
+    this.relief = force
   }
 
   /**
@@ -617,6 +631,12 @@ export class BotEngine {
     return {
       bodyPath,
       bodyAlpha: pose.bodyAlpha,
+      /*
+       * Le relief suit le MEME `gaze` que les yeux, pas la pose nominale : il doit
+       * donc bouger avec la derive et avec le pointeur, sinon le corps resterait
+       * eclaire d'un cote pendant que le visage regarde de l'autre.
+       */
+      shade: shadeFor(gaze, R, this.relief),
       eyes,
       dots,
       dotsBehind: pose.dotsBehind,

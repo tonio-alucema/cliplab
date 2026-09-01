@@ -7,6 +7,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The body reads as a volume** (`src/bot/relief.ts`), Phase 3's first cue: a soft
+  gradient whose lit side follows the same head orientation the eyes use, so body and
+  face agree. Off at `relief: 0`; `docs/relief.svg` compares strengths. The engine emits
+  intensities and the render mixes them with the chosen colour, so it works on all twelve.
+
 - **The rest pose is ours too.** `REST_GAZE` goes from the measured 28.49/28.62/-13 to
   14/14/-5 and `EYE_SPLIT` from 15.46 to 19. The head turns less because the iris now
   does the looking; it still turns, because the yaw is what compresses the outer eye and

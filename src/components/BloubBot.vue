@@ -91,6 +91,21 @@ const elapsed = defineModel<number>('elapsed', { default: 0 })
 const R = RAYON
 const VB = DEMI_VIEWBOX
 
+/**
+ * Teintes du relief. Le moteur ne rend que des intensites — il ignore la couleur
+ * du corps, que l'utilisateur choisit — donc le melange se fait ici, exactement
+ * comme pour la brume de profondeur des particules.
+ */
+const shade = computed(() => {
+  const s = frame.value.shade
+  if (!s || (s.lift <= 0 && s.drop <= 0)) return null
+  return {
+    ...s,
+    clair: mixHex(ink.value, '#ffffff', s.lift),
+    sombre: mixHex(ink.value, '#000000', s.drop)
+  }
+})
+
 const shapeRadii = computed(() => SHAPE_BY_ID.get(props.shape)?.radii ?? null)
 const ink = computed(() => COLOR_BY_ID.get(props.color)?.hex ?? '#0a0a0c')
 const expression = computed(() => EXPRESSION_BY_ID.get(props.expression) ?? null)
@@ -103,6 +118,7 @@ const frame = shallowRef<BotFrame>(engine.sample(props.frozenAt ?? 0))
 const uid = Math.random().toString(36).slice(2, 8)
 const maskId = `bot-mask-${uid}`
 const clipId = `bot-clip-${uid}`
+const shadeId = `bot-shade-${uid}`
 
 let raf = 0
 let nextAt = Infinity
@@ -540,6 +556,25 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
       <!-- silhouette seule : borne les couches d'oeil au corps -->
       <clipPath :id="clipId"><path :d="frame.bodyPath" /></clipPath>
 
+      <!--
+        Relief : le clair se pose la ou la tete pointe, l'ombre a l'oppose. Trois
+        arrets et pas deux — un degrade a deux arrets etale le passage sur tout le
+        corps et donne un fondu mou ; le troisieme, pose a la couleur du corps,
+        tient le milieu et laisse la bande se former de part et d'autre.
+      -->
+      <radialGradient
+        v-if="shade"
+        :id="shadeId"
+        gradientUnits="userSpaceOnUse"
+        :cx="shade.cx"
+        :cy="shade.cy"
+        :r="shade.r"
+      >
+        <stop offset="0" :stop-color="shade.clair" />
+        <stop offset="0.55" :stop-color="ink" />
+        <stop offset="1" :stop-color="shade.sombre" />
+      </radialGradient>
+
       <linearGradient
         v-for="arc in frame.arcs"
         :id="`${uid}-${arc.id}`"
@@ -623,7 +658,13 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         </g>
       </g>
       <g :mask="`url(#${maskId})`">
-        <rect :x="-VB" :y="-VB" :width="VB * 2" :height="VB * 2" :fill="ink" />
+        <rect
+          :x="-VB"
+          :y="-VB"
+          :width="VB * 2"
+          :height="VB * 2"
+          :fill="shade ? `url(#${shadeId})` : ink"
+        />
       </g>
     </g>
 
