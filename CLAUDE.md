@@ -216,6 +216,28 @@ written at 40 ms actually fires at 1 s, which reads as a delay the code never ha
 Assert on the *state* instead (a `MutationObserver` still fires; an
 `animation-delay` of `-1.5s` samples an animation mid-way while it is frozen).
 
+## Moving the checkout
+
+The repository has **linked worktrees** under `.claude/worktrees/`, and git records
+the link between a worktree and its repo as an **absolute path, in both directions**:
+the worktree's `.git` file points at `<repo>/.git/worktrees/<name>`, and that
+directory's `gitdir` file points back at the worktree's `.git`. Renaming or moving
+the checkout dangles both ends at once, and git then refuses to operate in either.
+
+The fix is `git worktree repair`, run **from the new location** — it rewrites both
+sides. Renaming `pill-clip-lab` to `cliplab` needed exactly this.
+
+What does and doesn't survive the move:
+
+- A **process's own working directory follows** the move, because it tracks the
+  directory itself and not the path that named it. A shell sitting inside the
+  checkout keeps working, and reports the new path.
+- A **path captured at startup does not**. The dev server records its project root
+  when it launches, so it looks for the old path afterwards and fails; the same goes
+  for an editor or a language server. Restart them, and prefer stopping the dev
+  server *before* the move rather than after.
+- `node_modules` survives — pnpm's links inside it are relative.
+
 ## Useful URLs
 
 - `#planche`: the 14 states side by side, frozen. The only safe path: it doesn't
