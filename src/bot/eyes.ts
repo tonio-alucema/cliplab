@@ -45,59 +45,42 @@ export interface EyeStyle {
  * `skins.ts` : c'est ce qui permettra a la couche i18n de verifier a la
  * compilation que chaque style a sa traduction dans les trois langues.
  */
-export type EyeStyleId = 'fente' | 'optique' | 'gemme' | 'vinyle'
+export type EyeStyleId = 'fente' | 'iris' | 'bille' | 'point' | 'reflet'
 
 /* Teintes des couches. Ce sont des CHOIX, pas des mesures — rien de tout ceci
-   n'existe sur la video de reference, dont l'oeil est un aplat unique. */
-const IRIS = '#3b93f0'
+   n'existe sur la video de reference, dont l'oeil est un aplat unique.
+   L'iris prend l'encre du corps : sur un oeil qui est un TROU, un iris de la
+   couleur du corps se lit comme une pupille, sans introduire de teinte a gerer. */
 const PUPILLE = '#0a0a0c'
 const REFLET = '#ffffff'
 
 export const EYE_STYLES: EyeStyle[] = [
   /**
-   * La fente : aucune couche, donc le trou montre le fond et rien d'autre.
-   * C'est l'oeil d'origine, garde comme point de comparaison et comme defaut —
-   * tant qu'un style n'est pas choisi, rien ne doit changer a l'ecran.
+   * Aucune couche : le trou montre le fond et rien d'autre. C'est l'oeil
+   * d'origine, garde comme point de comparaison et comme defaut — tant qu'un
+   * style n'est pas choisi, rien ne doit changer a l'ecran.
    */
   { id: 'fente', layers: [] },
 
-  /**
-   * Optique : iris, pupille, reflet. Le reflet part a l'oppose du regard et
-   * pese 0,3 — assez pour attraper la lumiere, pas assez pour devenir un oeil
-   * a lui tout seul.
-   */
-  {
-    id: 'optique',
-    layers: [
-      { r: 0.86, fill: IRIS, follow: 0.55 },
-      { r: 0.44, fill: PUPILLE, follow: 0.72 },
-      { r: 0.22, fill: REFLET, follow: -0.3 }
-    ]
-  },
+  /** Un iris, et c'est tout. La forme la plus simple qui lise comme un oeil. */
+  { id: 'iris', layers: [{ r: 0.52, fill: PUPILLE, follow: 0.62 }] },
+
+  /** Le meme, gros : l'iris mange presque la sclere, l'oeil devient une bille. */
+  { id: 'bille', layers: [{ r: 0.78, fill: PUPILLE, follow: 0.42 }] },
+
+  /** Le meme, petit et tres mobile : un oeil vif, qui se lit de loin. */
+  { id: 'point', layers: [{ r: 0.3, fill: PUPILLE, follow: 0.88 }] },
 
   /**
-   * Gemme : pupille etroite et tres mobile sur un iris presque immobile. La
-   * lecture « taillee » vient du contraste de course entre les deux, pas d'une
-   * couleur.
+   * Un iris et un reflet. Le reflet part a l'OPPOSE du regard, ce qui le fait
+   * lire comme une lumiere posee sur l'oeil plutot que comme une seconde
+   * pupille : une lumiere ne suit pas l'oeil, elle vient d'ailleurs.
    */
   {
-    id: 'gemme',
+    id: 'reflet',
     layers: [
-      { r: 0.94, fill: '#2fbfa0', follow: 0.2 },
-      { r: 0.3, fill: PUPILLE, follow: 0.95 },
-      { r: 0.16, fill: REFLET, follow: -0.45 }
-    ]
-  },
-
-  /**
-   * Vinyle : jouet souple. Pupille large, reflet surdimensionne et decale, pas
-   * d'iris — deux aplats suffisent, c'est ce qui fait le jouet.
-   */
-  {
-    id: 'vinyle',
-    layers: [
-      { r: 0.92, fill: PUPILLE, follow: 0.5 },
-      { r: 0.4, fill: REFLET, follow: -0.55 }
+      { r: 0.56, fill: PUPILLE, follow: 0.62 },
+      { r: 0.19, fill: REFLET, follow: -0.5 }
     ]
   }
 ]

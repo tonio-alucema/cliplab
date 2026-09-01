@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import BotTile from '@/components/BotTile.vue'
 import { EXPRESSIONS } from '@/bot/expressions'
+import { EYE_STYLES } from '@/bot/eyes'
 import { COLORS, SHAPES } from '@/bot/skins'
 import { t } from '@/i18n'
 
 const shape = defineModel<string>('shape', { required: true })
 const color = defineModel<string>('color', { required: true })
 const expression = defineModel<string>('expression', { required: true })
+const eyeStyle = defineModel<string>('eyeStyle', { required: true })
 
 /**
  * Les vignettes sont figees a la meme date que la pose de repos : elles montrent
@@ -44,6 +46,22 @@ const PREVIEW_AT = 1
         :expression="e.id"
         :frozen-at="PREVIEW_AT"
         @click="expression = e.id"
+      />
+    </div>
+
+    <h2 class="mt-5 text-sm font-semibold">{{ t('panel.eyes') }}</h2>
+    <div class="mt-2 grid grid-cols-4 gap-1.5">
+      <BotTile
+        v-for="y in EYE_STYLES"
+        :key="y.id"
+        :label="t(`eyes.${y.id}`)"
+        :selected="y.id === eyeStyle"
+        :shape="shape"
+        :color="color"
+        :expression="expression"
+        :eye-style="y.id"
+        :frozen-at="PREVIEW_AT"
+        @click="eyeStyle = y.id"
       />
     </div>
 

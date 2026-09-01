@@ -49,9 +49,22 @@ The verified traps that must not be "corrected" are listed in
 [docs/measurements.md](docs/measurements.md). Read it before touching a number in
 `src/bot/`.
 
-One deliberate exception: **`--ink` (`styles.css`) is the interface colour, chosen,
-not measured**, a night blue. The video's black is the bot's, in `skins.ts`
-(`encre`, `#0a0a0c`). Retouching one doesn't touch the other.
+Two deliberate exceptions, and they are the only ones:
+
+- **`--ink` (`styles.css`) is the interface colour, chosen, not measured**, a night
+  blue. The video's black is the bot's, in `skins.ts` (`encre`, `#0a0a0c`).
+  Retouching one doesn't touch the other.
+- **`EYE_W` and `EYE_H` (`face.ts`) are ours, chosen** — a circle, where the video
+  measured a 1:2.2 vertical slot. That is Phase 2 of the plan doing what it is for:
+  the eye is the part of the character we are deliberately leaving, and a slot
+  cannot hold an iris. Everything else in `face.ts` — the sphere model, `REST_GAZE`,
+  `EYE_SPLIT`, the blink timings — is still measured and still holds.
+
+**A measurement fixture must not read a shipped constant.** `face.test.ts` had the
+rest eye's dimensions as `w: EYE_W, h: EYE_H` where its two sibling fixtures used
+literals. The two coincided only while our eye was the reference's, and the test
+broke the moment they parted — reporting a failure of the sphere model, which was
+fine, instead of a divergence we had chosen. A fixture records what the video showed.
 
 ## Invariants worth knowing before editing
 
@@ -207,9 +220,13 @@ which is exactly what it failed to do the first time: the card still announced
 `index.html` described a card that did not exist. Rasterise with
 `rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png`.
 
-`public/favicon.svg` is not an approximation: its circle and **both eye matrices**
-are what `engine.sample(1)` returns for `idle`, byte for byte. `favicon.ico` and
-`apple-touch-icon.png` are rasterised from it.
+`public/favicon.svg` is not an approximation: its circle, **both eye matrices and
+both eye paths** are what `engine.sample(1)` returns for `idle`, byte for byte. The
+matrices survive a change of eye SIZE — they carry the tangent frame, not the
+dimensions — so check the `d` too when `EYE_W`/`EYE_H` move; that is what went stale
+when the eye became round. `favicon.ico` (three PNGs, 16/32/48) and
+`apple-touch-icon.png` (180) are rasterised from it, and the dark-mode block has to
+come out first or the rasteriser bakes whichever scheme it happens to prefer.
 
 `docs/shapes.svg` and `docs/eyes.svg` are the contact sheets, both written by
 `pnpm board` (`tools/board.ts`). They are the art-direction gates — every shape at

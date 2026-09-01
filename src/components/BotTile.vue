@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BloubBot from '@/components/BloubBot.vue'
 import { DEFAULT_EXPRESSION } from '@/bot/expressions'
+import { DEFAULT_EYE_STYLE } from '@/bot/eyes'
 import { DEFAULT_COLOR, DEFAULT_SHAPE } from '@/bot/skins'
 import type { StateId } from '@/bot/states'
 
@@ -22,6 +23,7 @@ withDefaults(
     shape?: string
     color?: string
     expression?: string
+    eyeStyle?: string
     size?: number
   }>(),
   {
@@ -29,6 +31,7 @@ withDefaults(
     shape: DEFAULT_SHAPE,
     color: DEFAULT_COLOR,
     expression: DEFAULT_EXPRESSION,
+    eyeStyle: DEFAULT_EYE_STYLE,
     size: 60
   }
 )
@@ -48,6 +51,7 @@ withDefaults(
       :shape="shape"
       :color="color"
       :expression="expression"
+      :eye-style="eyeStyle"
       :frozen-at="frozenAt"
     />
     <!-- 12 px : en dessous, une legende n'est plus lisible pour tout le monde -->

@@ -27,7 +27,8 @@ const en: typeof fr = {
     animations: 'Animation',
     shape: 'Shape',
     expression: 'Expression',
-    color: 'Colour'
+    color: 'Colour',
+    eyes: 'Eyes'
   },
 
   export: {
@@ -151,6 +152,14 @@ const en: typeof fr = {
     fleur: 'Flower',
     gemme: 'Gem',
     losange: 'Diamond'
+  },
+
+  eyes: {
+    fente: 'Plain',
+    iris: 'Iris',
+    bille: 'Bead',
+    point: 'Dot',
+    reflet: 'Glint'
   },
 
   colors: {

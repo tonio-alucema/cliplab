@@ -246,6 +246,7 @@ export interface ReglagesBot {
   shape: string
   color: string
   expression: string
+  eyeStyle: string
 }
 
 /**

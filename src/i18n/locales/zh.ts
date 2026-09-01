@@ -32,7 +32,8 @@ const zh: typeof fr = {
     animations: '动画',
     shape: '形状',
     expression: '表情',
-    color: '颜色'
+    color: '颜色',
+    eyes: '眼睛'
   },
 
   export: {
@@ -154,6 +155,14 @@ const zh: typeof fr = {
     fleur: '花朵',
     gemme: '宝石',
     losange: '菱形'
+  },
+
+  eyes: {
+    fente: '纯色',
+    iris: '虹膜',
+    bille: '珠子',
+    point: '圆点',
+    reflet: '高光'
   },
 
   colors: {

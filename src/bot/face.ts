@@ -19,9 +19,21 @@ type Vec3 = [number, number, number]
 
 /** Demi-ecart des yeux sur la sphere, en degres (separation totale ~31deg). */
 export const EYE_SPLIT = 15.46
-/** Taille de l'oeil au repos, en unites de rayon de boule. */
-export const EYE_W = 0.186
-export const EYE_H = 0.412
+/**
+ * Taille de l'oeil au repos, en unites de rayon de boule.
+ *
+ * CHOISIE, pas mesuree — et c'est la difference qui compte. La video donnait
+ * 0,186 x 0,412, une fente verticale de rapport 1:2,2 : c'est l'anatomie du bot
+ * de reference, pas la notre, et elle ne laissait rien voir a l'interieur de
+ * l'oeil. Un oeil ROND porte un iris ; une fente ne porte qu'elle-meme.
+ *
+ * Rond au sens strict (w = h) : `capsulePath` rend alors un cercle exact, son
+ * rayon de coin valant la demi-largeur. Les seize expressions gardent leurs
+ * propres proportions, c'est le REPOS qui change ici — et avec lui le defaut de
+ * tous les etats qui ne redefinissent pas leurs yeux.
+ */
+export const EYE_W = 0.3
+export const EYE_H = 0.3
 
 /** Orientation de tete au repos, ajustee sur les frames de reference. */
 export const REST_GAZE: HeadGaze = { yaw: 28.49, pitch: 28.62, roll: -13 }

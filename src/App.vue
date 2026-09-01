@@ -53,6 +53,7 @@ import {
   totalDuration,
   type Cycle
 } from '@/bot/cycles'
+import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
 import { DEFAULT_EXPRESSION, EXPRESSION_BY_ID } from '@/bot/expressions'
 import { COLOR_BY_ID, DEFAULT_COLOR, DEFAULT_SHAPE, SHAPE_BY_ID } from '@/bot/skins'
 import { POSES, SEQUENCE, STATES, type StateId } from '@/bot/states'
@@ -440,6 +441,7 @@ const droite = computed(() => !nue.value && view.value !== 'reglages')
 
 const shape = ref(stored('forme', DEFAULT_SHAPE, (v) => SHAPE_BY_ID.has(v)))
 const color = ref(stored('couleur', DEFAULT_COLOR, (v) => COLOR_BY_ID.has(v)))
+const eyeStyle = ref(stored('yeux', DEFAULT_EYE_STYLE, (v) => EYE_STYLE_BY_ID.has(v)))
 const expression = ref(
   stored('expression', DEFAULT_EXPRESSION, (v) => EXPRESSION_BY_ID.has(v))
 )
@@ -447,6 +449,7 @@ const expression = ref(
 watch(shape, (v) => ecris('forme', v))
 watch(color, (v) => ecris('couleur', v))
 watch(expression, (v) => ecris('expression', v))
+watch(eyeStyle, (v) => ecris('yeux', v))
 
 /**
  * Nom du produit, en capitales pour le grand mot du pied de page. PAS traduit —
@@ -598,7 +601,12 @@ async function exporteCycle() {
   const images = cycleImages(totalDuration(blocs), format)
   const pas = cyclePas(format)
   const taille = CYCLE_TAILLE[format]
-  const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+  const reglages = {
+    shape: shape.value,
+    color: color.value,
+    expression: expression.value,
+    eyeStyle: eyeStyle.value
+  }
   const suit = (fait: number, total: number) => (avancementCycle.value = fait / total)
 
   avancementCycle.value = 0
@@ -687,11 +695,21 @@ async function exporte(id: ActionId, confirme = false) {
     if (action.mode === 'anime') {
       // L'animation ne part PAS du SVG affiche : elle est rejouee depuis le debut
       // sur une instance hors ecran. Cf. `sequenceDuBot`.
-      const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+      const reglages = {
+        shape: shape.value,
+        color: color.value,
+        expression: expression.value,
+        eyeStyle: eyeStyle.value
+      }
       telecharge(await versSvgAnime(reglages, action.taille, ANIM_IMAGES, ANIM_PAS), nom())
       etatExport.value = 'exporte'
     } else if (action.mode === 'gif') {
-      const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+      const reglages = {
+        shape: shape.value,
+        color: color.value,
+        expression: expression.value,
+        eyeStyle: eyeStyle.value
+      }
       const fond = couleurDeFond(fondGif.value)
       telecharge(await versGifAnime(reglages, action.taille, GIF_IMAGES, GIF_PAS, fond), nom())
       etatExport.value = 'exporte'
@@ -757,6 +775,7 @@ watch(
           :shape="shape"
           :color="color"
           :expression="expression"
+          :eye-style="eyeStyle"
           :frozen-at="POSES[s.id]"
         />
         <figcaption class="text-xs text-[var(--muted)]">{{ t(`states.${s.id}`) }}</figcaption>
@@ -875,6 +894,7 @@ watch(
             :shape="forme"
             :color="color"
             :expression="humeur ?? expression"
+            :eye-style="eyeStyle"
             :follow="view === 'reglages'"
             :gaze="intro ? INTRO_GAZE : null"
           />
@@ -963,6 +983,7 @@ watch(
               :shape="shape"
               :color="color"
               :expression="expression"
+              :eye-style="eyeStyle"
               :frozen-at="POSES[s.id]"
               @click="addBlock(s.id)"
             />
@@ -975,6 +996,7 @@ watch(
             v-model:shape="shape"
             v-model:color="color"
             v-model:expression="expression"
+            v-model:eye-style="eyeStyle"
           />
         </template>
       </aside>
@@ -1001,6 +1023,7 @@ watch(
       :shape="shape"
       :color="color"
       :expression="expression"
+      :eye-style="eyeStyle"
       @seek="onSeek"
       @preview="preview = true"
         @exporter="dialogueCycle = true"

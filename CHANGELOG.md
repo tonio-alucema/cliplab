@@ -7,10 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The rest eye is a circle, and it is ours.** `EYE_W`/`EYE_H` were the video's
+  0.186 x 0.412 vertical slot; they are now 0.30 x 0.30, chosen rather than measured —
+  a slot cannot hold an iris. The sixteen expressions keep their own proportions, so
+  tilts stay as legible as before. `public/favicon.svg` and its rasterisations follow.
+- **An Eyes section in the customiser**, kept with your shape, colour and expression.
 - **Layered eyes** (`src/bot/eyes.ts`): a sclera that is still a hole, with iris, pupil and
-  highlight painted behind the body and revealed through it. Four styles so far — `fente`
-  (the original flat slot, and still the default, so nothing changes on screen until one is
-  picked), `optique`, `gemme`, `vinyle`. `docs/eyes.svg` shows them across six expressions.
+  highlight painted behind the body and revealed through it. Five styles so far, all built on
+  one idea — an iris in a circle: `fente` (no layers, still the default), `iris`, `bille`,
+  `point`, `reflet`. `docs/eyes.svg` shows them across six expressions.
 
 ### Changed
 

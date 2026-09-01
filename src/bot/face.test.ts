@@ -16,11 +16,19 @@ const MESURES: Array<{
   yeux: Array<{ x: number; y: number; court: number; long: number }>
 }> = [
   {
+    /*
+     * 0,186 x 0,412 EN DUR, comme les deux mesures suivantes, et plus `EYE_W` /
+     * `EYE_H` : une mesure enregistre ce que la video montrait, pas ce que nous
+     * expedions. Les deux ont coincide tant que l'oeil au repos etait celui de
+     * la reference ; ils ont divergé quand il est devenu rond, et le test s'est
+     * mis a echouer alors que le MODELE, lui, etait toujours juste. C'est le
+     * modele de sphere qu'on verifie ici, pas notre anatomie.
+     */
     nom: 'repos',
     gaze: REST_GAZE,
     split: EYE_SPLIT,
-    w: EYE_W,
-    h: EYE_H,
+    w: 0.186,
+    h: 0.412,
     yeux: [
       { x: 0.189, y: -0.412, court: 0.178, long: 0.39 },
       { x: 0.614, y: -0.51, court: 0.12, long: 0.395 }

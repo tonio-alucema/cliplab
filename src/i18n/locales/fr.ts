@@ -44,7 +44,8 @@ export default {
     animations: 'Animation',
     shape: 'Forme',
     expression: 'Expression',
-    color: 'Couleur'
+    color: 'Couleur',
+    eyes: 'Yeux'
   },
 
   /**
@@ -176,6 +177,14 @@ export default {
     fleur: 'Fleur',
     gemme: 'Gemme',
     losange: 'Losange'
+  },
+
+  eyes: {
+    fente: 'Uni',
+    iris: 'Iris',
+    bille: 'Bille',
+    point: 'Point',
+    reflet: 'Reflet'
   },
 
   colors: {
