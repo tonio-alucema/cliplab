@@ -10,6 +10,7 @@ import {
   EXPRESSION_BY_ID
 } from '@/bot/expressions'
 import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
+import { DEFAULT_RELIEF, RELIEF_BY_ID } from '@/bot/relief'
 import {
   COLOR_BY_ID,
   DEFAULT_COLOR,
@@ -32,6 +33,8 @@ const props = withDefaults(
     expression?: string
     /** identifiant de style d'oeil : couches internes revelees par le trou */
     eyeStyle?: string
+    /** identifiant de rendu du corps : volume ou aplat. N'affecte QUE le degrade */
+    relief?: string
     /** couleur du fond, utilisee pour la brume de profondeur des particules */
     paper?: string
     /**
@@ -65,6 +68,7 @@ const props = withDefaults(
     color: DEFAULT_COLOR,
     expression: DEFAULT_EXPRESSION,
     eyeStyle: DEFAULT_EYE_STYLE,
+    relief: DEFAULT_RELIEF,
     paper: '#f9f9f9',
     frozenAt: undefined,
     cycle: () => defaultCycle().blocks,
@@ -110,10 +114,18 @@ const shapeRadii = computed(() => SHAPE_BY_ID.get(props.shape)?.radii ?? null)
 const ink = computed(() => COLOR_BY_ID.get(props.color)?.hex ?? '#0a0a0c')
 const expression = computed(() => EXPRESSION_BY_ID.get(props.expression) ?? null)
 const eyeStyle = computed(() => EYE_STYLE_BY_ID.get(props.eyeStyle) ?? null)
+const reliefForce = computed(() => RELIEF_BY_ID.get(props.relief)?.force ?? 1)
 /** Y a-t-il quoi que ce soit a peindre derriere le corps ? */
 const yeuxEnCouches = computed(() => (eyeStyle.value?.layers.length ?? 0) > 0)
 
-const engine = new BotEngine(R, state.value, shapeRadii.value, expression.value, eyeStyle.value)
+const engine = new BotEngine(
+  R,
+  state.value,
+  shapeRadii.value,
+  expression.value,
+  eyeStyle.value,
+  reliefForce.value
+)
 const frame = shallowRef<BotFrame>(engine.sample(props.frozenAt ?? 0))
 const uid = Math.random().toString(36).slice(2, 8)
 const maskId = `bot-mask-${uid}`
@@ -436,9 +448,14 @@ watch(shapeRadii, (radii) => {
   redrawFrozen()
 })
 
-// Pas de date : le style ne morphe pas, cf. `setEyeStyle`.
+// Pas de date : ni le style ni le relief ne morphent, cf. `setEyeStyle`.
 watch(eyeStyle, (style) => {
   engine.setEyeStyle(style)
+  redrawFrozen()
+})
+
+watch(reliefForce, (force) => {
+  engine.setRelief(force)
   redrawFrozen()
 })
 

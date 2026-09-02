@@ -54,6 +54,7 @@ import {
   type Cycle
 } from '@/bot/cycles'
 import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
+import { DEFAULT_RELIEF, RELIEF_BY_ID } from '@/bot/relief'
 import { DEFAULT_EXPRESSION, EXPRESSION_BY_ID } from '@/bot/expressions'
 import { COLOR_BY_ID, DEFAULT_COLOR, DEFAULT_SHAPE, SHAPE_BY_ID } from '@/bot/skins'
 import { POSES, SEQUENCE, STATES, type StateId } from '@/bot/states'
@@ -442,6 +443,7 @@ const droite = computed(() => !nue.value && view.value !== 'reglages')
 const shape = ref(stored('forme', DEFAULT_SHAPE, (v) => SHAPE_BY_ID.has(v)))
 const color = ref(stored('couleur', DEFAULT_COLOR, (v) => COLOR_BY_ID.has(v)))
 const eyeStyle = ref(stored('yeux', DEFAULT_EYE_STYLE, (v) => EYE_STYLE_BY_ID.has(v)))
+const relief = ref(stored('relief', DEFAULT_RELIEF, (v) => RELIEF_BY_ID.has(v)))
 const expression = ref(
   stored('expression', DEFAULT_EXPRESSION, (v) => EXPRESSION_BY_ID.has(v))
 )
@@ -450,6 +452,7 @@ watch(shape, (v) => ecris('forme', v))
 watch(color, (v) => ecris('couleur', v))
 watch(expression, (v) => ecris('expression', v))
 watch(eyeStyle, (v) => ecris('yeux', v))
+watch(relief, (v) => ecris('relief', v))
 
 /**
  * Nom du produit, en capitales pour le grand mot du pied de page. PAS traduit —
@@ -605,7 +608,8 @@ async function exporteCycle() {
     shape: shape.value,
     color: color.value,
     expression: expression.value,
-    eyeStyle: eyeStyle.value
+    eyeStyle: eyeStyle.value,
+    relief: relief.value
   }
   const suit = (fait: number, total: number) => (avancementCycle.value = fait / total)
 
@@ -699,7 +703,8 @@ async function exporte(id: ActionId, confirme = false) {
         shape: shape.value,
         color: color.value,
         expression: expression.value,
-        eyeStyle: eyeStyle.value
+        eyeStyle: eyeStyle.value,
+        relief: relief.value
       }
       telecharge(await versSvgAnime(reglages, action.taille, ANIM_IMAGES, ANIM_PAS), nom())
       etatExport.value = 'exporte'
@@ -708,7 +713,8 @@ async function exporte(id: ActionId, confirme = false) {
         shape: shape.value,
         color: color.value,
         expression: expression.value,
-        eyeStyle: eyeStyle.value
+        eyeStyle: eyeStyle.value,
+        relief: relief.value
       }
       const fond = couleurDeFond(fondGif.value)
       telecharge(await versGifAnime(reglages, action.taille, GIF_IMAGES, GIF_PAS, fond), nom())
@@ -776,6 +782,7 @@ watch(
           :color="color"
           :expression="expression"
           :eye-style="eyeStyle"
+          :relief="relief"
           :frozen-at="POSES[s.id]"
         />
         <figcaption class="text-xs text-[var(--muted)]">{{ t(`states.${s.id}`) }}</figcaption>
@@ -895,6 +902,7 @@ watch(
             :color="color"
             :expression="humeur ?? expression"
             :eye-style="eyeStyle"
+            :relief="relief"
             :follow="view === 'reglages'"
             :gaze="intro ? INTRO_GAZE : null"
           />
@@ -984,6 +992,7 @@ watch(
               :color="color"
               :expression="expression"
               :eye-style="eyeStyle"
+              :relief="relief"
               :frozen-at="POSES[s.id]"
               @click="addBlock(s.id)"
             />
@@ -997,6 +1006,7 @@ watch(
             v-model:color="color"
             v-model:expression="expression"
             v-model:eye-style="eyeStyle"
+            v-model:relief="relief"
           />
         </template>
       </aside>
@@ -1024,6 +1034,7 @@ watch(
       :color="color"
       :expression="expression"
       :eye-style="eyeStyle"
+      :relief="relief"
       @seek="onSeek"
       @preview="preview = true"
         @exporter="dialogueCycle = true"

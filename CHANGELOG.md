@@ -5,6 +5,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **A Shading toggle**, volume or flat, kept between visits and carried into exports. Flat
+  removes the gradient and nothing else: the eyes stay on their sphere, keep their depth
+  compression and still share the head's orientation with the body. The pseudo-3D is
+  geometry, so it survives the flat shader — a test holds every field but `shade` equal
+  between the two.
+
 ### Changed
 
 - **The roster is two shapes: `dome` and a standing `capsule`.** Sixteen went, and the

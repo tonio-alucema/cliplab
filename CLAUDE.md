@@ -127,6 +127,11 @@ Details and the reasoning behind each are in [docs/](docs/):
 - **The eye style does not morph.** Its layers change in number and colour between
   styles, and there is nothing sensible to interpolate between "three discs" and
   "two". `setEyeStyle` takes no date, unlike `setShape` and `setExpression`.
+- **Flat shading removes the SHADER, never the 3D.** That distinction is the whole
+  contract of the Shading toggle: the pseudo-3D lives in the geometry — eyes on a
+  sphere, their depth compression, the head orientation body and face share — and
+  none of it moves when the gradient goes. A frame rendered at `relief: 0` is equal
+  to one at `relief: 1` in every field but `shade`, and a test asserts exactly that.
 - **The body's relief follows the SAME `HeadGaze` as the eyes** (`relief.ts`). That
   shared frame is the whole cue: a gradient pointed anywhere else reads as a stain,
   not as a form. It reads the composite gaze and not the nominal pose, so it moves

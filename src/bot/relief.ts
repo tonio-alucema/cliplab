@@ -34,6 +34,33 @@ const ETENDUE = 1.25
 export const RELIEF_CLAIR = 0.16
 export const RELIEF_SOMBRE = 0.28
 
+/**
+ * Les deux rendus proposes. C'est un choix de SHADER, pas de modele : le volume
+ * pseudo-3D vit dans la geometrie — les yeux sur une sphere, leur compression de
+ * profondeur, l'orientation de tete que le corps et le visage partagent — et rien
+ * de tout cela ne bouge quand on passe a plat. Seul le degrade s'en va.
+ *
+ * Un catalogue et pas un booleen, pour la meme raison que les styles d'oeil : les
+ * identifiants sont enumeres, donc la couche i18n verifie a la compilation que
+ * chacun a son libelle dans les trois langues. Et une troisieme intensite se
+ * range ici sans toucher a une seule signature.
+ */
+export type ReliefId = 'volume' | 'plat'
+
+export interface ReliefMode {
+  id: ReliefId
+  /** multiplie `RELIEF_CLAIR` et `RELIEF_SOMBRE` ; 0 = aplat */
+  force: number
+}
+
+export const RELIEFS: ReliefMode[] = [
+  { id: 'volume', force: 1 },
+  { id: 'plat', force: 0 }
+]
+
+export const RELIEF_BY_ID = new Map<string, ReliefMode>(RELIEFS.map((r) => [r.id, r]))
+export const DEFAULT_RELIEF = 'volume'
+
 export interface BodyShade {
   /** centre du degrade, en unites de viewBox */
   cx: number

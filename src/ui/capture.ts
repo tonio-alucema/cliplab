@@ -247,6 +247,7 @@ export interface ReglagesBot {
   color: string
   expression: string
   eyeStyle: string
+  relief: string
 }
 
 /**

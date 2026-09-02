@@ -28,7 +28,8 @@ const en: typeof fr = {
     shape: 'Shape',
     expression: 'Expression',
     color: 'Colour',
-    eyes: 'Eyes'
+    eyes: 'Eyes',
+    relief: 'Shading'
   },
 
   export: {
@@ -136,6 +137,11 @@ const en: typeof fr = {
   shapes: {
     dome: 'Dome',
     capsule: 'Capsule'
+  },
+
+  relief: {
+    volume: 'Volume',
+    plat: 'Flat'
   },
 
   eyes: {

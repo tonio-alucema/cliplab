@@ -45,7 +45,8 @@ export default {
     shape: 'Forme',
     expression: 'Expression',
     color: 'Couleur',
-    eyes: 'Yeux'
+    eyes: 'Yeux',
+    relief: 'Rendu'
   },
 
   /**
@@ -161,6 +162,11 @@ export default {
   shapes: {
     dome: 'Dôme',
     capsule: 'Capsule'
+  },
+
+  relief: {
+    volume: 'Volume',
+    plat: 'Aplat'
   },
 
   eyes: {

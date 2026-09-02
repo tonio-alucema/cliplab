@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BotEngine } from './engine'
 import { EYE_STYLE_BY_ID } from './eyes'
 import { REST_GAZE } from './face'
-import { shadeFor } from './relief'
+import { DEFAULT_RELIEF, RELIEFS, RELIEF_BY_ID, shadeFor } from './relief'
 
 const R = 100
 const style = EYE_STYLE_BY_ID.get('iris')!
@@ -56,6 +56,36 @@ describe('relief du corps', () => {
       for (const v of [s.cx, s.cy, s.r, s.lift, s.drop]) expect(Number.isFinite(v)).toBe(true)
       expect(s.r).toBeGreaterThan(0)
     }
+  })
+
+  /**
+   * Ce que le basculement doit garantir, et la seule chose qu'il garantit : passer
+   * a plat retire le SHADER, pas la 3D.
+   *
+   * Les yeux restent sur leur sphere, gardent leur compression de profondeur et
+   * suivent la meme orientation de tete ; le corps garde son chemin. Autrement
+   * dit, tout ce qui fait le volume pseudo-3D est GEOMETRIQUE et survit a l'aplat.
+   * Une image rendue avec et sans doit donc etre identique partout sauf `shade`.
+   */
+  it('a plat, seul le degrade disparait : la geometrie ne bouge pas', () => {
+    const volume = new BotEngine(R, 'idle', null, null, style, 1)
+    const plat = new BotEngine(R, 'idle', null, null, style, 0)
+    for (const t of [0, 0.7, 1.45, 2.6, 4.1]) {
+      const a = volume.sample(t)
+      const b = plat.sample(t)
+      expect(b.shade).toBeNull()
+      expect(a.shade).not.toBeNull()
+      // tout le reste, au byte
+      expect({ ...b, shade: null }).toEqual({ ...a, shade: null })
+    }
+  })
+
+  /** Et les deux modes du catalogue sont bien ces deux-la. */
+  it('le catalogue offre un volume et un aplat, et le defaut existe', () => {
+    expect(RELIEF_BY_ID.get(DEFAULT_RELIEF)).toBeDefined()
+    expect(RELIEFS.map((r) => r.id).sort()).toEqual(['plat', 'volume'])
+    expect(RELIEF_BY_ID.get('plat')!.force).toBe(0)
+    expect(RELIEF_BY_ID.get('volume')!.force).toBeGreaterThan(0)
   })
 
   it('ne rend pas le moteur non rejouable', () => {

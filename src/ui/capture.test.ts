@@ -20,7 +20,7 @@ import { DEMI_ECRAN, viewBoxExport } from './export'
  * silencieusement chaque video exportee.
  */
 
-const REGLAGES = { shape: 'dome', color: 'encre', expression: 'neutre', eyeStyle: 'iris' }
+const REGLAGES = { shape: 'dome', color: 'encre', expression: 'neutre', eyeStyle: 'iris', relief: 'volume' }
 const TAILLE = 128
 
 /** Le `d` du corps, tel que le composant l'a mis dans le masque. */
