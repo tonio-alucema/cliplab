@@ -159,24 +159,8 @@ export default {
   },
 
   shapes: {
-    cercle: 'Cercle',
-    galet: 'Galet',
-    squircle: 'Squircle',
-    capsule: 'Capsule',
-    triangle: 'Triangle',
-    hexagone: 'Hexagone',
-    nuage: 'Nuage',
-    goutte: 'Goutte',
-    oeuf: 'Œuf',
-    poire: 'Poire',
-    fuseau: 'Fuseau',
-    tonneau: 'Tonneau',
     dome: 'Dôme',
-    haricot: 'Haricot',
-    trefle: 'Trèfle',
-    fleur: 'Fleur',
-    gemme: 'Gemme',
-    losange: 'Losange'
+    capsule: 'Capsule'
   },
 
   eyes: {

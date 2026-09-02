@@ -205,8 +205,8 @@ describe('nettoyage du markup', () => {
 
 describe('nom de fichier', () => {
   it('se construit sur les ids et pas sur les libelles', () => {
-    expect(nomFichier('goutte', 'neutre', 'encre', 'png')).toBe('cliplab-goutte-neutre-encre.png')
-    expect(nomFichier('cercle', 'hilare', 'violet', 'svg')).toBe('cliplab-cercle-hilare-violet.svg')
+    expect(nomFichier('capsule', 'neutre', 'encre', 'png')).toBe('cliplab-capsule-neutre-encre.png')
+    expect(nomFichier('dome', 'hilare', 'violet', 'svg')).toBe('cliplab-dome-hilare-violet.svg')
   })
 
   /*

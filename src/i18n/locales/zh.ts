@@ -137,24 +137,8 @@ const zh: typeof fr = {
   },
 
   shapes: {
-    cercle: '圆形',
-    galet: '卵石',
-    squircle: '圆角方形',
-    capsule: '胶囊',
-    triangle: '三角形',
-    hexagone: '六边形',
-    nuage: '云朵',
-    goutte: '水滴',
-    oeuf: '蛋形',
-    poire: '梨形',
-    fuseau: '纺锤',
-    tonneau: '桶形',
     dome: '穹顶',
-    haricot: '豆形',
-    trefle: '三叶草',
-    fleur: '花朵',
-    gemme: '宝石',
-    losange: '菱形'
+    capsule: '胶囊'
   },
 
   eyes: {

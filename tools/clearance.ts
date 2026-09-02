@@ -8,7 +8,7 @@
  */
 import { BotEngine, type RenderedEye } from '@/bot/engine'
 import { EXPRESSIONS } from '@/bot/expressions'
-import { SHAPES } from '@/bot/skins'
+import { CERCLE, SHAPES } from '@/bot/skins'
 import { STATES } from '@/bot/states'
 
 const R = 100
@@ -57,14 +57,13 @@ function contourDeLOeil(eye: RenderedEye, N = 32) {
 
 const CORPS_DE_BASE = STATES.filter((s) => s.baseBody).map((s) => s.id)
 
-console.log('forme       marge min (u)   ou')
-const lignes: Array<[string, number, string]> = []
-for (const forme of SHAPES) {
+/** Marge minimale d'une forme, et la combinaison ou elle tombe. */
+function mesure(radii: number[]): [number, string] {
   let pire = Infinity
   let ou = ''
   for (const state of CORPS_DE_BASE) {
     for (const expr of [null, ...EXPRESSIONS]) {
-      const e = new BotEngine(R, state, forme.radii, expr)
+      const e = new BotEngine(R, state, radii, expr)
       for (let i = 0; i < 60; i++) {
         const f = e.sample(i / 20)
         const corps = contourDuCorps(f.bodyPath)
@@ -80,11 +79,23 @@ for (const forme of SHAPES) {
       }
     }
   }
-  lignes.push([forme.id, pire, ou])
+  return [pire, ou]
 }
-const ref = lignes.find((l) => l[0] === 'cercle')![1]
+
+console.log('forme       marge min (u)   ou')
+const lignes: Array<[string, number, string]> = SHAPES.map((f) => {
+  const [m, ou] = mesure(f.radii)
+  return [f.id, m, ou]
+})
+/* La reference est le CERCLE, qui n'est plus au catalogue mais reste le corps
+   neutre : c'est la marge dont il faut se rapprocher, pas une forme a proposer. */
+const ref = mesure(CERCLE)[0]
 for (const [id, m, ou] of lignes.sort((a, b) => a[1] - b[1])) {
-  const drapeau = m < ref * 0.55 ? '  <-- rase le bord' : ''
+  /* Seuil ABSOLU et non une fraction du cercle : la reference bouge avec l'oeil
+     et la pose, alors que ce qu'on sait est absolu — la capsule couchee expediee
+     jusqu'ici tenait a 4,79 u et passait, les debordements corriges valaient de
+     3,3 a 14,5 u. En dessous de 4,5 on est en terrain inconnu. */
+  const drapeau = m < 4.5 ? '  <-- rase le bord' : ''
   console.log(`${id.padEnd(11)} ${m.toFixed(2).padStart(8)}   ${ou}${drapeau}`)
 }
-console.log(`\ncercle (reference) = ${ref.toFixed(2)} u`)
+console.log(`\ncercle (reference, hors catalogue) = ${ref.toFixed(2)} u`)

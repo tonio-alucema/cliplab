@@ -1,11 +1,5 @@
 import { PROFILE_SAMPLES } from './profiles'
-import {
-  hullOfCircles,
-  profileFromPolygon,
-  regularPolygonProfile,
-  superellipseProfile,
-  unionOfCirclesProfile
-} from './shape'
+import { hullOfCircles, profileFromPolygon } from './shape'
 
 /**
  * Formes et couleurs proposees par le personnalisateur du bot.
@@ -24,25 +18,7 @@ import {
  * la cle existe). Un `as const` sur le tableau aurait le meme effet mais
  * rendrait `radii` en lecture seule, alors que le moteur le passe tel quel.
  */
-export type ShapeId =
-  | 'cercle'
-  | 'galet'
-  | 'squircle'
-  | 'capsule'
-  | 'triangle'
-  | 'hexagone'
-  | 'nuage'
-  | 'goutte'
-  | 'oeuf'
-  | 'poire'
-  | 'fuseau'
-  | 'tonneau'
-  | 'dome'
-  | 'haricot'
-  | 'trefle'
-  | 'fleur'
-  | 'gemme'
-  | 'losange'
+export type ShapeId = 'dome' | 'capsule'
 
 export interface BotShape {
   id: ShapeId
@@ -57,44 +33,18 @@ function normalize(radii: number[], max = 1): number[] {
   return radii.map((r) => r * k)
 }
 
-const ANGLES = Array.from({ length: PROFILE_SAMPLES }, (_, i) => (i / PROFILE_SAMPLES) * Math.PI * 2)
-
-/** Galet : cercle deforme par deux harmoniques basses, donc irregulier mais lisse. */
-const pebble = normalize(
-  ANGLES.map((a) => 1 + 0.075 * Math.cos(2 * a + 0.5) + 0.035 * Math.cos(3 * a + 2.1)),
-  1.02
-)
-
-/** Nuage : union de bosses, large en bas, deux lobes en haut. */
-const cloud = normalize(
-  unionOfCirclesProfile([
-    { x: -0.44, y: 0.2, r: 0.54 },
-    { x: 0.46, y: 0.2, r: 0.5 },
-    { x: 0.02, y: 0.3, r: 0.6 },
-    { x: -0.24, y: -0.3, r: 0.48 },
-    { x: 0.3, y: -0.24, r: 0.44 }
-  ]),
-  1.02
-)
-
-/** Goutte : gros disque en bas, pointe effilee en haut. */
-const droplet = normalize(
-  profileFromPolygon(hullOfCircles(0, 0.28, 0.66, 0, -0.96, 0.05), 0, 0),
-  1.04
-)
-
-/** Capsule couchee : enveloppe de deux disques cote a cote. */
-const capsule = profileFromPolygon(hullOfCircles(-0.42, 0, 0.62, 0.42, 0, 0.62), 0, 0)
-
-/* ------------------------------------------------------ formes a axe vertical
+/**
+ * Deux formes, et c'est un choix de casting plutot qu'une reduction.
  *
- * Elles ont toutes un HAUT et un BAS distincts, ce que les huit premieres
- * n'avaient qu'avec la goutte et le triangle. C'est ce que la phase 1 demande :
- * un axe lisible est ce qui donne au corps une orientation, donc un visage.
+ * Dix-huit formes faisaient un selecteur, pas un personnage : une identite tient
+ * a ce qu'on ecarte. Les deux gardees ont toutes deux un HAUT et un BAS nets,
+ * ce qui donne au corps une orientation et donc un visage — c'est ce qui manquait
+ * au cercle, au galet et au squircle, qui n'ont pas de sens de lecture.
  *
- * Rappel de contrainte : le rayon maximal de TOUTES les formes fixe le cadre
- * d'export (`RAYON_MAX`, `export.ts`). On reste donc sous 1,15, le pic actuel
- * du squircle — au-dela, chaque image exportee serait recadree.
+ * Le CERCLE reste malgre tout, hors catalogue : c'est le corps des etats releves
+ * sur la video, la cible du fondu, et la boule de l'arrivee (qui doit etre ronde
+ * le temps du tour, sinon les yeux sautent — cf. `docs/intro.md`). Il n'est
+ * simplement plus proposable.
  */
 
 /** Points d'un arc de cercle, en coordonnees ecran (y vers le bas). */
@@ -107,40 +57,17 @@ function arcPoints(cx: number, cy: number, r: number, de: number, a: number, pas
 
 const TOUR = Math.PI * 2
 
-/** Oeuf : enveloppe de deux disques inegaux, le petit en haut. */
-const egg = normalize(
-  profileFromPolygon(hullOfCircles(0, 0.24, 0.72, 0, -0.42, 0.46), 0, 0),
-  1.04
-)
-
 /**
- * Poire : trois disques alignes, decroissants vers le haut.
+ * Capsule DEBOUT : enveloppe de deux disques empiles.
  *
- * Une ENVELOPPE serait convexe et redonnerait un oeuf ; c'est l'union qui laisse
- * la taille se creuser, et c'est elle qui fait la poire.
+ * Debout et non couchee, contrairement a la version d'origine — une capsule
+ * couchee n'a pas de haut ni de bas, or c'est l'axe vertical qui donne au corps
+ * une orientation, donc un visage. Les deux disques sont ecartes de 0,42 et
+ * larges de 0,58 : le stade fait ainsi deux fois plus haut que large, ce qui le
+ * garde franchement debout sans l'etirer au point que les yeux flottent.
  */
-const pear = normalize(
-  unionOfCirclesProfile([
-    { x: 0, y: 0.34, r: 0.62 },
-    { x: 0, y: -0.02, r: 0.46 },
-    { x: 0, y: -0.42, r: 0.34 }
-  ]),
-  1.06
-)
-
-/**
- * Fuseau : superellipse d'exposant INFERIEUR a 2, donc a bouts pointus, etiree
- * en hauteur. n = 2 donnerait une ellipse, n > 2 un squircle.
- */
-const spindle = normalize(superellipseProfile(1.5, 0.68, 1.02), 1.06)
-
-/** Tonneau : trois disques empiles, donc des flancs bombes et des bouts plats. */
-const barrel = normalize(
-  unionOfCirclesProfile([
-    { x: 0, y: -0.28, r: 0.6 },
-    { x: 0, y: 0, r: 0.64 },
-    { x: 0, y: 0.28, r: 0.6 }
-  ]),
+const capsule = normalize(
+  profileFromPolygon(hullOfCircles(0, -0.42, 0.58, 0, 0.42, 0.58), 0, 0),
   1.04
 )
 
@@ -167,89 +94,25 @@ const dome = normalize(
 )
 
 /**
- * Haricot : quatre disques sur un arc ouvert vers le bas, donc un dos rond et un
- * ventre creuse.
+ * Le cercle, HORS catalogue mais toujours la.
  *
- * Les disques sont poses A LA MAIN et non sur un arc parametre : la premiere
- * version en calculait les centres, et les quatre se retrouvaient dans la moitie
- * HAUTE du cadre. Le profil, lu depuis l'origine, sortait donc court en haut et
- * l'oeil exterieur de `wide` passait au travers de 4,1 unites. Une forme lue en
- * r(theta) doit etre centree sur son origine, sinon elle est fausse a moitie.
+ * Ce n'est plus une forme proposable, c'est le corps NEUTRE : celui des etats
+ * releves sur la video, la cible des fondus, et la boule de l'arrivee, qui doit
+ * etre ronde le temps du tour sous peine de faire sauter les yeux. Passer `null`
+ * au moteur revient exactement a passer ceci — et un test le verifie, parce que
+ * c'est ce qui garantit que le catalogue ne deforme pas la reference.
  */
-const bean = normalize(
-  unionOfCirclesProfile([
-    { x: -0.44, y: 0.14, r: 0.5 },
-    { x: -0.15, y: -0.1, r: 0.56 },
-    { x: 0.15, y: -0.1, r: 0.56 },
-    { x: 0.44, y: 0.14, r: 0.5 }
-  ]),
-  1.05
-)
-
-/** Trefle : trois lobes a 120 degres, plus un coeur qui les relie. */
-const clover = normalize(
-  unionOfCirclesProfile([
-    { x: 0, y: 0, r: 0.52 },
-    ...[0, 1, 2].map((i) => {
-      const a = -Math.PI / 2 + (i / 3) * TOUR
-      return { x: Math.cos(a) * 0.46, y: Math.sin(a) * 0.46, r: 0.44 }
-    })
-  ]),
-  1.04
-)
-
-/** Fleur : six lobes PEU marques — creuses davantage, ils avalent les yeux. */
-const flower = normalize(
-  unionOfCirclesProfile([
-    { x: 0, y: 0, r: 0.68 },
-    ...Array.from({ length: 6 }, (_, i) => {
-      const a = -Math.PI / 2 + (i / 6) * TOUR
-      return { x: Math.cos(a) * 0.42, y: Math.sin(a) * 0.42, r: 0.36 }
-    })
-  ]),
-  1.03
-)
-
-/**
- * Gemme : octogone a chanfreins COURTS. C'est le meme constructeur que
- * l'hexagone, avec un rayon de coin cinq fois plus petit — ce qui separe une
- * pierre taillee d'un galet, c'est la nettete de l'arete, pas le nombre de cotes.
- * Tournee d'un demi-pas pour poser une facette a plat en haut.
- */
-const gem = regularPolygonProfile(8, 1.06, 0.07, -90 + 360 / 16)
-
-/** Losange : carre sur la pointe, coins juste adoucis. */
-const rhombus = regularPolygonProfile(4, 1.12, 0.15, -90)
+export const CERCLE: number[] = new Array(PROFILE_SAMPLES).fill(1)
 
 export const SHAPES: BotShape[] = [
-  { id: 'cercle', radii: new Array(PROFILE_SAMPLES).fill(1) },
-  { id: 'galet', radii: pebble },
-  // 1.15 et pas 1.02 : sur une superellipse le rayon maximal est la diagonale,
-  // donc normaliser dessus donne une forme qui parait plus petite que le cercle.
-  { id: 'squircle', radii: normalize(superellipseProfile(4.2), 1.15) },
-  { id: 'capsule', radii: capsule },
-  // -90deg : un sommet vers le haut de l'ecran (y est oriente vers le bas)
-  { id: 'triangle', radii: regularPolygonProfile(3, 1.12, 0.34, -90) },
-  // 0deg : sommets a gauche et a droite, donc aretes du haut et du bas plates
-  { id: 'hexagone', radii: regularPolygonProfile(6, 1.04, 0.26, 0) },
-  { id: 'nuage', radii: cloud },
-  { id: 'goutte', radii: droplet },
-  { id: 'oeuf', radii: egg },
-  { id: 'poire', radii: pear },
-  { id: 'fuseau', radii: spindle },
-  { id: 'tonneau', radii: barrel },
   { id: 'dome', radii: dome },
-  { id: 'haricot', radii: bean },
-  { id: 'trefle', radii: clover },
-  { id: 'fleur', radii: flower },
-  { id: 'gemme', radii: gem },
-  { id: 'losange', radii: rhombus }
+  { id: 'capsule', radii: capsule }
 ]
 
 // Map indexee par `string` et non par `ShapeId` : les appelants interrogent avec
 // une valeur relue du localStorage ou d'une prop, donc non validee.
 export const SHAPE_BY_ID = new Map<string, BotShape>(SHAPES.map((s) => [s.id, s]))
-export const DEFAULT_SHAPE = 'cercle'
+export const DEFAULT_SHAPE = 'dome'
 
 export type ColorId =
   | 'encre'

@@ -28,7 +28,7 @@ export function monte(hote: Element, o: Options = {}) {
   const eng = new BotEngine(
     RAYON,
     'idle',
-    SHAPE_BY_ID.get(o.forme ?? 'cercle')?.radii ?? null,
+    SHAPE_BY_ID.get(o.forme ?? 'dome')?.radii ?? null,
     EXPRESSION_BY_ID.get(o.expression ?? 'neutre') ?? null
   )
 

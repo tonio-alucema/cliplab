@@ -5,6 +5,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The roster is two shapes: `dome` and a standing `capsule`.** Sixteen went, and the
+  capsule was turned upright — a lying capsule has no top or bottom, and it is the vertical
+  axis that gives the body an orientation and so a face. `dome` is the new default. The
+  circle survives outside the catalogue as `CERCLE`: it is still the body of the measured
+  states, the target of fades, and the ball of the arrival.
+- **`public/favicon.svg` is generated** by `pnpm favicon` instead of transcribed. It had gone
+  stale four times in four changes to the anatomy, each time while still looking correct.
+
 ### Added
 
 - **The body reads as a volume** (`src/bot/relief.ts`), Phase 3's first cue: a soft

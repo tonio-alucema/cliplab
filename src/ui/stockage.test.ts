@@ -70,9 +70,9 @@ describe('garde du stockage', () => {
       getItem: (k: string) => tas.get(k) ?? null,
       setItem: (k: string, v: string) => void tas.set(k, v)
     })
-    ecris('forme', 'goutte')
-    expect(tas.get('cliplab:forme')).toBe('goutte')
-    expect(lis('forme')).toBe('goutte')
+    ecris('forme', 'capsule')
+    expect(tas.get('cliplab:forme')).toBe('capsule')
+    expect(lis('forme')).toBe('capsule')
     expect(lis('couleur')).toBeNull()
   })
 })

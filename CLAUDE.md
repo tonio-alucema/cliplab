@@ -150,6 +150,13 @@ Details and the reasoning behind each are in [docs/](docs/):
 - **Transitions are exponential ease-outs and the body never overshoots.** The one
   spring is the notification pop (`NOTIF_POP = 1.14`). There is deliberately no
   spring engine. A new bouncing effect belongs in the state that needs it.
+- **The catalogue is two shapes, and the circle is not one of them.** `dome` and
+  `capsule` (standing, not lying) both have a clear top and bottom, which is what
+  gives the body an orientation and therefore a face. The **circle still exists**,
+  exported as `CERCLE` but out of the catalogue: it is the body of the measured
+  states, the target of fades, and the ball of the arrival — which must be round
+  for the length of its turn or the eyes hop (`docs/intro.md`). Passing `null` to
+  the engine is exactly passing `CERCLE`, and a test holds that.
 - **Two sources of shapes, not to be mixed.** `profiles.ts` is generated from the
   video and drives the animated states; `skins.ts` holds the customiser's shapes,
   built analytically. A user's shape only replaces the body on `baseBody` states
@@ -240,13 +247,20 @@ which is exactly what it failed to do the first time: the card still announced
 `index.html` described a card that did not exist. Rasterise with
 `rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png`.
 
-`public/favicon.svg` is not an approximation: its circle, **both eye matrices and
-both eye paths** are what `engine.sample(1)` returns for `idle`, byte for byte. Its
-**fill is deliberately flat** where the app now carries a gradient — a decision, not
-an oversight. A flat silhouette stays crisp at 16–48 px where a gradient goes muddy,
-and the dark-mode inversion here is a single class swapping one `fill`, which a
-gradient can only follow by defining both and swapping the reference. Geometry
-tracks the engine; the fill does not. The
+`public/favicon.svg` is **written by `pnpm favicon`** (`tools/favicon.ts`) and must
+not be hand-edited. It went stale four times while it was transcribed — when the eye
+became round (the paths), when the iris arrived (the layers), when the rest pose
+changed (the matrices), when the catalogue lost the circle (the body) — and every
+time it still *looked* right, which is the dangerous kind. The eye matrices in
+particular survive a change of eye SIZE and do not survive a change of POSE.
+
+Two things about it are deliberately NOT the engine's. Its **fill is flat** where the
+app carries a gradient: a flat silhouette stays crisp at 16–48 px, and the dark-mode
+inversion is one class swapping one `fill`, which a gradient only follows by being
+defined twice. And its **frame is fitted to the body** rather than centred on the
+origin, because the dome is not centred there and an icon has no room for a fifth of
+empty space — the same distinction `DEMI_CADRE` makes in `export.ts`. Geometry comes
+from the engine; framing and fill are the icon's own. The
 matrices survive a change of eye SIZE — they carry the tangent frame, not the
 dimensions — so check the `d` too when `EYE_W`/`EYE_H` move; that is what went stale
 when the eye became round. `favicon.ico` (three PNGs, 16/32/48) and

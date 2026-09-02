@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BotEngine } from '@/bot/engine'
 import { EXPRESSIONS, EXPRESSION_BY_ID, type ExpressionId } from '@/bot/expressions'
-import { SHAPE_BY_ID } from '@/bot/skins'
+import { CERCLE } from '@/bot/skins'
 import { STATE_BY_ID } from '@/bot/states'
 import {
   HUMEURS,
@@ -15,7 +15,7 @@ import {
   type Aim
 } from './gaze'
 
-const cercle = () => SHAPE_BY_ID.get('cercle')!.radii
+const cercle = () => CERCLE
 
 /** Visee au repos : pointeur au centre du bot, demi-tour acheve. */
 const vise = (o: Partial<Aim> = {}): Aim => ({ nx: 0, ny: 0, tour: 1, pointer: true, ...o })

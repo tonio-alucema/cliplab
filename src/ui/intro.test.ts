@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { blockAt, minDurationOf, offsetOf } from '@/bot/cycles'
 import { BotEngine } from '@/bot/engine'
 import { EXPRESSION_BY_ID } from '@/bot/expressions'
-import { SHAPE_BY_ID } from '@/bot/skins'
+import { CERCLE, SHAPES } from '@/bot/skins'
 import { STATE_BY_ID } from '@/bot/states'
 import { TOUR_TIME, type GazeScript } from './gaze'
 import { INTRO, INTRO_GAZE, POSE_AT, introDue, type Arrivee } from './intro'
@@ -114,7 +114,7 @@ describe('montage de l arrivee', () => {
  * quelques lignes et suit `BloubBot.apply`.
  */
 describe('fluidite de l arrivee', () => {
-  const cercle = SHAPE_BY_ID.get('cercle')!.radii
+  const cercle = CERCLE
   const neutre = EXPRESSION_BY_ID.get('neutre')!
   const IMAGE = 1 / 60
 
@@ -193,8 +193,8 @@ describe('fluidite de l arrivee', () => {
    */
   it('un tour sur une forme non circulaire ferait sautiller les yeux', () => {
     /** Ordonnee de l'oeil interieur image par image, `NaN` quand il est cache. */
-    const trajectoire = (forme: string) => {
-      const m = new BotEngine(100, 'idle', SHAPE_BY_ID.get(forme)!.radii, neutre)
+    const trajectoire = (radii: number[]) => {
+      const m = new BotEngine(100, 'idle', radii, neutre)
       const ys: number[] = []
       for (let t = 0; t < TOUR_TIME; t += IMAGE) {
         m.setLook(INTRO_GAZE(t), t, IMAGE)
@@ -208,15 +208,20 @@ describe('fluidite de l arrivee', () => {
       return ys
     }
 
-    const rond = trajectoire('cercle')
-    const goutte = trajectoire('goutte')
-    let ecart = 0
-    for (let i = 0; i < rond.length; i++) {
-      if (Number.isNaN(rond[i]!) || Number.isNaN(goutte[i]!)) continue
-      ecart = Math.max(ecart, Math.abs(goutte[i]! - rond[i]!))
+    const rond = trajectoire(CERCLE)
+    const ecartDe = (radii: number[]) => {
+      const autre = trajectoire(radii)
+      let ecart = 0
+      for (let i = 0; i < rond.length; i++) {
+        if (Number.isNaN(rond[i]!) || Number.isNaN(autre[i]!)) continue
+        ecart = Math.max(ecart, Math.abs(autre[i]! - rond[i]!))
+      }
+      return ecart
     }
+    const ecarts = SHAPES.map((f) => [f.id, ecartDe(f.radii)] as const)
+    const pire = Math.max(...ecarts.map(([, e]) => e))
     // sur une boule de 100 de rayon : des dizaines de px, pas un ou deux
-    expect(ecart, `${ecart.toFixed(1)} px d ecart vertical avec le cercle`).toBeGreaterThan(15)
+    expect(pire, ecarts.map(([id, e]) => `${id} ${e.toFixed(1)}px`).join(', ')).toBeGreaterThan(15)
   })
 
   it('fait bien parcourir un tour aux yeux', () => {

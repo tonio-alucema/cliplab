@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BotEngine, type RenderedEye } from './engine'
 import { decalageDesYeux, POUR_TESTS } from './eyefit'
 import { EXPRESSIONS } from './expressions'
-import { DEFAULT_SHAPE, SHAPES, SHAPE_BY_ID } from './skins'
+import { CERCLE, DEFAULT_SHAPE, SHAPES, SHAPE_BY_ID } from './skins'
 import { STATES, type StateId } from './states'
 
 /**
@@ -153,9 +153,9 @@ describe('formes du personnalisateur', () => {
    * `public/favicon.svg`, dont les deux matrices d'yeux sont celles de `sample(1)` sur
    * `idle`, au byte.
    */
-  it('choisir le cercle rend exactement la meme chose que ne rien choisir', () => {
-    expect(DEFAULT_SHAPE).toBe('cercle')
-    const cercle = SHAPE_BY_ID.get('cercle')!.radii
+  it('le corps neutre rend exactement la meme chose que ne rien choisir', () => {
+    expect(SHAPE_BY_ID.get(DEFAULT_SHAPE)).toBeDefined()
+    const cercle = CERCLE
     for (const state of CORPS_DE_BASE) {
       for (const expr of [null, ...EXPRESSIONS]) {
         const avec = new BotEngine(R, state, cercle, expr).sample(1)
@@ -256,7 +256,7 @@ describe('formes du personnalisateur', () => {
       return { n, amplitude }
     }
 
-    const cercle = SHAPE_BY_ID.get('cercle')!.radii
+    const cercle = CERCLE
     const morphDeForme = (radii: number[]) =>
       allersRetours(
         trajectoire(() => {

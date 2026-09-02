@@ -38,8 +38,8 @@ only gate, so run `pnpm build` before you call something done.
 
 ## What's in it
 
-The rail on the left switches between three views. **Customise** offers 18 body
-shapes, 12 colours and 16 rest expressions, kept between visits. **Animations** is
+The rail on the left switches between three views. **Customise** offers 2 body
+shapes, 3 eye styles, 12 colours and 16 rest expressions, kept between visits. **Animations** is
 a small editor: arrange states into a timeline, set how long each is held, save the
 result. **Settings** holds the language (French, English or Chinese) and the
 credits.

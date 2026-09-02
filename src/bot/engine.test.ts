@@ -3,7 +3,7 @@ import { BotEngine } from './engine'
 import { radiusAtAngle } from './shape'
 import { EXPRESSION_BY_ID } from './expressions'
 import { REST_GAZE } from './face'
-import { SHAPE_BY_ID } from './skins'
+import { CERCLE, SHAPE_BY_ID } from './skins'
 import { SEQUENCE, STATES, type StateId } from './states'
 
 /** Points d'ancrage d'un path genere par closedPath (on ignore les controles). */
@@ -130,23 +130,27 @@ describe('forme personnalisee', () => {
 
   it('remplace la silhouette des etats au repos', () => {
     const rond = new BotEngine(100, 'idle')
-    const goutte = new BotEngine(100, 'idle', radii('goutte'))
+    const goutte = new BotEngine(100, 'idle', radii('dome'))
     expect(goutte.sample(1).bodyPath).not.toBe(rond.sample(1).bodyPath)
   })
 
   it('laisse intacts les etats qui dessinent leur propre forme', () => {
     for (const id of ['exclaim', 'alert', 'sleep', 'egg', 'hexagon'] as const) {
       const nu = new BotEngine(100, id)
-      const habille = new BotEngine(100, id, radii('goutte'))
+      const habille = new BotEngine(100, id, radii('dome'))
       expect(habille.sample(1).bodyPath).toBe(nu.sample(1).bodyPath)
     }
   })
 
   it('morphe vers la nouvelle forme au lieu de sauter', () => {
-    const e = new BotEngine(100, 'idle', radii('cercle'))
-    // le cercle fait 2.0 de haut, la capsule 1.24 : la hauteur est parlante
+    const e = new BotEngine(100, 'idle', CERCLE)
+    // le cercle fait 2.0 de haut, le dome est franchement plus bas : la hauteur
+    // est donc parlante. Elle est LUE et non ecrite en dur — une forme se
+    // retouche, et un test de morph n'a pas a tomber pour autant.
     expect(hauteur(e, 1)).toBeCloseTo(2, 1)
-    e.setShape(radii('capsule'), 1)
+    e.setShape(radii('dome'), 1)
+    const arrivee = hauteur(new BotEngine(100, 'idle', radii('dome')), 1)
+    expect(arrivee).toBeLessThan(1.8)
 
     const etapes = [1.06, 1.14, 1.26].map((t) => hauteur(e, t))
     // strictement decroissant, et jamais deja arrive
@@ -154,14 +158,14 @@ describe('forme personnalisee', () => {
       expect(etapes[i]!).toBeLessThan(etapes[i - 1]!)
     }
     expect(etapes[0]!).toBeLessThan(2)
-    expect(etapes[etapes.length - 1]!).toBeGreaterThan(1.24)
+    expect(etapes[etapes.length - 1]!).toBeGreaterThan(arrivee)
 
     // arrive apres la duree du morph
-    expect(hauteur(e, 1 + BotEngine.SHAPE_MORPH + 0.05)).toBeCloseTo(1.24, 1)
+    expect(hauteur(e, 1 + BotEngine.SHAPE_MORPH + 0.05)).toBeCloseTo(arrivee, 1)
   })
 
   it('reste une fonction pure du temps pendant un morph de forme', () => {
-    const e = new BotEngine(100, 'idle', radii('cercle'))
+    const e = new BotEngine(100, 'idle', CERCLE)
     e.setShape(radii('capsule'), 1)
     const milieu = e.sample(1.1).bodyPath
     // on depasse la fin du morph, puis on relit la date passee
@@ -170,7 +174,7 @@ describe('forme personnalisee', () => {
   })
 
   it('garde les yeux dans la silhouette sur une forme non circulaire', () => {
-    for (const id of ['nuage', 'capsule', 'goutte', 'triangle', 'squircle'] as const) {
+    for (const id of ['dome', 'capsule'] as const) {
       const f = new BotEngine(100, 'idle', radii(id)).sample(1)
       expect(f.eyes).toHaveLength(2)
       for (const eye of f.eyes) {
@@ -276,7 +280,7 @@ describe('regard qui suit le pointeur', () => {
     const modele = EXPRESSION_BY_ID.get('neutre')!
     const gauchier = { ...modele, gaze: { ...modele.gaze, yaw: -30 } }
     const droitier = { ...modele, gaze: { ...modele.gaze, yaw: 60 } }
-    const cercle = SHAPE_BY_ID.get('cercle')!.radii
+    const cercle = CERCLE
 
     const a = new BotEngine(100, 'idle', cercle, gauchier)
     const b = new BotEngine(100, 'idle', cercle, droitier)

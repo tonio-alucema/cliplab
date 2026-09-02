@@ -28,7 +28,8 @@
     "size": "vite build --ssr tools/size/bake.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/bake.js && node tools/size/runtime-sizes.mjs",
     "board": "vite build --ssr tools/board.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/board.js",
     "clearance": "vite build --ssr tools/clearance.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/clearance.js",
-    "og": "vite build --ssr tools/og.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/og.js"
+    "og": "vite build --ssr tools/og.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/og.js",
+    "favicon": "vite build --ssr tools/favicon.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/favicon.js"
   },
   "dependencies": {
     "mediabunny": "^1.54.0",

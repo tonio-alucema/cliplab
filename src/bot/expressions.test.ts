@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { BotEngine } from './engine'
 import { EXPRESSIONS, EXPRESSION_BY_ID, blendExpression } from './expressions'
 import { radiusAtAngle } from './shape'
-import { SHAPE_BY_ID } from './skins'
+import { CERCLE } from './skins'
 
-const cercle = () => SHAPE_BY_ID.get('cercle')!.radii
+const cercle = () => CERCLE
 
 /** Matrice de l'oeil rendu -> position, dimensions ecran et angle du grand axe. */
 function rendu(matrix: string, w: number, h: number) {
