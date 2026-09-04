@@ -14,15 +14,48 @@ Gzip level 9, self-contained artifacts, no server compression assumed.
 
 | Target | Artifact | gzip |
 |---|---|---|
-| **JS runtime** | engine + one character + DOM painter | **10.9 kB** |
-| **JS runtime** | the same, plus montage playback | **11.3 kB** |
-| **Baked SVG** | `idle` alone, 3 s loop | **5.4 kB** |
-| **Baked SVG** | 9 states, 18.4 s, no decor | **131 kB** |
-| **Baked SVG** | the default cycle, 14 states, 31.2 s | **792 kB** |
+| **JS runtime** | engine + one character + DOM painter | **11.1 kB** |
+| **JS runtime** | the same, plus montage playback | **11.4 kB** |
+| **Baked SVG** | `idle` alone, 3 s loop | **6.5 kB** |
+| **Baked SVG** | 9 states, 18.4 s, no decor | **139 kB** |
+| **Baked SVG** | the default cycle, 14 states, 31.2 s | **825 kB** |
 
 The baked rows use an adaptive key grid at a 0.5-unit tolerance — half a percent
 of the ball's radius, which is half a pixel on a 200 px avatar. That is the
 fairest setting: it is visually exact, and it is the cheapest grid that is.
+
+Both targets now carry everything that ships: the dome, the iris, the relief
+gradient and the pitch foreshortening. The figures rose by a few percent when
+those arrived, and the conclusion did not move an inch.
+
+## Phase 3's cues cost almost nothing to bake — but had to be emitted
+
+The plan asks that each depth cue be tested against the bake *as it lands*. Doing
+it turned up the failure mode that instruction exists for, twice: **the baker was
+silently dropping cues.** It had no idea the eyes had layers, and none that the
+body had a gradient, so it produced a flat body with hollow eyes and reported a
+perfectly healthy size. Nothing failed. The artifact was simply not the product.
+
+Worse, it was baking a bot nobody has — no eye style, and the circle, which left
+the catalogue. A size probe that measures the wrong character is not a measurement.
+
+With both cues emitted, and the shipping defaults in place, the cost is small:
+
+| | before the cues | with them |
+|---|---|---|
+| `idle`, 3 s, 30 keys/s | 51.0 kB | 52.5 kB |
+| 9 states, 30 keys/s | 377 kB | 390 kB |
+
+So roughly 1–3 %. That is what "bakeable" was supposed to mean and now demonstrably
+does — a gradient is not a path, so it has no command signature to break, and its
+centres, radius and stops are numbers. The iris layers ride the same 64-point
+correspondence the body does.
+
+The adaptive grid samples the relief as well as the body and eyes. It has to: the
+gradient follows the gaze, so it moves during the long stretches when the body is
+merely breathing, and a grid chosen on the body alone would under-sample it. In
+practice it costs almost nothing — 146 keys became 150 on the 9-state sequence —
+which is itself the useful finding: the relief is slow next to everything else.
 
 ## Why the bake does not scale
 

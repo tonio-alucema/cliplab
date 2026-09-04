@@ -14,6 +14,8 @@ import { BotEngine, type BotFrame } from '@/bot/engine'
 import { blockAt, makeBlock, offsetOf, totalDuration, type Block } from '@/bot/cycles'
 import { defaultCycle } from '@/bot/cycles'
 import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
+import { DEFAULT_SHAPE, SHAPE_BY_ID, mixHex } from '@/bot/skins'
+import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
 import { NOTIF_BLUE } from '@/bot/decor'
 import type { StateId } from '@/bot/states'
 
@@ -24,7 +26,16 @@ const VERITE = 60
 
 /** Parcourt un montage et rend chaque instant demande. Reproduit `rendAt`. */
 function joue(blocks: Block[], instants: number[]): BotFrame[] {
-  const eng = new BotEngine(RAYON, blocks[0]!.state, null, null)
+  /* On cuit ce qui S'EXPEDIE : forme et style d'oeil par defaut. Sans eux la
+     sonde mesurait un bot que personne n'a — sans iris, et sur un cercle qui
+     n'est plus au catalogue — et la cuisson perdait les couches sans le dire. */
+  const eng = new BotEngine(
+    RAYON,
+    blocks[0]!.state,
+    SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii,
+    null,
+    EYE_STYLE_BY_ID.get(DEFAULT_EYE_STYLE)!
+  )
   let dernier = -1
   return instants.map((t) => {
     const { index } = blockAt(blocks, t)
@@ -107,8 +118,40 @@ function cuit(frames: BotFrame[], duree: number, avecDecor: boolean, keyTimes?: 
     )
   }
 
+  /*
+   * Les couches internes de l'oeil, DERRIERE le corps, comme dans le composant :
+   * le trou du masque les revele et le corps les rogne. Sans elles la cuisson
+   * rendait des yeux vides — le meme oubli silencieux que le relief.
+   *
+   * Elles portent `base` (la matrice SANS l'ecrasement du clignement), donc la
+   * paupiere les rogne au lieu de les deformer, exactement comme a l'ecran.
+   */
+  const nCouche = frames[0]?.eyes[0]?.layers.length ?? 0
+  const couches = (i: number) =>
+    Array.from({ length: nCouche }, (_, j) => {
+      const cx = col((f) => String(f.eyes[i]?.layers[j]?.cx ?? 0))
+      const cy = col((f) => String(f.eyes[i]?.layers[j]?.cy ?? 0))
+      const r = col((f) => String(f.eyes[i]?.layers[j]?.r ?? 0))
+      const al = col((f) => String(f.eyes[i] ? 1 : 0))
+      const fill = frames.find((f) => f.eyes[i]?.layers[j])?.eyes[i]!.layers[j]!.fill ?? '#000'
+      return (
+        `<circle cx="${cx[0]}" cy="${cy[0]}" r="${r[0]}" fill="${fill}" opacity="${al[0]}">` +
+        `${piste('cx', cx)}${piste('cy', cy)}${piste('r', r)}${piste('opacity', al)}</circle>`
+      )
+    }).join('')
+
   /* Les yeux portent une MATRICE : `animateTransform` ne sait pas l'animer, mais
      CSS interpole les transformations. C'est deja le choix de `anime.ts`. */
+  const cssBase = Array.from({ length: nOeil }, (_, i) => {
+    const etapes = frames
+      .map((f, k) => {
+        const u = keyTimes ? keyTimes[k]! * 100 : (k * 100) / (frames.length - 1)
+        return `${+u.toFixed(3)}%{transform:${f.eyes[i]?.base ?? 'matrix(1,0,0,1,0,0)'}}`
+      })
+      .join('')
+    return `@keyframes b${i}{${etapes}}`
+  }).join('')
+
   const cssOeil = Array.from({ length: nOeil }, (_, i) => {
     const etapes = frames
       .map((f, k) => {
@@ -120,11 +163,12 @@ function cuit(frames: BotFrame[], duree: number, avecDecor: boolean, keyTimes?: 
   }).join('')
 
   const style =
-    `<style>${Array.from({ length: nOeil }, (_, i) => `.o${i}`).join(',')}{` +
+    `<style>${Array.from({ length: nOeil }, (_, i) => `.o${i},.b${i}`).join(',')}{` +
     `transform-box:view-box;transform-origin:0 0;animation-duration:${duree}s;` +
     `animation-iteration-count:infinite;animation-timing-function:linear}` +
-    Array.from({ length: nOeil }, (_, i) => `.o${i}{animation-name:o${i}}`).join('') +
+    Array.from({ length: nOeil }, (_, i) => `.o${i}{animation-name:o${i}}.b${i}{animation-name:b${i}}`).join('') +
     cssOeil +
+    (nCouche ? cssBase : '') +
     '</style>'
 
   /* Les arcs changent de STRUCTURE de commandes a presque chaque image : leur
@@ -176,19 +220,54 @@ function cuit(frames: BotFrame[], duree: number, avecDecor: boolean, keyTimes?: 
 
   const alpha = col((f) => String(f.bodyAlpha))
 
+  /*
+   * Le relief. Un degrade n'est PAS un chemin : il n'a donc pas de signature de
+   * commandes qui puisse changer d'une image a l'autre, et ses centres, son rayon
+   * et ses teintes sont des nombres. C'est le cue le moins cher de tous a cuire —
+   * mais encore faut-il l'emettre, sans quoi la cuisson rend un corps a plat sans
+   * le dire, ce qui est exactement le risque que la phase 3 demande de tester.
+   *
+   * Les teintes sont melangees ICI, comme dans le composant : le moteur ne rend
+   * que des intensites, il ignore la couleur du corps.
+   */
+  const aShade = frames.some((f) => f.shade)
+  const teinte = (pick: (s: NonNullable<BotFrame['shade']>) => string) =>
+    col((f) => (f.shade ? pick(f.shade) : ENCRE))
+  const relief = aShade
+    ? `<radialGradient id="sh" gradientUnits="userSpaceOnUse"` +
+      ` cx="${frames[0]!.shade?.cx ?? 0}" cy="${frames[0]!.shade?.cy ?? 0}" r="${frames[0]!.shade?.r ?? 1}">` +
+      `${piste('cx', col((f) => String(f.shade?.cx ?? 0)))}` +
+      `${piste('cy', col((f) => String(f.shade?.cy ?? 0)))}` +
+      `${piste('r', col((f) => String(f.shade?.r ?? 1)))}` +
+      `<stop offset="0" stop-color="${mixHex(ENCRE, '#ffffff', frames[0]!.shade?.lift ?? 0)}">` +
+      `${piste('stop-color', teinte((sh) => mixHex(ENCRE, '#ffffff', sh.lift)))}</stop>` +
+      `<stop offset="0.55" stop-color="${ENCRE}"/>` +
+      `<stop offset="1" stop-color="${mixHex(ENCRE, '#000000', frames[0]!.shade?.drop ?? 0)}">` +
+      `${piste('stop-color', teinte((sh) => mixHex(ENCRE, '#000000', sh.drop)))}</stop>` +
+      `</radialGradient>`
+    : ''
+  const remplissage = aShade ? 'url(#sh)' : ENCRE
+
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-VB} ${-VB} ${VB * 2} ${VB * 2}">` +
-    `<defs>${corps}${grad}` +
+    `<defs>${corps}${grad}${relief}` +
     `<mask id="m" maskUnits="userSpaceOnUse" x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}">` +
     `<use href="#corps" fill="#fff"/>` +
     Array.from({ length: nOeil }, (_, i) => oeil(i)).join('') +
-    `</mask></defs>` +
+    `</mask>` +
+    (nCouche ? `<clipPath id="clip"><use href="#corps"/></clipPath>` : '') +
+    `</defs>` +
     (nArc
       ? `<g fill="none" stroke-linecap="round">${Array.from({ length: nArc }, (_, i) => arc(i, 'back')).join('')}</g>`
       : '') +
     `<g opacity="${alpha[0]}">${piste('opacity', alpha)}` +
     `<use href="#corps" fill="${PAPIER}"/>` +
-    `<g mask="url(#m)"><rect x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}" fill="${ENCRE}"/></g></g>` +
+    (nCouche
+      ? `<g clip-path="url(#clip)">` +
+        Array.from({ length: nOeil }, (_, i) => `<g class="b${i}">${couches(i)}</g>`).join('') +
+        `</g>`
+      : '') +
+    `<g mask="url(#m)"><rect x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}" fill="${remplissage}"/></g></g>` +
     (nDot ? `<g>${Array.from({ length: nDot }, (_, i) => dot(i)).join('')}</g>` : '') +
     notif +
     (nArc
@@ -212,6 +291,13 @@ function vecteur(f: BotFrame): number[] {
   const v = nombres(f.bodyPath)
   for (const e of f.eyes) {
     v.push(...nombres(e.matrix), e.alpha * RAYON, ...nombres(e.d))
+  }
+  /* Le relief entre dans la grille, sinon une cle posee sur le seul corps
+     sous-echantillonnerait un degrade qui, lui, suit le regard : il bouge donc
+     quand le corps ne bouge pas. Les intensites sont mises a l'echelle du rayon
+     pour peser comme des distances. */
+  if (f.shade) {
+    v.push(f.shade.cx, f.shade.cy, f.shade.lift * RAYON, f.shade.drop * RAYON)
   }
   return v
 }
