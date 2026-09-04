@@ -16,7 +16,8 @@
  * le test que la phase 1 a rendu concret, et ce cue le passe sans effort — ce qui
  * n'etait pas gagne : les anneaux d'orbite, eux, le ratent.
  */
-import { eyePoses, type HeadGaze } from './face'
+import { REST_GAZE, eyePoses, type HeadGaze } from './face'
+import { clamp } from './math'
 
 /**
  * Ou se pose le centre clair, en fraction du rayon de boule.
@@ -60,6 +61,51 @@ export const RELIEFS: ReliefMode[] = [
 
 export const RELIEF_BY_ID = new Map<string, ReliefMode>(RELIEFS.map((r) => [r.id, r]))
 export const DEFAULT_RELIEF = 'volume'
+
+/* --------------------------------------------------------------- raccourci */
+
+/**
+ * Raccourci : le corps s'ecrase verticalement quand la tete penche.
+ *
+ * Nos deux formes sont des solides de REVOLUTION autour de l'axe vertical — un
+ * dome et une capsule debout le sont l'un comme l'autre. Consequence directe :
+ * le LACET ne change pas leur silhouette, exactement comme il ne change pas
+ * celle d'une sphere, et c'est le degrade qui porte le tournement. Le TANGAGE,
+ * lui, la raccourcit pour de bon. Ecraser aussi en largeur ferait donc une boule
+ * pressee, pas une tete qui tourne.
+ *
+ * Mesure relative au REPOS et non au tangage absolu : les formes sont dessinees
+ * pour etre vues au repos, donc c'est cette silhouette-la qu'on veut intacte, et
+ * c'est l'ECART qui doit se voir.
+ *
+ * ⚠️ Le raccourci est de la GEOMETRIE, pas du shader : il ne suit donc pas le
+ * reglage `relief`, et un corps a plat penche toujours. C'est la meme frontiere
+ * que garde `relief.test.ts` — l'aplat retire le degrade et rien d'autre.
+ */
+
+/**
+ * Plancher du raccourci, et c'est une limite MESUREE du modele.
+ *
+ * Les yeux vivent sur une sphere, le corps est un profil 2D : raccourcir l'un
+ * sans l'autre les fait diverger. Mesure par balayage du tangage, sur les deux
+ * formes et vingt instants — marge de l'oeil au bord de la silhouette :
+ *
+ *   ecart de tangage    0     10     20     30     40
+ *   ecrasement       1,000  0,985  0,940  0,866  0,766
+ *   marge (unites)    22,5   18,0    9,7    0,5 SORTI
+ *
+ * L'oeil sort donc des 0,94. Le raccourci sature juste avant, ce qui le laisse
+ * entier sur tout ce qu'une tete fait vraiment et l'empeche d'ouvrir le visage
+ * dans les poses extremes. Le rendre plus fort demanderait de raccourcir aussi
+ * la sphere des yeux, ce qui est un autre modele, pas un reglage.
+ */
+const PLANCHER = 0.94
+
+export function raccourci(gaze: HeadGaze, force = 1): number {
+  const ecart = (gaze.pitch - REST_GAZE.pitch) * (Math.PI / 180)
+  const brut = 1 - (1 - Math.cos(clamp(ecart, -Math.PI / 2, Math.PI / 2))) * force
+  return Math.max(PLANCHER, brut)
+}
 
 export interface BodyShade {
   /** centre du degrade, en unites de viewBox */

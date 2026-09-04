@@ -3,7 +3,7 @@ import { blendExpression, type BotExpression } from './expressions'
 import { decalageDesYeux } from './eyefit'
 import { REST_GAZE, blinkScale, eyePoses, liveliness, type HeadGaze } from './face'
 import { GAZE_RANGE, type EyeStyle } from './eyes'
-import { shadeFor, type BodyShade } from './relief'
+import { raccourci, shadeFor, type BodyShade } from './relief'
 import { clamp, easings, lerp, r2 } from './math'
 import {
   blend,
@@ -168,6 +168,8 @@ export class BotEngine {
   private shapeAt = -10
   private eyeStyle: EyeStyle | null = null
   private relief = 1
+  /** force du raccourci ; 1 = orthographique exact */
+  private raccourci = 1
   private expr: BotExpression | null = null
   private exprPrev: BotExpression | null = null
   private exprAt = -10
@@ -571,7 +573,9 @@ export class BotEngine {
       ...pose.sil,
       cx: pose.sil.cx + offX,
       cy: pose.sil.cy + offY,
-      sy: pose.sil.sy * life.breath
+      // respiration ET raccourci : le second est de la geometrie, donc il
+      // s'applique meme a plat. Cf. `raccourci`.
+      sy: pose.sil.sy * life.breath * raccourci(gaze, this.raccourci)
     }
     const bodyPath = closedPath(toPoints(sil, R, this.pts))
 
@@ -579,8 +583,34 @@ export class BotEngine {
     // Les yeux vivent sur une sphere de rayon 1 ; des que la silhouette n'est
     // plus un cercle, on les ramene au prorata du rayon reel dans leur
     // direction, sinon ils debordent et le masque les coupe.
-    const bodyRadius = (x: number, y: number) =>
-      radiusAtAngle(pose.sil.radii, Math.atan2(y, x) - pose.sil.rot)
+    /*
+     * Rayon du corps DESSINE dans une direction d'ecran.
+     *
+     * `toPoints` tourne le profil PUIS l'ecrase (`sx`, `sy`) : pour retrouver le
+     * bord dans une direction donnee il faut donc defaire les deux, et pas
+     * seulement la rotation. On ramene la direction dans le repere du profil,
+     * on y lit le rayon, et on le remet a l'echelle — exact, et sans lancer de
+     * rayon.
+     *
+     * Tant qu'aucun etat n'ecrase quoi que ce soit, cela ne change rien : le seul
+     * ecart aujourd'hui est la RESPIRATION, que l'ancienne version ignorait parce
+     * qu'elle lisait `pose.sil` et non la silhouette rendue. Un demi pour cent,
+     * donc invisible — mais c'est aussi ce qui rendait impossible tout cue de
+     * profondeur qui ecrase le corps : les yeux ne suivaient pas.
+     */
+    const cr = Math.cos(sil.rot)
+    const sr = Math.sin(sil.rot)
+    const bodyRadius = (x: number, y: number) => {
+      const n = Math.hypot(x, y)
+      if (n === 0) return radiusAtAngle(sil.radii, 0)
+      // direction unitaire ramenee dans le repere du profil : ecrasement d'abord
+      const ax = x / n / sil.sx
+      const ay = y / n / sil.sy
+      const vx = ax * cr + ay * sr
+      const vy = -ax * sr + ay * cr
+      const len = Math.hypot(vx, vy) || 1e-9
+      return radiusAtAngle(sil.radii, Math.atan2(vy, vx)) / len
+    }
 
     const eyes: RenderedEye[] = []
     if (pose.eyeAlpha > 0.01) {
