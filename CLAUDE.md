@@ -127,6 +127,21 @@ Details and the reasoning behind each are in [docs/](docs/):
 - **The eye style does not morph.** Its layers change in number and colour between
   styles, and there is nothing sensible to interpolate between "three discs" and
   "two". `setEyeStyle` takes no date, unlike `setShape` and `setExpression`.
+- **`radiusAtAngle` must be undone in the RIGHT ORDER.** `toPoints` rotates the
+  profile then squashes it (`sx`, `sy`), so finding the drawn edge in a screen
+  direction means undoing both — squash first, then rotation — not the rotation
+  alone. The old version undid only the rotation, invisible while every state had
+  `sx = sy = 1`, and wrong on every frame the moment a depth cue squashed the body.
+  Anything anchored to the outline goes through this.
+- **The foreshortening is bounded by a MEASURED limit, not by taste.** The eyes live
+  on a sphere while the body is a 2D profile; squash one and not the other and they
+  diverge. Sweeping the pitch put the eye through the silhouette below a squash of
+  0.94, so that is the floor. Going further needs the eye sphere to foreshorten too —
+  a different model, not a bigger number.
+- **Only PITCH foreshortens.** A dome and a standing capsule are solids of revolution
+  about the vertical axis, so yaw leaves their silhouette alone exactly as it leaves a
+  sphere's — the gradient carries the turn. Squashing on yaw as well reads as a ball
+  being pressed, not a head turning.
 - **Flat shading removes the SHADER, never the 3D.** That distinction is the whole
   contract of the Shading toggle: the pseudo-3D lives in the geometry — eyes on a
   sphere, their depth compression, the head orientation body and face share — and

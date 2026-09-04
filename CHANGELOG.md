@@ -7,6 +7,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The body foreshortens when the head tilts** — Phase 3's second cue. Both shapes are
+  solids of revolution about the vertical axis, so yaw leaves the silhouette alone and only
+  pitch shortens it. Measured against the rest pose, so the shapes stay as drawn. Geometry
+  rather than shading: a flat body still tilts.
+
+### Fixed
+
+- **Anything anchored to the outline now follows a squashed body.** `radiusAtAngle` undid
+  the silhouette's rotation but not its squash — invisible while nothing squashed, wrong on
+  every frame once something did. Worth 0.16 units today: the breathing it had ignored.
+
+### Added
+
 - **A Shading toggle**, volume or flat, kept between visits and carried into exports. Flat
   removes the gradient and nothing else: the eyes stay on their sphere, keep their depth
   compression and still share the head's orientation with the body. The pseudo-3D is
