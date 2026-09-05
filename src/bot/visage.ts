@@ -37,15 +37,31 @@ export interface VisageStyle {
    * le clignement et les yeux mi-clos de `somnolent` tiennent toujours.
    */
   oeilRond: boolean
+  /**
+   * Taille du disque, en fraction de `EYE_W`. N'a de sens qu'avec `oeilRond`.
+   *
+   * Porte par le VISAGE et non par `face.ts` : `EYE_W` reste l'anatomie
+   * commune, et `classique` garde donc exactement l'oeil qu'il avait — ce qui
+   * est tout l'interet d'avoir les deux cote a cote. Changer `EYE_W` aurait
+   * retreci les deux, et la comparaison avec.
+   */
+  oeilTaille: number
 }
 
 export const VISAGES: VisageStyle[] = [
-  { id: 'classique', marque: false, bouche: false, oeilRond: false },
-  { id: 'trait', marque: true, bouche: true, oeilRond: true }
+  { id: 'classique', marque: false, bouche: false, oeilRond: false, oeilTaille: 1 },
+  // 0,6 : quatre dixiemes de moins, pour des points plutot que des yeux
+  { id: 'trait', marque: true, bouche: true, oeilRond: true, oeilTaille: 0.6 }
 ]
 
 export const VISAGE_BY_ID = new Map<string, VisageStyle>(VISAGES.map((v) => [v.id, v]))
 export const DEFAULT_VISAGE = 'classique'
 
-/** Ou la bouche descend sous l'avant du visage, en degres sur la sphere. */
-export const BOUCHE_DESCENTE = 26
+/**
+ * Ou la bouche descend sous l'avant du visage, en degres sur la sphere.
+ *
+ * 22 et non 26 : le DOME a une base plate et proche, et le rayon du corps y est
+ * deux fois plus court vers le bas que vers le haut, donc une bouche grande
+ * ouverte s'y posait a un cheveu du menton.
+ */
+export const BOUCHE_DESCENTE = 22

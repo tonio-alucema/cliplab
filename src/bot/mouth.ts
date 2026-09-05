@@ -43,8 +43,15 @@ export interface Point {
   y: number
 }
 
-/** Hauteur de la courbe au centre, pour une courbure et une demi-largeur. */
-const fleche = (courbe: number, hw: number) => -courbe * hw * 0.55
+/**
+ * Hauteur de la courbe au centre, pour une courbure et une demi-largeur.
+ *
+ * Le signe compte et il etait faux : l'ecran a le y VERS LE BAS, donc un
+ * sourire — coins releves — veut un centre POSITIF, plus bas que les coins.
+ * Avec le signe inverse, `heureux` boudait et `colere` souriait, sur seize
+ * expressions dont les valeurs etaient pourtant justes.
+ */
+const fleche = (courbe: number, hw: number) => courbe * hw * 0.55
 
 /**
  * Contour de la bouche, en repere BOUCHE (origine au centre du trait).

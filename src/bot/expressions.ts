@@ -83,7 +83,7 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: 3, pitch: -3, roll: 0 },
     split: 19,
     eyes: pair(0.45, 0.47),
-    mouth: { w: 0.2, courbe: 0, epaisseur: 0.06, ouverture: 0.16 }
+    mouth: { w: 0.26, courbe: 0, epaisseur: 0.075, ouverture: 0.22 }
   },
   {
     id: 'excite',
@@ -105,7 +105,7 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: 4, pitch: 14, roll: 0 },
     split: 18,
     eyes: pair(0.34, 0.13, 20),
-    mouth: { w: 0.4, courbe: 0.6, epaisseur: 0.06, ouverture: 0.26, langue: 0.55 }
+    mouth: { w: 0.4, courbe: 0.6, epaisseur: 0.06, ouverture: 0.21, langue: 0.55 }
   },
   {
     // hauts des yeux qui convergent fort vers le centre + yeux étrécis
@@ -121,14 +121,14 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: 3, pitch: -13, roll: 0 },
     split: 16,
     eyes: pair(0.22, 0.4, -28),
-    mouth: { w: 0.24, courbe: -0.7, epaisseur: 0.07 }
+    mouth: { w: 0.3, courbe: -0.7, epaisseur: 0.085 }
   },
   {
     id: 'effraye',
     gaze: { yaw: 2, pitch: -20, roll: 0 },
     split: 20.5,
     eyes: pair(0.4, 0.6),
-    mouth: { w: 0.22, courbe: -0.2, epaisseur: 0.06, ouverture: 0.24 }
+    mouth: { w: 0.28, courbe: -0.2, epaisseur: 0.075, ouverture: 0.28 }
   },
   {
     // un œil franchement plus fermé que l'autre
@@ -154,7 +154,7 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: 16, pitch: -9, roll: -15 },
     split: 16.5,
     eyes: [eye(0.24, 0.46, -8), eye(0.2, 0.38, -8)],
-    mouth: { w: 0.16, courbe: 0, epaisseur: 0.06, ouverture: 0.12 }
+    mouth: { w: 0.22, courbe: 0, epaisseur: 0.075, ouverture: 0.18 }
   },
   {
     id: 'fier',
@@ -168,7 +168,7 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: -19, pitch: -14, roll: -7 },
     split: 14,
     eyes: pair(0.17, 0.3),
-    mouth: { w: 0.16, courbe: 0.15, epaisseur: 0.06 }
+    mouth: { w: 0.22, courbe: 0.2, epaisseur: 0.08 }
   },
   {
     // fentes horizontales et regard qui part sur le côté
@@ -185,7 +185,7 @@ export const EXPRESSIONS: BotExpression[] = [
     gaze: { yaw: 6, pitch: -9, roll: -3 },
     split: 16,
     eyes: pair(0.2, 0.42, 0, 0.42),
-    mouth: { w: 0.18, courbe: 0, epaisseur: 0.05, ouverture: 0.18 }
+    mouth: { w: 0.24, courbe: 0, epaisseur: 0.07, ouverture: 0.22 }
   }
 ]
 

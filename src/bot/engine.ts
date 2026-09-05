@@ -678,7 +678,9 @@ export class BotEngine {
         eyes.push({
           // un visage a bouche porte l'humeur dans la bouche : l'oeil redevient
           // un disque, cf. `VisageStyle.oeilRond`
-          d: this.visage?.oeilRond ? capsulePath(EYE_W * R, EYE_W * R) : capsulePath(cfg.w * R, cfg.h * R),
+          d: this.visage?.oeilRond
+            ? capsulePath(EYE_W * this.visage.oeilTaille * R, EYE_W * this.visage.oeilTaille * R)
+            : capsulePath(cfg.w * R, cfg.h * R),
           matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${tx},${ty})`,
           // sans le `k` : voir `RenderedEye.base`
           base: `matrix(${r2(ax)},${r2(ay)},${r2(cx2)},${r2(cy2)},${tx},${ty})`,
