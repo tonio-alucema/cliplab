@@ -125,6 +125,37 @@ export function eyePoses(gaze: HeadGaze, scale: number, split = EYE_SPLIT): [Eye
 }
 
 /**
+ * Un trait du visage pose ailleurs que les yeux, sur la MEME sphere.
+ *
+ * `eyePoses` fait tourner l'avant vers la droite d'un demi-ecart ; ici on le
+ * fait descendre vers le bas. Meme construction, donc meme repere tangent : la
+ * bouche se comprime avec la profondeur, penche avec le roulis et disparait
+ * derriere la boule exactement comme un oeil. C'est ce qui la fait appartenir au
+ * meme visage plutot que d'etre un dessin pose par-dessus.
+ *
+ * `descente` est en degres depuis l'avant, positif vers le bas.
+ */
+export function featurePose(gaze: HeadGaze, scale: number, descente: number): EyePose {
+  let f: Vec3 = [0, 0, 1]
+  let right: Vec3 = [1, 0, 0]
+  let down: Vec3 = [0, 1, 0]
+  ;[f, right] = spin(f, right, deg(gaze.yaw))
+  ;[down, f] = spin(down, f, deg(gaze.pitch))
+  ;[right, down] = spin(right, down, deg(gaze.roll))
+  // l'avant bascule vers le bas ; `right` ne bouge pas dans ce plan
+  const [ff, dd] = spin(f, down, deg(descente))
+  return {
+    x: ff[0] * scale,
+    y: ff[1] * scale,
+    a: right[0],
+    b: right[1],
+    c: dd[0],
+    d: dd[1],
+    depth: ff[2]
+  }
+}
+
+/**
  * Vie au repos : derive lente du regard, saccades, clignements.
  *
  * Fonction pure du temps (aucun etat interne), donc pause, reprise et saut a

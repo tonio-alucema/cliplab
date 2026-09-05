@@ -16,6 +16,7 @@ import {
   type DotRender
 } from './decor'
 import { EYE_H, EYE_SPLIT, EYE_W, REST_GAZE, type HeadGaze } from './face'
+import type { MouthCfg } from './mouth'
 import { TAU, clamp, easings } from './math'
 import {
   circle,
@@ -55,6 +56,11 @@ export interface Pose {
   eyes: [EyeCfg, EyeCfg]
   /** opacite des yeux : sert aux etats sans visage */
   eyeAlpha: number
+  /**
+   * La bouche. Portee par la pose comme les yeux, donc elle morphe avec eux et
+   * disparait avec `eyeAlpha` — un etat sans visage n'a pas de bouche non plus.
+   */
+  mouth: MouthCfg
   bodyAlpha: number
   dots: DotRender[]
   arcs: ArcSpec[]
@@ -76,6 +82,8 @@ function base(over: Partial<Pose> = {}): Pose {
     gaze: { ...REST_GAZE },
     split: EYE_SPLIT,
     eyes: pair(EYE_W, EYE_H),
+    // trait neutre : c'est le repos, les expressions la remplacent
+    mouth: { w: 0.22, courbe: 0, epaisseur: 0.075 },
     eyeAlpha: 1,
     bodyAlpha: 1,
     dots: [],

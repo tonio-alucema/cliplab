@@ -1,9 +1,19 @@
 import { arcRender, type ArcRender, type DotRender } from './decor'
 import { blendExpression, type BotExpression } from './expressions'
 import { decalageDesYeux } from './eyefit'
-import { REST_GAZE, blinkScale, eyePoses, liveliness, type HeadGaze } from './face'
+import {
+  EYE_W,
+  REST_GAZE,
+  blinkScale,
+  eyePoses,
+  featurePose,
+  liveliness,
+  type HeadGaze
+} from './face'
 import { GAZE_RANGE, type EyeStyle } from './eyes'
 import { raccourci, shadeFor, type BodyShade } from './relief'
+import { mouthPath, tonguePos, type MouthCfg } from './mouth'
+import { BOUCHE_DESCENTE, type VisageStyle } from './visage'
 import { clamp, easings, lerp, r2 } from './math'
 import {
   blend,
@@ -22,6 +32,15 @@ export interface RenderedEyeLayer {
   cy: number
   r: number
   fill: string
+}
+
+/** La bouche rendue, en repere BOUCHE : `matrix` la pose sur le visage. */
+export interface RenderedMouth {
+  d: string
+  matrix: string
+  alpha: number
+  /** disque de langue, en repere bouche, rogne par la bouche au rendu */
+  langue: { cx: number; cy: number; r: number } | null
 }
 
 export interface RenderedEye {
@@ -46,6 +65,8 @@ export interface BotFrame {
   bodyAlpha: number
   /** degrade du corps, ou `null` quand le relief est coupe */
   shade: BodyShade | null
+  /** la bouche, ou `null` sur un visage qui n'en porte pas */
+  mouth: RenderedMouth | null
   eyes: RenderedEye[]
   dots: DotRender[]
   /** true = les points passent derriere le corps (particules de l'eclatement) */
@@ -105,6 +126,14 @@ const lerpLook = (a: Look, b: Look, t: number): Look => ({
   wander: lerp(a.wander, b.wander, t)
 })
 
+const lerpMouth = (a: MouthCfg, b: MouthCfg, t: number): MouthCfg => ({
+  w: lerp(a.w, b.w, t),
+  courbe: lerp(a.courbe, b.courbe, t),
+  epaisseur: lerp(a.epaisseur, b.epaisseur, t),
+  ouverture: lerp(a.ouverture ?? 0, b.ouverture ?? 0, t),
+  langue: lerp(a.langue ?? 0, b.langue ?? 0, t)
+})
+
 const lerpEye = (a: Pose['eyes'][number], b: Pose['eyes'][number], t: number) => ({
   w: lerp(a.w, b.w, t),
   h: lerp(a.h, b.h, t),
@@ -126,6 +155,7 @@ function blendPose(a: Pose, b: Pose, t: number): Pose {
     },
     split: lerp(a.split, b.split, t),
     eyes: [lerpEye(a.eyes[0], b.eyes[0], t), lerpEye(a.eyes[1], b.eyes[1], t)],
+    mouth: lerpMouth(a.mouth, b.mouth, t),
     eyeAlpha: lerp(a.eyeAlpha, b.eyeAlpha, t),
     bodyAlpha: lerp(a.bodyAlpha, b.bodyAlpha, t),
     dots: [
@@ -168,6 +198,7 @@ export class BotEngine {
   private shapeAt = -10
   private eyeStyle: EyeStyle | null = null
   private relief = 1
+  private visage: VisageStyle | null = null
   /** force du raccourci ; 1 = orthographique exact */
   private raccourci = 1
   private expr: BotExpression | null = null
@@ -196,7 +227,8 @@ export class BotEngine {
     shape: number[] | null = null,
     expression: BotExpression | null = null,
     eyeStyle: EyeStyle | null = null,
-    relief = 1
+    relief = 1,
+    visage: VisageStyle | null = null
   ) {
     this.scale = scale
     this.cur = initial
@@ -204,6 +236,12 @@ export class BotEngine {
     this.expr = expression
     this.eyeStyle = eyeStyle
     this.relief = relief
+    this.visage = visage
+  }
+
+  /** Visage : trous ou marques, avec ou sans bouche. Ne morphe pas, comme le style d'oeil. */
+  setVisage(visage: VisageStyle | null) {
+    this.visage = visage
   }
 
   /**
@@ -327,7 +365,7 @@ export class BotEngine {
       pose = { ...pose, sil: { ...pose.sil, radii: shape } }
     }
     if (def.baseFace && expr) {
-      pose = { ...pose, gaze: expr.gaze, split: expr.split, eyes: expr.eyes }
+      pose = { ...pose, gaze: expr.gaze, split: expr.split, eyes: expr.eyes, mouth: expr.mouth }
     }
     return pose
   }
@@ -485,6 +523,8 @@ export class BotEngine {
    */
   private couches(cfg: Pose['eyes'][number], gaze: HeadGaze): RenderedEyeLayer[] {
     const style = this.eyeStyle
+    // un oeil PEINT est un aplat : il n'a pas d'interieur ou poser un iris
+    if (this.visage?.marque) return []
     if (!style || style.layers.length === 0) return []
     const R = this.scale
     const hw = (cfg.w * R) / 2
@@ -636,13 +676,33 @@ export class BotEngine {
         const tx = r2(e.x * fit + (offX + decalage.x) * R)
         const ty = r2(e.y * fit + (offY + decalage.y) * R)
         eyes.push({
-          d: capsulePath(cfg.w * R, cfg.h * R),
+          // un visage a bouche porte l'humeur dans la bouche : l'oeil redevient
+          // un disque, cf. `VisageStyle.oeilRond`
+          d: this.visage?.oeilRond ? capsulePath(EYE_W * R, EYE_W * R) : capsulePath(cfg.w * R, cfg.h * R),
           matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${tx},${ty})`,
           // sans le `k` : voir `RenderedEye.base`
           base: `matrix(${r2(ax)},${r2(ay)},${r2(cx2)},${r2(cy2)},${tx},${ty})`,
           alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
           layers: this.couches(cfg, gaze)
         })
+      }
+    }
+
+    // --- bouche -----------------------------------------------------------
+    // Posee sur la MEME sphere que les yeux, donc elle se comprime, penche et
+    // passe derriere la boule comme eux. Elle suit aussi `radiusAtAngle` : sans
+    // ca elle flotterait au-dessus d'une silhouette qui n'est pas un cercle.
+    let mouth: RenderedMouth | null = null
+    if (this.visage?.bouche && pose.eyeAlpha > 0.01) {
+      const m = featurePose(gaze, R, BOUCHE_DESCENTE)
+      if (m.depth > 0.02) {
+        const fit = bodyRadius(m.x, m.y)
+        mouth = {
+          d: mouthPath(pose.mouth, R),
+          matrix: `matrix(${r2(m.a)},${r2(m.b)},${r2(m.c)},${r2(m.d)},${r2(m.x * fit + (offX + decalage.x) * R)},${r2(m.y * fit + (offY + decalage.y) * R)})`,
+          alpha: pose.eyeAlpha * clamp(m.depth / 0.12),
+          langue: tonguePos(pose.mouth, R)
+        }
       }
     }
 
@@ -667,6 +727,7 @@ export class BotEngine {
        * eclaire d'un cote pendant que le visage regarde de l'autre.
        */
       shade: shadeFor(gaze, R, this.relief),
+      mouth,
       eyes,
       dots,
       dotsBehind: pose.dotsBehind,

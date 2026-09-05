@@ -3,6 +3,7 @@ import BotTile from '@/components/BotTile.vue'
 import { EXPRESSIONS } from '@/bot/expressions'
 import { EYE_STYLES } from '@/bot/eyes'
 import { RELIEFS } from '@/bot/relief'
+import { VISAGES } from '@/bot/visage'
 import { COLORS, SHAPES } from '@/bot/skins'
 import { t } from '@/i18n'
 
@@ -11,6 +12,7 @@ const color = defineModel<string>('color', { required: true })
 const expression = defineModel<string>('expression', { required: true })
 const eyeStyle = defineModel<string>('eyeStyle', { required: true })
 const relief = defineModel<string>('relief', { required: true })
+const visage = defineModel<string>('visage', { required: true })
 
 /**
  * Les vignettes sont figees a la meme date que la pose de repos : elles montrent
@@ -64,6 +66,24 @@ const PREVIEW_AT = 1
         :eye-style="y.id"
         :frozen-at="PREVIEW_AT"
         @click="eyeStyle = y.id"
+      />
+    </div>
+
+    <h2 class="mt-5 text-sm font-semibold">{{ t('panel.visage') }}</h2>
+    <div class="mt-2 grid grid-cols-4 gap-1.5">
+      <BotTile
+        v-for="v in VISAGES"
+        :key="v.id"
+        :label="t(`visage.${v.id}`)"
+        :selected="v.id === visage"
+        :shape="shape"
+        :color="color"
+        :expression="expression"
+        :eye-style="eyeStyle"
+        :relief="relief"
+        :visage="v.id"
+        :frozen-at="PREVIEW_AT"
+        @click="visage = v.id"
       />
     </div>
 

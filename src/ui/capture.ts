@@ -248,6 +248,7 @@ export interface ReglagesBot {
   expression: string
   eyeStyle: string
   relief: string
+  visage: string
 }
 
 /**

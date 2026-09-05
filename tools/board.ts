@@ -12,14 +12,18 @@
 import { writeFileSync } from 'node:fs'
 import { BotEngine } from '@/bot/engine'
 import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
-import { SHAPES, mixHex } from '@/bot/skins'
+import { DEFAULT_SHAPE, SHAPES, SHAPE_BY_ID, mixHex } from '@/bot/skins'
 import { EYE_STYLES, EYE_STYLE_BY_ID, type EyeStyle } from '@/bot/eyes'
-import { EXPRESSION_BY_ID, type BotExpression } from '@/bot/expressions'
+import { VISAGE_BY_ID, type VisageStyle } from '@/bot/visage'
+import { EXPRESSIONS, EXPRESSION_BY_ID, type BotExpression } from '@/bot/expressions'
 import { EYE_H, EYE_SPLIT, EYE_W, REST_GAZE } from '@/bot/face'
 
 const ENCRE = '#0a0a0c'
 const PAPIER = '#f9f9f9'
 const CRAYON = '#6b7280'
+/* Le corps du plateau est l'encre : un trait peint dessus doit donc ECLAIRCIR,
+   la meme regle de contraste que dans le composant. */
+const TRAIT = '#e9e9ea'
 const VB = DEMI_VIEWBOX
 const CASE = 200
 const LEGENDE = 26
@@ -39,9 +43,10 @@ function cellule(
   radii: number[] | null,
   style: EyeStyle | null,
   expr: BotExpression | null,
-  relief = 0
+  relief = 0,
+  visage: VisageStyle | null = null
 ) {
-  const f = new BotEngine(RAYON, 'idle', radii, expr, style, relief).sample(1)
+  const f = new BotEngine(RAYON, 'idle', radii, expr, style, relief, visage).sample(1)
   const id = `c${uid++}`
   const k = (CASE * 0.86) / (VB * 2)
   const yeux = f.eyes
@@ -76,11 +81,27 @@ function cellule(
     `<mask id="m${id}" maskUnits="userSpaceOnUse" x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}">` +
     `<path d="${f.bodyPath}" fill="#fff"/>${yeux}</mask>` +
     `<clipPath id="k${id}"><path d="${f.bodyPath}"/></clipPath>` +
+    (f.mouth ? `<clipPath id="b${id}"><path d="${f.mouth.d}"/></clipPath>` : '') +
     `</defs>` +
     `<g transform="translate(${CASE / 2} ${CASE / 2}) scale(${k})">` +
     `<path d="${f.bodyPath}" fill="${PAPIER}"/>` +
     (couches ? `<g clip-path="url(#k${id})">${couches}</g>` : '') +
     `<g mask="url(#m${id})"><rect x="${-VB}" y="${-VB}" width="${VB * 2}" height="${VB * 2}" fill="${remplissage}"/></g>` +
+    (visage?.marque
+      ? `<g clip-path="url(#k${id})" fill="${TRAIT}">` +
+        f.eyes
+          .map((e) => `<path d="${e.d}" transform="${e.matrix}" opacity="${e.alpha}"/>`)
+          .join('') +
+        (f.mouth
+          ? `<g transform="${f.mouth.matrix}" opacity="${f.mouth.alpha}">` +
+            `<path d="${f.mouth.d}"/>` +
+            (f.mouth.langue
+              ? `<g clip-path="url(#b${id})"><circle cx="${f.mouth.langue.cx}" cy="${f.mouth.langue.cy}" r="${f.mouth.langue.r}" fill="#e8483f"/></g>`
+              : '') +
+            `</g>`
+          : '') +
+        `</g>`
+      : '') +
     `</g>` +
     `<text x="${CASE / 2}" y="${CASE + 14}" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"` +
     ` font-size="13" fill="${CRAYON}">${legende}</text></g>`
@@ -115,6 +136,35 @@ planche(
   casesFormes,
   MARGE * 2 + COL_F * CASE,
   MARGE * 2 + Math.ceil(SHAPES.length / COL_F) * (CASE + LEGENDE)
+)
+
+/* ----------------------------------------------------- planche des visages */
+
+/**
+ * Le visage `trait` sur les seize humeurs. C'est la bouche qu'on juge ici : les
+ * yeux ne changent que de taille, alors qu'elle change de courbe, d'epaisseur et
+ * d'ouverture, et c'est elle qui porte l'humeur dans cette direction.
+ */
+const COL_V = 6
+const traits = VISAGE_BY_ID.get('trait') ?? null
+const casesVisage = EXPRESSIONS.map((e, i) =>
+  cellule(
+    MARGE + (i % COL_V) * CASE,
+    MARGE + Math.floor(i / COL_V) * (CASE + LEGENDE),
+    e.id,
+    SHAPE_BY_ID.get(DEFAULT_SHAPE)?.radii ?? null,
+    null,
+    e,
+    1,
+    traits
+  )
+)
+planche(
+  'docs/visages.svg',
+  COL_V,
+  casesVisage,
+  MARGE * 2 + COL_V * CASE,
+  MARGE * 2 + Math.ceil(EXPRESSIONS.length / COL_V) * (CASE + LEGENDE)
 )
 
 /* ------------------------------------------------------ planche du relief */

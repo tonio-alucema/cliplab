@@ -111,6 +111,27 @@ Details and the reasoning behind each are in [docs/](docs/):
   measured and rejected; don't re-try them. `skins.test.ts` locks the lot, and it sweeps
   **time as well as combinations** — one instant per combination is what let
   `capsule` + `effraye` through.
+- **The face has two rendering models, and they are inversions of each other.**
+  `classique` pierces the eyes as holes, so they show the page and an iris painted
+  behind shows through. `trait` PAINTS eyes and a mouth onto the body instead — a
+  hole reveals what is under it, a mark hides it — so the eyes must leave the mask
+  in that mode or every mark would sit over a hole. Hence a catalogue (`visage.ts`)
+  rather than a flag on the eye style.
+- **A painted mark needs a contrast rule, a hole does not.** A hole works on any
+  body colour because it shows the page; a mark disappears on a body of its own
+  tone. `BloubBot.vue` darkens a light body and lightens a dark one — the default
+  `encre` being the darkest in the palette, this is not a corner case.
+- **The mouth carries the mood on `trait`, so the eyes stop trying to.** With no
+  mouth, the sixteen expressions had to say everything through eye shape — narrowed,
+  widened, mirrored tilts. Once a mouth exists, expressive eyes AND an expressive
+  mouth say the same thing twice, so `trait` renders eyes as fixed discs
+  (`VisageStyle.oeilRond`). `open` still applies, so blinks and `somnolent`'s heavy
+  lids survive. The sixteen eye designs are not lost — they are what `classique` is.
+- **The mouth outline is a fixed-point POLYLINE, deliberately.** Its signature
+  cannot change with curvature, thickness or opening, so it bakes — the Phase 1
+  rule applied to a new feature rather than discovered later. Arcs would have been
+  shorter and would also have held; the polyline makes the guarantee obvious
+  instead of merely true. Locked by `mouth.test.ts`.
 - **Eye layers are painted BEHIND the body, and nothing new clips them.** The eyes
   are holes in the mask, so a hole reveals whatever is behind — the iris/pupil/
   highlight stack goes there, and the body painted over it is what trims it. The one

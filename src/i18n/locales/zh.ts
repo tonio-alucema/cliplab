@@ -34,7 +34,8 @@ const zh: typeof fr = {
     expression: '表情',
     color: '颜色',
     eyes: '眼睛',
-    relief: '明暗'
+    relief: '明暗',
+    visage: '面部'
   },
 
   export: {
@@ -140,6 +141,11 @@ const zh: typeof fr = {
   shapes: {
     dome: '穹顶',
     capsule: '胶囊'
+  },
+
+  visage: {
+    classique: '经典',
+    trait: '五官'
   },
 
   relief: {

@@ -11,6 +11,7 @@ import {
 } from '@/bot/expressions'
 import { DEFAULT_EYE_STYLE, EYE_STYLE_BY_ID } from '@/bot/eyes'
 import { DEFAULT_RELIEF, RELIEF_BY_ID } from '@/bot/relief'
+import { DEFAULT_VISAGE, VISAGE_BY_ID } from '@/bot/visage'
 import {
   COLOR_BY_ID,
   DEFAULT_COLOR,
@@ -35,6 +36,8 @@ const props = withDefaults(
     eyeStyle?: string
     /** identifiant de rendu du corps : volume ou aplat. N'affecte QUE le degrade */
     relief?: string
+    /** identifiant de visage : yeux perces sans bouche, ou traits peints avec */
+    visage?: string
     /** couleur du fond, utilisee pour la brume de profondeur des particules */
     paper?: string
     /**
@@ -69,6 +72,7 @@ const props = withDefaults(
     expression: DEFAULT_EXPRESSION,
     eyeStyle: DEFAULT_EYE_STYLE,
     relief: DEFAULT_RELIEF,
+    visage: DEFAULT_VISAGE,
     paper: '#f9f9f9',
     frozenAt: undefined,
     cycle: () => defaultCycle().blocks,
@@ -115,6 +119,26 @@ const ink = computed(() => COLOR_BY_ID.get(props.color)?.hex ?? '#0a0a0c')
 const expression = computed(() => EXPRESSION_BY_ID.get(props.expression) ?? null)
 const eyeStyle = computed(() => EYE_STYLE_BY_ID.get(props.eyeStyle) ?? null)
 const reliefForce = computed(() => RELIEF_BY_ID.get(props.relief)?.force ?? 1)
+const visage = computed(() => VISAGE_BY_ID.get(props.visage) ?? null)
+
+/**
+ * Couleur des traits peints.
+ *
+ * Une marque doit rester lisible sur n'importe quel corps, donc on prend le
+ * contraste dans le sens qui reste visible : on assombrit un corps clair, on
+ * eclaircit un corps sombre. C'est la regle d'une couleur de texte sur un fond
+ * quelconque, et c'est ce qui evite qu'un visage disparaisse sur l'encre — la
+ * couleur par defaut, justement la plus sombre du nuancier.
+ */
+const luminance = (hex: string) => {
+  const v = parseInt(hex.slice(1), 16)
+  return 0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)
+}
+const encreTrait = computed(() =>
+  luminance(ink.value) > 70 ? mixHex(ink.value, '#000000', 0.82) : mixHex(ink.value, '#ffffff', 0.9)
+)
+/** La langue garde sa teinte : c'est la seule tache de couleur du visage. */
+const LANGUE = '#e8483f'
 /** Y a-t-il quoi que ce soit a peindre derriere le corps ? */
 const yeuxEnCouches = computed(() => (eyeStyle.value?.layers.length ?? 0) > 0)
 
@@ -124,13 +148,15 @@ const engine = new BotEngine(
   shapeRadii.value,
   expression.value,
   eyeStyle.value,
-  reliefForce.value
+  reliefForce.value,
+  visage.value
 )
 const frame = shallowRef<BotFrame>(engine.sample(props.frozenAt ?? 0))
 const uid = Math.random().toString(36).slice(2, 8)
 const maskId = `bot-mask-${uid}`
 const clipId = `bot-clip-${uid}`
 const shadeId = `bot-shade-${uid}`
+const boucheId = `bot-bouche-${uid}`
 
 let raf = 0
 let nextAt = Infinity
@@ -459,6 +485,11 @@ watch(reliefForce, (force) => {
   redrawFrozen()
 })
 
+watch(visage, (v) => {
+  engine.setVisage(v)
+  redrawFrozen()
+})
+
 watch(expression, (expr) => {
   engine.setExpression(expr, clock)
   redrawFrozen()
@@ -553,14 +584,21 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         :height="VB * 2"
       >
         <path :d="frame.bodyPath" fill="#fff" />
-        <path
-          v-for="(eye, i) in frame.eyes"
-          :key="i"
-          :d="eye.d"
-          :transform="eye.matrix"
-          :opacity="eye.alpha"
-          fill="#000"
-        />
+        <!--
+          Les yeux ne percent le corps que sur le visage CLASSIQUE. Sur `trait`
+          ils sont peints par-dessus : les laisser ici en plus ouvrirait un trou
+          sous chaque marque, et la marque flotterait sur un vide.
+        -->
+        <template v-if="!visage?.marque">
+          <path
+            v-for="(eye, i) in frame.eyes"
+            :key="i"
+            :d="eye.d"
+            :transform="eye.matrix"
+            :opacity="eye.alpha"
+            fill="#000"
+          />
+        </template>
         <circle
           v-if="frame.notch"
           :cx="frame.notch.x"
@@ -570,8 +608,13 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         />
       </mask>
 
-      <!-- silhouette seule : borne les couches d'oeil au corps -->
+      <!-- silhouette seule : borne les couches d'oeil et les traits au corps -->
       <clipPath :id="clipId"><path :d="frame.bodyPath" /></clipPath>
+
+      <!-- la bouche, pour y enfermer la langue -->
+      <clipPath v-if="frame.mouth" :id="boucheId">
+        <path :d="frame.mouth.d" />
+      </clipPath>
 
       <!--
         Relief : le clair se pose la ou la tete pointe, l'ombre a l'oppose. Trois
@@ -682,6 +725,34 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
           :height="VB * 2"
           :fill="shade ? `url(#${shadeId})` : ink"
         />
+      </g>
+    </g>
+
+    <!--
+      Le visage PEINT : yeux et bouche poses sur le corps, dans une teinte qui
+      contraste avec lui. Rognes a la silhouette, comme les couches d'oeil — un
+      trait qui depasserait le bord s'afficherait a nu sur la page, la ou un trou
+      se serait simplement referme.
+    -->
+    <g v-if="visage?.marque" :clip-path="`url(#${clipId})`" :fill="encreTrait">
+      <path
+        v-for="(eye, i) in frame.eyes"
+        :key="`t${i}`"
+        :d="eye.d"
+        :transform="eye.matrix"
+        :opacity="eye.alpha"
+      />
+      <g v-if="frame.mouth" :transform="frame.mouth.matrix" :opacity="frame.mouth.alpha">
+        <path :d="frame.mouth.d" />
+        <!-- la langue est rognee PAR la bouche : un disque suffit donc -->
+        <g v-if="frame.mouth.langue" :clip-path="`url(#${boucheId})`">
+          <circle
+            :cx="frame.mouth.langue.cx"
+            :cy="frame.mouth.langue.cy"
+            :r="frame.mouth.langue.r"
+            :fill="LANGUE"
+          />
+        </g>
       </g>
     </g>
 

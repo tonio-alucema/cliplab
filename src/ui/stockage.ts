@@ -17,7 +17,7 @@
 const PREFIXE = 'cliplab:'
 
 /** Tout ce que l'application persiste. */
-const NOMS = ['cycles', 'cycle', 'forme', 'couleur', 'expression', 'yeux', 'relief', 'langue'] as const
+const NOMS = ['cycles', 'cycle', 'forme', 'couleur', 'expression', 'yeux', 'relief', 'visage', 'langue'] as const
 
 export type NomStocke = (typeof NOMS)[number]
 

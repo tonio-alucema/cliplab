@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A mouth, and a Face toggle to compare with the current look.** `classique` is what
+  shipped — eyes pierced as holes, no mouth. `trait` paints the face on instead: fixed disc
+  eyes and a mouth that carries the mood through curvature, thickness and opening, with a
+  tongue when it opens wide. All sixteen expressions declare one. `docs/visages.svg` shows
+  them. The default is unchanged, so nothing moves until you pick `trait`.
+
+### Added
+
 - **The body foreshortens when the head tilts** — Phase 3's second cue. Both shapes are
   solids of revolution about the vertical axis, so yaw leaves the silhouette alone and only
   pitch shortens it. Measured against the rest pose, so the shapes stay as drawn. Geometry

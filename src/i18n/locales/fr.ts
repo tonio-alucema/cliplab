@@ -46,7 +46,8 @@ export default {
     expression: 'Expression',
     color: 'Couleur',
     eyes: 'Yeux',
-    relief: 'Rendu'
+    relief: 'Rendu',
+    visage: 'Visage'
   },
 
   /**
@@ -162,6 +163,11 @@ export default {
   shapes: {
     dome: 'Dôme',
     capsule: 'Capsule'
+  },
+
+  visage: {
+    classique: 'Classique',
+    trait: 'Traits'
   },
 
   relief: {
