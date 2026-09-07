@@ -26,7 +26,7 @@ export interface Character {
 }
 export interface Definition { version: 1; character: Character; expressions: Expression[]; animations: Animation[] }
 export interface Project { version: 1; name: string; characters: Character[]; expressions: Expression[]; animations: Animation[] }
-export interface Sample { pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number }
+export interface Sample { pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number; gradientMix?: number }
 
 export const EYES: Eye[] = ['dot', 'soft', 'closed', 'wink', 'star', 'heart', 'squint', 'wide', 'arc-up', 'arc-down', 'half-lidded', 'pupil']
 export const MOUTHS: Mouth[] = ['smile', 'open', 'line', 'frown', 'oh', 'wave', 'sleep', 'grin', 'cry', 'u-smile', 'kiss', 'tongue-out']
@@ -151,7 +151,7 @@ export function mixPose(a: Pose, b: Pose, t: number): Pose {
 const smooth = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v * v * (3 - 2 * v) }
 function featureAmount(a: unknown, b: unknown, blend: number) { return a === b ? 1 : blend < .5 ? 1 - smooth(blend * 2) : smooth((blend - .5) * 2) }
 const mod = (t: number, d: number) => ((t % d) + d) % d
-export function sampleExpression(expression: Expression, time: number): { pose: Pose; beatIndex: number; propAmount: number; tearAmount: number; gradientRotation?: number } {
+export function sampleExpression(expression: Expression, time: number): { pose: Pose; beatIndex: number; propAmount: number; tearAmount: number; gradientRotation?: number; gradientMix?: number } {
   const duration = expressionDuration(expression)
   let t = mod(time, duration)
   const gradient = isGradientExpression(expression)
@@ -166,7 +166,7 @@ export function sampleExpression(expression: Expression, time: number): { pose: 
       const eased = progress * progress * (3 - 2 * progress)
       const turn = Math.min(1, t / beatDuration)
       const turnEased = turn < .5 ? 16 * turn ** 5 : 1 - (-2 * turn + 2) ** 5 / 2
-      return { pose: mixPose(previous.pose, beat.pose, eased), beatIndex: i, propAmount: featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: featureAmount(previous.pose.tears, beat.pose.tears, eased), ...(gradient ? { gradientRotation: gradientStart + (beat.gradientAction === 'rotate' ? 360 * turnEased : 0) } : {}) }
+      return { pose: mixPose(previous.pose, beat.pose, eased), beatIndex: i, propAmount: featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: featureAmount(previous.pose.tears, beat.pose.tears, eased), ...(gradient ? { gradientRotation: gradientStart + (beat.gradientAction === 'rotate' ? 360 * turnEased : 0), gradientMix: 1 } : {}) }
     }
     if (beat.gradientAction === 'rotate') gradientStart += 360
     t -= beatDuration
@@ -210,8 +210,12 @@ export function sampleDefinition(def: Definition, animationId: string, time: num
     sample.pose = mixPose(previous.pose, sample.pose, eased)
     if (previous.gradientRotation !== undefined || sample.gradientRotation !== undefined) {
       const from = previous.gradientRotation ?? 0, to = sample.gradientRotation ?? 0
-      const delta = mod(to - from + 180, 360) - 180
-      sample.gradientRotation = from + delta * eased
+      // Align the previous completed turn to the next expression's starting angle.
+      // Keep the incoming turn unwrapped so crossing 180 degrees cannot flip it.
+      const alignedFrom = from - Math.round(from / 360) * 360
+      sample.gradientRotation = alignedFrom + (to - alignedFrom) * eased
+      const fromMix = previous.gradientMix ?? 0
+      sample.gradientMix = fromMix + ((sample.gradientMix ?? 0) - fromMix) * eased
     }
   }
   // All secondary motion uses the cycle period, so exported loops close exactly.

@@ -77,4 +77,24 @@ describe('Loading gradient loop', () => {
     expect(old.expressions).toHaveLength(original.expressions.length + 1)
     expect(parseProject(old)).toEqual(old)
   })
+
+  it('fades a solid fill into the gradient without reversing short turns during a transition', () => {
+    const definition = definitionOf(project, { ...project.characters[0]!, gradient: false })
+    definition.expressions.find(e => e.id === 'loading')!.beats[0]!.duration = .2
+    definition.animations = [{ id: 'quick', name: 'Quick', loop: true, steps: [{ id: 'idle', expressionId: 'idle', duration: 1 }, { id: 'load', expressionId: 'loading', duration: .7 }] }]
+    expect(sampleDefinition(definition, 'quick', 1).gradientMix).toBeCloseTo(0, 10)
+    expect(sampleDefinition(definition, 'quick', 1.07).gradientMix).toBeCloseTo(.5)
+    expect(sampleDefinition(definition, 'quick', 1.15).gradientMix).toBe(1)
+    let previous = 0
+    for (let i = 0; i <= 200; i++) {
+      const current = sampleDefinition(definition, 'quick', 1 + i / 1000).gradientRotation!
+      expect(current).toBeGreaterThanOrEqual(previous)
+      expect(current - previous).toBeLessThan(20)
+      previous = current
+    }
+    expect(sampleDefinition(definition, 'quick', 1.7).gradientMix).toBe(1)
+    expect(sampleDefinition(definition, 'quick', 1.8).gradientMix).toBeCloseTo(.5)
+    expect(sampleDefinition(definition, 'quick', 1.91).gradientMix).toBeUndefined()
+    expect(definition.character.gradient).toBe(false)
+  })
 })

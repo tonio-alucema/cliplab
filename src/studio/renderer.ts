@@ -295,7 +295,7 @@ export class CharacterRenderer {
     const detail = detailAt(this.options.displaySize ?? Math.min(this.options.width, this.options.height))
     const u = this.body.material.uniforms
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
-    u.gradientOn!.value = character.gradient || sample.gradientRotation !== undefined ? 1 : 0; u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
+    u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height
     const cursor = character.followRotation ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
     const rotation = this.options.rotation ?? { x: -5, y: -12, z: -7 }
