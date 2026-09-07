@@ -6,16 +6,16 @@
   n'executent pas de JavaScript, donc l'apercu partage est toujours celui du
   HTML servi. Une seule langue a choisir, autant que ce soit celle de l'auteur.
 -->
-<html lang="fr">
+<html lang="en">
   <head>
     <!-- doit tenir dans les 1024 premiers octets, donc en premier -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Cliplab, studio de personnages SVG</title>
+    <title>ClipLab — Character Studio</title>
     <meta
       name="description"
-      content="Cliplab : un studio de personnages SVG. Composez un corps, superposez les yeux, enchaînez les animations, exportez un clip léger. Sans librairie d'animation."
+      content="Create expressive 3D characters with crisp toon shading. Tune faces, sequence looping animations, and export for your app or marketing."
     />
 
     <!--
@@ -26,15 +26,13 @@
 
     <!-- Open Graph : attribut `property`, alors que les balises X prennent `name` -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Cliplab, studio de personnages SVG" />
+    <meta property="og:title" content="ClipLab — Character Studio" />
     <meta
       property="og:description"
-      content="Composez un personnage, superposez les yeux, enchaînez les animations, exportez un clip SVG léger."
+      content="Three simple shapes. Expressive faces. Looping animations for your app and beyond."
     />
     <meta property="og:site_name" content="Cliplab" />
-    <meta property="og:locale" content="fr_FR" />
-    <meta property="og:locale:alternate" content="en_US" />
-    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale" content="en_US" />
 
     <!--
       `twitter:card` suffit : X reprend og:title, og:description et og:image.
@@ -49,9 +47,9 @@
       ne se deduisent de rien. A REPRENDRE : le domaine ci-dessous est presume,
       aucun deploiement n'existe encore.
     -->
-    <link rel="canonical" href="https://cliplab.vercel.app/" />
-    <meta property="og:url" content="https://cliplab.vercel.app/" />
-    <meta property="og:image" content="https://cliplab.vercel.app/og.png" />
+    <link rel="canonical" href="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/" />
+    <meta property="og:url" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/" />
+    <meta property="og:image" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/og.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -86,6 +84,14 @@
     <meta name="theme-color" content="#0a0a0c" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
+    <!--
+    THESIS: A working character studio makes the character, its expressive beats, and their timing visible together.
+    OWN-WORLD: A slate preview, white controls, blue selection, restrained system typography, crisp outlined controls, and warm toon characters.
+    STORY: Choose a body, shape an expression, arrange a loop, and take the same character into an app or a rendered asset.
+    FIRST VIEWPORT: Large interactive 3D stage on the left; expression library and controls on the right; editable beats and size previews below the stage.
+    FORM: User-pinned Avatar Lab reference and character references override direction seed 9a9a4d4d. Operate mode.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

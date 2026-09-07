@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.1",
   "type": "module",
-  "description": "A character studio for procedural SVG avatars: build a body, layer the eyes, sequence animations, and export a lightweight embeddable clip.",
+  "description": "A 3D character studio with illustrative toon shading, editable expressions, looping sequences, and app or media exports.",
   "license": "MIT",
   "author": "Tonio",
   "repository": {
@@ -20,8 +20,8 @@
   ],
   "packageManager": "pnpm@11.17.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "dev": "node tools/build-studio-runtime.mjs && vite",
+    "build": "vue-tsc --noEmit && node tools/build-studio-runtime.mjs && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -32,12 +32,15 @@
     "favicon": "vite build --ssr tools/favicon.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/favicon.js"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "mediabunny": "^1.54.0",
+    "three": "^0.185.1",
     "vue": "^3.5.41"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.0.0",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-vue": "^6.0.8",
     "happy-dom": "^20.11.2",
     "tailwindcss": "^4.3.3",

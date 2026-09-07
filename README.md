@@ -1,125 +1,44 @@
-# Cliplab
+# ClipLab
 
-A character studio for procedural SVG avatars: build a body, layer the eyes,
-sequence animations, and export a lightweight embeddable clip. No animation
-library.
+A standalone 3D character studio for product companions and marketing assets. Three simple bodies—capsule, rounded end cap, and sphere—share graphic faces, smooth two-color fills, and crisp toon shading.
 
-> **A fork of [bloub](https://github.com/jeremy-prt/bloub) by Jérémy Perret**,
-> MIT-licensed and gratefully reused. bloub is an SVG recreation of the x.ai bot
-> avatar, measured frame by frame off a reference video.
->
-> **Cliplab is mid-migration away from that heritage.** The engine, the
-> timeline and the eye model are bloub's and are being kept. The *character* work
-> is being replaced: a new analytic shape library, layered eyes, and our own cast.
->
-> ⚠️ **Until that replacement lands, this repo still ships bloub's measured
-> silhouettes** (`src/bot/profiles.ts`) and the 14 states derived from them. Those
-> reproduce the x.ai design and must be replaced before any commercial use — MIT
-> covers Jérémy's code, not the design it reproduces. See the project plan.
+## Run
 
-![The avatar going through idle, wink, orbit and burst](docs/demo.gif)
-
-## Running it
-
-```bash
+```sh
 pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:5190.
+Open http://localhost:5190. `pnpm build` checks TypeScript, bundles the portable character runtime, and builds the studio. `pnpm test` runs the tests. Vue 3, TypeScript, Vite, and Three.js.
 
-```bash
-pnpm test     # vitest
-pnpm build    # vue-tsc --noEmit && vite build
-```
+## Author a character
 
-Vue 3, Vite, TypeScript, Tailwind 4. No ESLint and no Prettier: `vue-tsc` is the
-only gate, so run `pnpm build` before you call something done.
+1. Choose Milo, Pip, or Lumi. In **Character**, choose a body, colors, shading, white eye dots, or face elevation.
+2. Select an **Expression** to preview it; double-click or choose **Edit selected** to adjust its face and body. Each expression has timed beats; select, reorder, duplicate, or add beats in the strip below the stage.
+3. In **Animations**, combine expressions, adjust their duration, and turn looping on or off. The eight starters are Idle, Listening, Thinking, Working, Success, Confused, Sleepy, and Playful.
+4. Drag the character or orientation globe to rotate; hold Shift while dragging to roll. The globe also supports arrow keys and Home to reset. Motion controls adjust speed, body movement, blinking, and cursor following.
 
-## What's in it
+The in-product strip previews actual CSS sizes. Below 16 px the face disappears; 16–24 px shows eyes only; above 24 px shows the full face. Display density does not change these thresholds.
 
-The rail on the left switches between three views. **Customise** offers 2 body
-shapes, 3 eye styles, volume or flat shading, 12 colours and 16 rest expressions,
-kept between visits. **Animations** is
-a small editor: arrange states into a timeline, set how long each is held, save the
-result. **Settings** holds the language (French, English or Chinese) and the
-credits.
+Changes autosave to this browser. Undo and redo keep recent edits. Export a **Project** file to back up all characters and sequences or move them to another browser; import validates the file before replacing the current project. Local browser storage is not cloud synchronization.
 
-Anything on screen can be exported: the avatar as SVG, PNG or an animated GIF, and
-a whole timeline as GIF or MP4. The still formats need no library at all, and the
-video encoder is only fetched the first time you ask for one.
+## Export
 
-Two URLs are worth knowing:
+- **App:** select animations and download a character JSON definition or a complete JavaScript/React package. The ZIP includes the same renderer used in the studio, a working example, type declarations, and integration instructions. JSON alone is configuration and needs the supplied runtime.
+- **Image:** PNG of the current pose, with transparent or solid background, framing, presets, and dimensions up to 2048 px.
+- **Animation:** MP4 with an opaque background, WebM with optional transparency, or transparent GIF. Video supports up to 2048 px and 60 seconds. GIF uses 20 fps and at most 512 px. MP4 requires even dimensions. Browser video encoding support varies; encoding errors are shown in the studio.
+- **Project:** the full editable studio, including characters, expressions, and sequences.
 
-- `#planche`: the 14 states side by side, frozen. Quick visual check.
-- `#etat=orbit&stop`: opens one state directly, playback paused.
+App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, and `followCursor`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
 
-![The 14 states, frozen side by side](docs/states.png)
+## Implementation
 
-## Why the numbers look arbitrary
+The new studio lives in `src/studio/`. `model.ts` defines the portable data and deterministic animation sampling; `renderer.ts` draws the actual geometry and curved face shell; `runtime.ts` provides the independent player; `export.ts` creates packages and rendered assets. `tools/build-studio-runtime.mjs` builds the standalone player before development or production builds.
 
-They're measured, not chosen. The reference video was cut at 10 fps and each
-state measured off the frames: silhouettes by sub-pixel ray casting, eyes by
-capsule fitting, colours and stroke widths by direct sampling.
+`tools/studio-check.html` is a development-only browser verification page for video decoding, transparent exports, ZIP contents, and size thresholds. It is not part of the production build.
 
-So the constants in the code are **measurements**, and rounding them to friendlier
-values breaks the resemblance, which is the only thing this project is trying to
-get right. A few are counter-intuitive enough to be worth knowing before you
-correct anything:
+The previous SVG studio and tests remain in the repository for reference; its former documentation is in [docs/legacy-readme.md](docs/legacy-readme.md). The active studio uses the new analytic 3D bodies and expression set.
 
-| What you'd assume | What the video shows |
-|---|---|
-| The eyes lean `//` | They lean `\\`, around 26° off vertical |
-| The body is a squircle | It's a perfect circle, radial deviation under 0.7% |
-| Transitions are springs | Exponential ease-outs; the body never overshoots |
-| The comet crosses the screen | The dot stays put, the trail orbits it |
-| The avatar floats at rest | It doesn't. The life is gaze drift and blinking |
+## Credits
 
-[docs/measurements.md](docs/measurements.md) has the rest, including how to
-regenerate the extracted profiles.
-
-## How it's put together
-
-`src/bot/` is framework-free and clock-free: `engine.sample(t)` is a pure
-function of time. Pausing, resuming, jumping to an arbitrary date and running
-tests all produce the same image, which is what makes the frozen state board and
-the DOM-less test suite possible.
-
-| | |
-|---|---|
-| [docs/architecture.md](docs/architecture.md) | The engine, radial-profile morphing, eyes as mask holes |
-| [docs/measurements.md](docs/measurements.md) | What was measured, and regenerating `profiles.ts` |
-| [docs/intro.md](docs/intro.md) | The arrival sequence, and why it only plays one state |
-| [docs/interface.md](docs/interface.md) | Layout, the three-column scene, CSS traps |
-| [docs/export.md](docs/export.md) | Exporting to SVG, PNG, GIF and MP4 |
-| [docs/i18n.md](docs/i18n.md) | The hand-rolled translation layer |
-
-## Using the component
-
-```vue
-<BloubBot v-model:block="block" v-model:state="state" v-model:playing="playing" />
-<BloubBot state="orbit" :size="120" :frozen-at="1.2" />
-```
-
-`block` is the playback cursor: a montage can play the same state twice, so the
-index is what identifies where you are; `state` follows it as an output. Pass
-`frozenAt` and the component renders one exact frame with no animation loop, which
-is how the thumbnails and the state board are drawn.
-
-Props: `size`, `shape`, `color`, `expression`, `paper`, `frozenAt`, `cycle`,
-`follow`, `gaze`. Models: `block`, `state`, `playing`, `elapsed`. See
-[BloubBot.vue](src/components/BloubBot.vue) for the details.
-
-## Changes
-
-[CHANGELOG.md](CHANGELOG.md), one entry per release — which is how you tell whether the
-copy you have carries a given fix.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
-
-Not affiliated with, endorsed by or connected to x.ai. It recreates the visual
-behaviour of their bot avatar as an exercise; "Grok" and "x.ai" belong to their
-owners. The MIT licence covers the code in this repository, not the design it
-imitates.
+ClipLab started as a fork of [bloub](https://github.com/jeremy-prt/bloub) by Jérémy Perret. Its GIF and MP4 export helpers are reused. The studio workflow is inspired by the [Bible Strong Avatar Lab](https://avatars.bible-strong.app/); no source from that application is copied. Three.js is MIT licensed. See [LICENSE](LICENSE) for this repository's license.
