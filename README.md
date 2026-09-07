@@ -15,10 +15,14 @@ Open http://localhost:5190. `pnpm build` checks TypeScript, bundles the portable
 
 1. Choose Milo, Pip, or Lumi. In **Character**, choose a body, colors, shading, white eye dots, or face elevation.
 2. Select an **Expression** to preview it; double-click or choose **Edit selected** to adjust its face and body. Each expression has timed beats; select, reorder, duplicate, or add beats in the strip below the stage.
-3. In **Animations**, combine expressions, adjust their duration, and turn looping on or off. The eight starters are Idle, Listening, Thinking, Working, Success, Confused, Sleepy, and Playful.
+3. In **Animations**, combine expressions, adjust their duration, and turn looping on or off. The ten starters are Idle, Listening, Thinking, Working, Success, Confused, Sleepy, Playful, Sad, and Tearful. Older saved projects can use **Add new presets** to add missing expressions without replacing their edits.
 4. Drag the character or orientation globe to rotate; hold Shift while dragging to roll. The globe also supports arrow keys and Home to reset. Motion controls adjust speed, body movement, blinking, and cursor following.
 
-The in-product strip previews actual CSS sizes. Below 16 px the face disappears; 16–24 px shows eyes only; above 24 px shows the full face. Display density does not change these thresholds.
+Click a size preset to resize the main preview to that exact CSS size; **Fit** restores the large preview. Below 16 px the face disappears; 16–24 px shows eyes only; above 24 px shows the full face. Display density does not change these thresholds. Marketing export dimensions are configured independently.
+
+**Front** keeps the camera and animated body turns at a true front angle. **Position** stops floating and secondary breathing while preserving authored stretch, facial expressions, and supporting effects. Both settings are saved with the character and included in app and media exports. Dragging the orientation control releases Front.
+
+In **Character**, **Candle light** fixes slightly offset, concentric toon bands to the camera. Turning it off restores directional shading. In the expression editor, face presets combine circular eyes, half-circle arcs, and broad outlined mouths. **Cheek cutouts** remove a circular section from the lower eyes; white eye dots enlarge the black eyes by 20%. Tears and supporting props ease through deterministic loops, including when Position is locked.
 
 Changes autosave to this browser. Undo and redo keep recent edits. Export a **Project** file to back up all characters and sequences or move them to another browser; import validates the file before replacing the current project. Local browser storage is not cloud synchronization.
 

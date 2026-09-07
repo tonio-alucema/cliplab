@@ -24,9 +24,11 @@ function geometryFor(shape: Shape): THREE.BufferGeometry {
 }
 const vertexShader = `
   varying vec3 vPosition;
+  varying vec2 vViewXY;
   varying vec3 vWorldNormal;
   void main() {
     vPosition = position;
+    vViewXY = (modelViewMatrix * vec4(position, 1.0)).xy - (modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xy;
     vWorldNormal = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
@@ -36,16 +38,22 @@ const fragmentShader = `
   uniform vec3 colorB;
   uniform float gradientOn;
   uniform float toonOn;
+  uniform float candleLight;
   uniform float angle;
   uniform float bodyHeight;
   varying vec3 vPosition;
+  varying vec2 vViewXY;
   varying vec3 vWorldNormal;
   void main() {
     float t = clamp(0.5 + vPosition.y / bodyHeight * cos(angle) + vPosition.x * sin(angle), 0.0, 1.0);
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
     float light = dot(normalize(vWorldNormal), normalize(vec3(-0.6, 0.85, 1.0)));
     float shade = light > 0.58 ? 1.0 : (light > 0.08 ? 0.81 : 0.64);
-    gl_FragColor = vec4(color * mix(1.0, shade, toonOn), 1.0);
+    // An illustrative radial field keeps cylindrical bodies free from angular light bands.
+    vec2 radial = vec2((vViewXY.x + 0.035) / 0.5, (vViewXY.y - 0.04) / (bodyHeight * 0.5));
+    float ring = length(radial);
+    float candle = ring < 0.48 ? 1.0 : (ring < 0.7 ? 0.88 : (ring < 0.9 ? 0.74 : 0.59));
+    gl_FragColor = vec4(color * mix(1.0, mix(shade, candle, candleLight), toonOn), 1.0);
     #include <colorspace_fragment>
   }
 `
@@ -60,74 +68,101 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, po
   ctx.closePath(); ctx.fill()
 }
 
-export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }) {
+const faceAspect = .76 / .57
+const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+const fract = (v: number) => ((v % 1) + 1) % 1
+export function effectEnvelope(phase: number) { const t = fract(phase); return smoothstep(0, .18, t) * (1 - smoothstep(.72, 1, t)) }
+export function eyeRadius(pose: Pose, character: Character, detail: Detail, side: number) { return (detail === 'eyes' ? 29 : 27) * pose.eyeSize * (side < 0 ? pose.leftScale : pose.rightScale) * (character.iris ? 1.2 : 1) }
+function drop(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  ctx.beginPath(); ctx.moveTo(x, y - r * 1.5); ctx.bezierCurveTo(x - r * .25, y - r * .8, x - r, y - r * .2, x - r, y + r * .35); ctx.bezierCurveTo(x - r, y + r * 1.65, x + r, y + r * 1.65, x + r, y + r * .35); ctx.bezierCurveTo(x + r, y - r * .2, x + r * .25, y - r * .8, x, y - r * 1.5); ctx.fill()
+}
+export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number } = {}) {
   ctx.clearRect(0, 0, 512, 512)
   if (detail === 'body') return
-  const ink = character.eyeColor
-  const eyeY = detail === 'eyes' ? 254 : 209
-  const spacing = 103 * pose.spacing
+  const ink = character.eyeColor, eyeY = detail === 'eyes' ? 254 : 197, spacing = 103 * pose.spacing
   const gx = (pose.gazeX + gaze.x) * 20, gy = -(pose.gazeY + gaze.y) * 15
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  const drawEye = (side: number) => {
-    const factor = side < 0 ? pose.leftScale : pose.rightScale
-    const r = (detail === 'eyes' ? 28 : 23) * pose.eyeSize * factor
-    const x = 256 + side * spacing + gx + (side < 0 ? pose.leftX : pose.rightX)
-    const y = eyeY + gy - (side < 0 ? pose.leftY : pose.rightY)
+  for (const side of [-1, 1]) {
+    const r = eyeRadius(pose, character, detail, side)
+    const x = 256 + side * spacing + gx + (side < 0 ? pose.leftX : pose.rightX), y = eyeY + gy - (side < 0 ? pose.leftY : pose.rightY)
     const localRotation = side < 0 ? pose.leftRotation : pose.rightRotation
-    ctx.save(); ctx.translate(x, y); ctx.rotate((pose.eyeTilt * side + localRotation) * Math.PI / 180)
-    ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = 13
-    const closed = pose.eye === 'closed' || (pose.eye === 'wink' && side > 0) || (detail === 'eyes' && pose.mouth === 'open' && pose.eye === 'dot')
+    // Equal world units in X/Y: the face mesh is wider than it is tall.
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, faceAspect); ctx.rotate((pose.eyeTilt * side + localRotation) * Math.PI / 180)
+    ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = Math.max(13, r * .43)
+    const happyMouth = ['open', 'grin', 'smile', 'u-smile'].includes(pose.mouth)
+    const closed = ['closed', 'arc-up', 'arc-down'].includes(pose.eye) || (pose.eye === 'wink' && side > 0) || (detail === 'eyes' && ['open', 'grin'].includes(pose.mouth) && pose.eye === 'dot')
     if (closed) {
-      ctx.beginPath()
-      const happy = pose.mouth === 'open' || pose.mouth === 'smile'
-      ctx.moveTo(-r, happy ? 6 : -6); ctx.quadraticCurveTo(0, happy ? -r : r, r, happy ? 6 : -6); ctx.stroke()
+      const up = pose.eye === 'arc-up' || (pose.eye !== 'arc-down' && happyMouth)
+      ctx.beginPath(); ctx.arc(0, 0, r, up ? Math.PI : 0, up ? Math.PI * 2 : Math.PI); ctx.stroke()
     } else if (pose.eye === 'squint') {
-      ctx.beginPath(); ctx.moveTo(-r * side, -r * .75); ctx.lineTo(r * side * .6, 0); ctx.lineTo(-r * side, r * .75); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(-r * side * .7, -r * .8); ctx.lineTo(r * side * .6, 0); ctx.lineTo(-r * side * .7, r * .8); ctx.stroke()
     } else if (blink > .7) {
       ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.stroke()
     } else {
-      const h = Math.max(.12, 1 - blink) * pose.eyeHeight * (pose.eye === 'soft' ? .58 : pose.eye === 'wide' ? 1.2 : 1)
+      const h = Math.max(.12, 1 - blink) * pose.eyeHeight * (pose.eye === 'soft' ? .65 : 1)
       ctx.scale(1, h)
-      if (pose.eye === 'star') star(ctx, 0, 0, r * 1.25)
+      if (pose.cheeks) {
+        // The cheek is transparent, revealing the live shaded body beneath the eye.
+        ctx.beginPath(); ctx.rect(-r * 2, -r * 2, r * 4, r * 4); ctx.moveTo(r * .82, r * 1.13); ctx.arc(0, r * 1.13, r * .82, 0, Math.PI * 2); ctx.clip('evenodd')
+      }
+      if (pose.eye === 'star') star(ctx, 0, 0, r * 1.2)
       else if (pose.eye === 'heart') heart(ctx, 0, 0, r)
-      else { ctx.beginPath(); ctx.ellipse(0, 0, r, r, 0, 0, Math.PI * 2); ctx.fill() }
-      if (character.iris && detail === 'full') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-r * .29 + gaze.x * 3, -r * .32 + gaze.y * 3, r * .28, 0, Math.PI * 2); ctx.fill() }
+      else { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill() }
+      if (character.iris && detail === 'full') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-r * .29 + gaze.x * 3, -r * .32 - gaze.y * 3, r * .28, 0, Math.PI * 2); ctx.fill() }
     }
     ctx.restore()
+    if (pose.tears && detail === 'full') {
+      const phase = fract((effects.phase ?? .35) + (side < 0 ? .46 : 0)), alpha = effectEnvelope(phase) * (effects.tearAmount ?? 1)
+      ctx.save(); ctx.translate(x + side * (r + 18), y + 23 + phase * phase * 123); ctx.scale(1, faceAspect); ctx.rotate(-side * .2); ctx.globalAlpha = alpha; ctx.fillStyle = '#f6fdff'; drop(ctx, 0, 0, 12 + phase * 3); ctx.restore()
+    }
   }
-  drawEye(-1); drawEye(1)
   if (detail === 'eyes') return
-  const x = 256 + gx * .25, y = 318 + gy * .25, w = 49 * pose.mouthWidth
-  ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = 12
-  ctx.save(); ctx.translate(x, y); ctx.beginPath()
-  if (pose.mouth === 'smile') { ctx.moveTo(-w, -7); ctx.quadraticCurveTo(0, 29, w, -7); ctx.stroke() }
-  else if (pose.mouth === 'frown') { ctx.moveTo(-w, 9); ctx.quadraticCurveTo(0, -24, w, 9); ctx.stroke() }
-  else if (pose.mouth === 'line') { ctx.moveTo(-w * .65, 0); ctx.lineTo(w * .65, 0); ctx.stroke() }
-  else if (pose.mouth === 'wave') { ctx.moveTo(-w, 4); ctx.bezierCurveTo(-w * .35, -22, w * .35, 22, w, -4); ctx.stroke() }
-  else if (pose.mouth === 'sleep') { ctx.moveTo(-w * .7, 0); ctx.lineTo(w * .7, 0); ctx.stroke() }
+  const x = 256 + gx * .25, y = (pose.mouth === 'cry' ? 329 : 293) + gy * .25
+  const broad = ['open', 'grin', 'cry'].includes(pose.mouth), w = (broad ? 124 : pose.mouth === 'oh' ? 51 : 61) * pose.mouthWidth
+  const line = 17 * pose.mouthStroke
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, faceAspect); ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = line; ctx.beginPath()
+  if (pose.mouth === 'smile') { ctx.arc(0, -10, w, Math.PI * .18, Math.PI * .82); ctx.stroke() }
+  else if (pose.mouth === 'u-smile') { ctx.arc(0, -8, w * .56, 0, Math.PI); ctx.stroke() }
+  else if (pose.mouth === 'frown') { ctx.arc(0, 39, w, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke() }
+  else if (pose.mouth === 'line' || pose.mouth === 'sleep') { ctx.moveTo(-w * .58, 0); ctx.lineTo(w * .58, 0); ctx.stroke() }
+  else if (pose.mouth === 'wave') { ctx.moveTo(-w, 4); ctx.bezierCurveTo(-w * .35, -25, w * .35, 25, w, -4); ctx.stroke() }
   else {
-    const h = 17 + 61 * pose.mouthOpen
-    if (pose.mouth === 'oh') { ctx.ellipse(0, 2, w * .53, h * .64, 0, 0, Math.PI * 2) }
-    else { ctx.moveTo(-w, -15); ctx.quadraticCurveTo(0, -5, w, -15); ctx.bezierCurveTo(w * 1.13, h, -w * 1.13, h, -w, -15) }
+    const h = (broad ? 48 : 22) + 72 * pose.mouthOpen
+    if (pose.mouth === 'oh') ctx.arc(0, 14, w * (.55 + .3 * pose.mouthOpen), 0, Math.PI * 2)
+    else if (pose.mouth === 'cry') { ctx.moveTo(-w, 30); ctx.bezierCurveTo(-w * 1.1, -h, w * 1.1, -h, w, 30); ctx.quadraticCurveTo(w, 44, w * .76, 38); ctx.quadraticCurveTo(0, 24, -w * .76, 38); ctx.quadraticCurveTo(-w, 44, -w, 30) }
+    else { const tilt = pose.mouth === 'grin' ? 24 : 0; ctx.moveTo(-w, -11); ctx.quadraticCurveTo(0, 5, w, -11 - tilt); ctx.bezierCurveTo(w * 1.02, h, -w * 1.02, h, -w, -11) }
     ctx.closePath(); ctx.fill(); ctx.save(); ctx.clip()
-    if (pose.tongue) { ctx.fillStyle = '#f47c80'; ctx.beginPath(); ctx.ellipse(3, h * .66, w * .75, h * .36, 0, 0, Math.PI * 2); ctx.fill() }
-    if (pose.teeth) { ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.roundRect(-w * .75, -20, w * 1.5, 25, 10); ctx.fill() }
+    if (pose.tongue) { ctx.fillStyle = '#f37b83'; ctx.beginPath(); ctx.ellipse(10, h * .65, w * .65, h * .34, -.1, 0, Math.PI * 2); ctx.fill() }
+    if (pose.teeth) { ctx.fillStyle = '#fffef8'; ctx.beginPath(); ctx.roundRect(-w * .76, -23, w * 1.52, 30, 12); ctx.fill() }
     ctx.restore()
+    // Rebuild the outer path after the clipped interior details changed the canvas path.
+    ctx.beginPath()
+    if (pose.mouth === 'oh') ctx.arc(0, 14, w * (.55 + .3 * pose.mouthOpen), 0, Math.PI * 2)
+    else if (pose.mouth === 'cry') { ctx.moveTo(-w, 30); ctx.bezierCurveTo(-w * 1.1, -h, w * 1.1, -h, w, 30); ctx.quadraticCurveTo(w, 44, w * .76, 38); ctx.quadraticCurveTo(0, 24, -w * .76, 38); ctx.quadraticCurveTo(-w, 44, -w, 30) }
+    else { const tilt = pose.mouth === 'grin' ? 24 : 0; ctx.moveTo(-w, -11); ctx.quadraticCurveTo(0, 5, w, -11 - tilt); ctx.bezierCurveTo(w * 1.02, h, -w * 1.02, h, -w, -11) }
+    ctx.closePath(); ctx.strokeStyle = ink; ctx.stroke()
   }
-  if (pose.drool) { ctx.strokeStyle = '#fffef5'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(w * .35, 4); ctx.lineTo(w * .4, 41); ctx.stroke(); ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.arc(w * .4, 44, 8, 0, Math.PI * 2); ctx.fill() }
+  if (pose.drool) { ctx.strokeStyle = '#fffef5'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(w * .35, 6); ctx.lineTo(w * .4, 40); ctx.stroke(); ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.arc(w * .4, 44, 8, 0, Math.PI * 2); ctx.fill() }
   ctx.restore()
 }
 
-function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string) {
-  ctx.clearRect(0, 0, 256, 256); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  if (prop === 'zzz') {
-    const z = (x: number, y: number, size: number) => { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y); ctx.lineTo(x, y + size); ctx.lineTo(x + size, y + size); ctx.stroke() }
-    z(28, 170, 30); z(84, 104, 48); z(159, 22, 65)
-  } else if (prop === 'sparkle') { star(ctx, 83, 91, 53, 4); star(ctx, 190, 168, 29, 4) }
-  else if (prop === 'heart') { heart(ctx, 126, 112, 58) }
-  else if (prop === 'question') { ctx.font = 'bold 156px sans-serif'; ctx.fillText('?', 73, 180) }
-  else if (prop === 'sweat') { ctx.beginPath(); ctx.moveTo(124, 38); ctx.bezierCurveTo(104, 98, 55, 131, 71, 174); ctx.bezierCurveTo(100, 230, 197, 190, 166, 139); ctx.closePath(); ctx.fill() }
-  else if (prop === 'crown') { ctx.beginPath(); ctx.moveTo(46, 181); ctx.lineTo(23, 71); ctx.lineTo(86, 119); ctx.lineTo(126, 43); ctx.lineTo(166, 119); ctx.lineTo(229, 71); ctx.lineTo(206, 181); ctx.closePath(); ctx.fill() }
+function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number) {
+  ctx.clearRect(0, 0, 256, 256)
+  const count = ['zzz', 'sparkle', 'heart'].includes(prop) ? 3 : 1
+  for (let i = 0; i < count; i++) {
+    const p = fract((phase ?? .34) + i * .29), ease = p * p
+    ctx.save(); ctx.globalAlpha = phase === undefined ? 1 : effectEnvelope(p)
+    ctx.translate(count === 1 ? 128 : 51 + i * 69, count === 1 ? 132 - ease * 26 : 198 - i * 60 - ease * 38)
+    const scale = phase === undefined ? 1 : .62 + .38 * smoothstep(0, .38, p)
+    ctx.scale(scale, scale); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    if (prop === 'zzz') { const r = 14 + i * 5; ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, -r); ctx.lineTo(-r, r); ctx.lineTo(r, r); ctx.stroke() }
+    else if (prop === 'sparkle') star(ctx, 0, 0, 23 + i * 4, 4)
+    else if (prop === 'heart') heart(ctx, 0, 0, 17 + i * 3)
+    else if (prop === 'question') { ctx.font = 'bold 144px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('?', 0, 48) }
+    else if (prop === 'sweat') drop(ctx, 0, 0, 38)
+    else if (prop === 'crown') { ctx.beginPath(); ctx.moveTo(-78, 42); ctx.lineTo(-94, -45); ctx.lineTo(-35, -3); ctx.lineTo(0, -67); ctx.lineTo(35, -3); ctx.lineTo(94, -45); ctx.lineTo(78, 42); ctx.closePath(); ctx.fill() }
+    ctx.restore()
+  }
 }
 
 export class CharacterRenderer {
@@ -163,7 +198,7 @@ export class CharacterRenderer {
     this.propCanvas.width = this.propCanvas.height = 256; this.propCtx = this.propCanvas.getContext('2d')!
     this.propTexture = new THREE.CanvasTexture(this.propCanvas); this.propTexture.colorSpace = THREE.SRGBColorSpace
     const material = new THREE.ShaderMaterial({
-      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
+      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, candleLight: { value: 0 }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
     })
     this.body = new THREE.Mesh(geometryFor('capsule'), material)
     this.face = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 56, 40), new THREE.MeshBasicMaterial({ map: this.faceTexture, transparent: true, alphaTest: .008, depthWrite: false, side: THREE.FrontSide, toneMapped: false }))
@@ -191,20 +226,20 @@ export class CharacterRenderer {
     const detail = detailAt(this.options.displaySize ?? Math.min(this.options.width, this.options.height))
     const u = this.body.material.uniforms
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
-    u.gradientOn!.value = character.gradient ? 1 : 0; u.toonOn!.value = character.toon ? 1 : 0
+    u.gradientOn!.value = character.gradient ? 1 : 0; u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
     u.angle!.value = character.gradientAngle * Math.PI / 180; u.bodyHeight!.value = height
     const rotation = this.options.rotation ?? { x: -5, y: -12, z: -7 }
-    this.root.rotation.set((rotation.x + pose.rotationX) * Math.PI / 180, (rotation.y + pose.rotationY) * Math.PI / 180, (rotation.z + pose.rotationZ) * Math.PI / 180, 'YXZ')
-    this.root.position.y = sample.bob * .025 * height
-    const stretch = pose.squash + sample.breathe * .008
+    this.root.rotation.set((character.trueFront ? 0 : rotation.x + pose.rotationX) * Math.PI / 180, (character.trueFront ? 0 : rotation.y + pose.rotationY) * Math.PI / 180, (character.trueFront ? 0 : rotation.z + pose.rotationZ) * Math.PI / 180, 'YXZ')
+    this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
+    const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))
     const zoom = this.options.zoom ?? 1
     const aspect = this.options.width / this.options.height
     const half = Math.max(height * .72, .72 / aspect) / zoom
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
     this.face.visible = detail !== 'body'
-    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), detail, gaze.x.toFixed(3), gaze.y.toFixed(3)])
-    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, gaze); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
+    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, gaze.x.toFixed(3), gaze.y.toFixed(3)])
+    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!
@@ -221,13 +256,14 @@ export class CharacterRenderer {
     }
     vertices.needsUpdate = true; valid.needsUpdate = true; this.face.geometry.computeBoundingSphere()
     this.prop.visible = detail === 'full' && pose.prop !== 'none'
-    if (pose.prop !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362'); this.propTexture.needsUpdate = true; this.lastProp = pose.prop }
+    const propKey = `${pose.prop}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
+    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase); this.propTexture.needsUpdate = true; this.lastProp = propKey }
     const propSize = this.shape === 'capsule' ? .42 : .32
-    this.prop.scale.setScalar(propSize)
-    this.prop.position.set(pose.prop === 'crown' ? 0 : .56, pose.prop === 'crown' ? height / 2 + .08 : height * .29 + sample.bob * .03, .15)
+    this.prop.scale.setScalar(propSize * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
+    this.prop.position.set(pose.prop === 'crown' ? 0 : .56, pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
-    this.shadow.scale.set((1 - sample.bob * .06) * (this.shape === 'capsule' ? 1 : .95), .12, 1)
+    this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (this.shape === 'capsule' ? 1 : .95), .12, 1)
     const bg = this.options.background
     if (bg) this.gl.setClearColor(bg, 1); else this.gl.setClearColor(0x000000, 0)
     this.gl.render(this.scene, this.camera)
@@ -245,7 +281,7 @@ export class CharacterRenderer {
 let thumbRenderer: CharacterRenderer | undefined
 const thumbs = new Map<string, string>()
 export function thumbnail(character: Character, pose: Pose = BASE_POSE, size = 96): string {
-  const key = JSON.stringify([character.shape, character.color, character.color2, character.gradient, character.gradientAngle, character.toon, character.iris, character.eyeColor, character.elevated, character.elevation, pose, size])
+  const key = JSON.stringify([character, pose, size])
   const cached = thumbs.get(key); if (cached) return cached
   try {
     if (!thumbRenderer) thumbRenderer = new CharacterRenderer(document.createElement('canvas'), { width: 192, height: 192, pixelRatio: 1, displaySize: size })

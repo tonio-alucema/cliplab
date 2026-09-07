@@ -88,3 +88,12 @@ These are directions explicitly supplied by the user, not an inferred design sys
 - Any team sharing or cloud project storage, beyond browser autosave and portable project files.
 - The later Paperclip flyout integration.
 - Character personality refinements after reviewing the working studio.
+
+## September 2026 refinement
+
+- Dark-only UI: a transparent header, three independently floating charcoal cards for preview, sequence panel and inspector, with restrained white sequence selections. Supplied screenshots 2/3 govern this replacement of the earlier pale inspector. Use public/cliplab-logo-white.svg.
+- Clickable CSS-size presets update the main canvas, with Fit to restore the large preview.
+- Persist True front and Lock position in character definitions. True front overrides rendered view and pose rotation without erasing poses. Position lock stops float/breathing while preserving facial, prop, and authored pose animation.
+- Round dot eyes and half-circle arcs, bolder face strokes, broad open mouths, optional circular cheek cutouts, and 20% larger black eyes whenever white eye dots are enabled.
+- Optional camera-fixed candle-style radial toon bands, smooth and loosely concentric with a slight offset. Existing directional toon lighting remains selectable.
+- Supporting hearts, stars, sleep marks and tears use deterministic eased entrance, motion and exit, including in exported loops. Add sad and tearful presets without overwriting saved user expressions.

@@ -1,123 +1,167 @@
 ---
 name: ClipLab
-description: A compact studio for expressive toon characters and looping animation.
+description: A quiet dark studio for expressive toon characters and looping animation.
 colors:
-  accent: "#4967d6"
-  accent-soft: "#edf1ff"
-  selected-surface: "#f0f3ff"
-  ink: "#27313b"
-  secondary-text: "#596675"
-  line: "#e4e7eb"
-  surface: "#fff"
-  workbench: "#f9fafb"
-  stage-slate: "#171e25"
-  stage-light: "#e9eef0"
+  graphite: "#303230"
+  primary: "#ecefe8"
+  primary-ink: "#171a17"
+  timeline-selected: "#eeeee8"
+  accent: "#a9d9bb"
+  focus: "#9fd3b5"
+  text-action: "#c3ddb2"
+  ink: "#eff0ed"
+  secondary-text: "#b3b8ad"
+  control-text: "#e3e6e0"
+  utility-text: "#b2b6b1"
+  line: "#ffffff12"
+  sequence-surface: "#1a1d1a"
+  field-surface: "#282d25"
+  secondary-surface: "#292c29"
+  secondary-hover: "#343834"
+  secondary-ink: "#eef0eb"
+  expression-selected: "#2d392d"
+  chip-surface: "#272f22"
+  chip-selected: "#3d4d32"
+  chip-selected-ink: "#e4f3d6"
+  view-selected: "#304136"
+  view-selected-ink: "#c8ecd2"
   peach: "#ff986d"
   apricot: "#ffd092"
   mint: "#81d4c1"
   pale-mint: "#c6efd2"
   lilac: "#a79ce8"
   pale-lilac: "#d8cafa"
-  face-ink: "#172023"
+  face-ink: "#080909"
 typography:
   headline:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    fontSize: "25px"
-    fontWeight: 640
-    lineHeight: 1.3
-    letterSpacing: "-.035em"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
+    fontSize: "27px"
+    fontWeight: 400
+    lineHeight: 1.25
+    letterSpacing: "-.025em"
   headline-compact:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
     fontSize: "20px"
-    fontWeight: 640
-    lineHeight: 1.3
-    letterSpacing: "-.035em"
+    fontWeight: 400
+    lineHeight: 1.25
+    letterSpacing: "-.025em"
   title:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
     fontSize: "14px"
-    fontWeight: 630
+    fontWeight: 500
+    letterSpacing: "-.01em"
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
     fontSize: "14px"
   button:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
     fontSize: "13px"
-    fontWeight: 570
+    fontWeight: 450
   label:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
     fontSize: "12px"
-    fontWeight: 570
+    fontWeight: 500
+  helper:
+    fontFamily: "'Helvetica Neue', Arial, sans-serif"
+    fontSize: "12px"
+    lineHeight: 1.6
   code:
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
     fontSize: "12px"
     lineHeight: 1.65
 rounded:
-  micro: "4px"
-  chip: "6px"
-  field: "7px"
-  button: "8px"
-  card: "9px"
-  panel: "10px"
+  readout: "4px"
+  icon: "7px"
+  field: "10px"
+  option: "12px"
+  timeline: "13px"
+  tab: "14px"
+  expression: "15px"
+  chip: "17px"
+  stage-pill: "18px"
+  button: "22px"
+  panel-mobile: "23px"
+  sequence: "24px"
+  panel: "26px"
 spacing:
   tight: "4px"
   small: "6px"
   control: "8px"
   grid: "10px"
   label: "12px"
+  compact: "14px"
   group: "16px"
-  section: "23px"
+  gutter: "18px"
+  wide-gutter: "22px"
   inspector: "24px"
 components:
   button-primary:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.surface}"
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-ink}"
     typography: "{typography.button}"
     rounded: "{rounded.button}"
-    padding: "9px 14px"
+    padding: "9px 17px"
   button-primary-hover:
-    backgroundColor: "#3b57c4"
+    backgroundColor: "#fff"
   button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "#3d4753"
+    backgroundColor: "{colors.secondary-surface}"
+    textColor: "{colors.secondary-ink}"
     typography: "{typography.button}"
     rounded: "{rounded.button}"
-    padding: "9px 14px"
+    padding: "9px 17px"
+  button-secondary-hover:
+    backgroundColor: "{colors.secondary-hover}"
   button-quiet:
     textColor: "{colors.ink}"
     typography: "{typography.button}"
     rounded: "{rounded.button}"
-    padding: "9px 14px"
+    padding: "9px 17px"
   button-text:
-    textColor: "{colors.accent}"
+    textColor: "{colors.text-action}"
     padding: "5px 0"
   button-icon:
-    textColor: "{colors.secondary-text}"
-    rounded: "{rounded.field}"
+    textColor: "{colors.utility-text}"
+    rounded: "{rounded.icon}"
     width: "32px"
     height: "32px"
   text-field:
-    backgroundColor: "#f9fafc"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.field-surface}"
+    textColor: "{colors.control-text}"
     rounded: "{rounded.field}"
     padding: "7px 10px"
     height: "37px"
   option-chip:
+    backgroundColor: "{colors.chip-surface}"
+    textColor: "{colors.secondary-text}"
     rounded: "{rounded.chip}"
     padding: "7px 11px"
   option-chip-selected:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "#4a65c9"
+    backgroundColor: "{colors.chip-selected}"
+    textColor: "{colors.chip-selected-ink}"
     rounded: "{rounded.chip}"
     padding: "7px 11px"
+  inspector-tab:
+    rounded: "{rounded.tab}"
+    padding: "8px 0"
+    height: "58px"
   integration-card:
-    backgroundColor: "#fafbfd"
-    rounded: "{rounded.button}"
+    backgroundColor: "#ffffff02"
+    textColor: "{colors.secondary-text}"
+    rounded: "{rounded.timeline}"
     padding: "13px"
-  integration-card-selected:
-    backgroundColor: "{colors.selected-surface}"
-    textColor: "#5a74d1"
-    rounded: "{rounded.button}"
-    padding: "13px"
+  expression-card:
+    backgroundColor: "#ffffff02"
+    rounded: "{rounded.expression}"
+  expression-card-selected:
+    backgroundColor: "{colors.expression-selected}"
+    rounded: "{rounded.expression}"
+  sequence-beat:
+    backgroundColor: "#272c26"
+    rounded: "{rounded.timeline}"
+  sequence-beat-selected:
+    backgroundColor: "{colors.timeline-selected}"
+    textColor: "#252d23"
+    rounded: "{rounded.timeline}"
 ---
 
 # Design System: ClipLab
@@ -126,141 +170,147 @@ components:
 
 **Creative North Star: "The Character Studio"**
 
-ClipLab is a working character studio with a slate preview, white controls, blue selection, crisp outlines, and expressive toon characters. Its identity is carried by the authored character; the surrounding interface uses compact, familiar controls and a restrained system UI font.
+ClipLab is a quiet dark studio: a graphite canvas, a transparent header with the supplied white logo, and separate charcoal cards leave room for the authored character. Regular sans-serif headings, compact controls, sage selections, and a few white action surfaces keep the surrounding interface restrained.
 
-The material distinction is deliberate: the controls use quiet surface changes and borders, while the characters combine smooth two-color fills with discrete lighting bands. The studio, expression thumbnails, and size previews all use the same character renderer, preserving the character’s appearance while it is edited and sequenced.
+The character carries the expressive range. Real geometry supports smooth two-color fills and sharply divided toon lighting, with circular eyes, substantial mouths, and optional animated details. The stage, expression library, and timeline share the character renderer so that the same face reads consistently while it is edited, sequenced, and exported. This refresh retains the established studio identity and character principles while replacing the earlier pale surfaces and blue action language with the user-approved dark world.
 
 **Key Characteristics:**
 
-- Slate preview and white editing surfaces.
-- Blue identifies selection and primary actions.
-- Compact controls with fine outlines and modest corner rounding.
-- Smooth character color blending with crisp toon shading.
-- Character detail follows displayed CSS size.
+- Graphite gutters separate independently rounded charcoal surfaces.
+- The transparent header carries the supplied white ClipLab logo.
+- White highlights primary actions and the active timeline beat; sage identifies quieter editing states.
+- Compact regular sans-serif type supports a character-led interface.
+- Circular facial geometry and crisp toon bands remain consistent across rendering contexts.
 
 ## Colors
 
-The interface uses cool neutral surfaces and a blue action accent; the character palette introduces peach, mint, lilac, and other user-selected colors.
+The interface combines subtly green charcoal neutrals with warm white actions and quiet sage states; editable character colors provide the stronger hues.
 
 ### Primary
 
-- **Selection blue** (`accent`): primary buttons, current inspector tabs, range controls, and text actions.
-- **Pale selection blue** (`accent-soft`) and **selected surface** (`selected-surface`): existing complementary fills for option chips and selected cards. These are separate source values; the build does not have one universal selected-card border color.
+- **Warm white action** (`primary`): primary action fills, paired with `primary-ink`. Hover approaches pure white. The timeline uses its own `timeline-selected` white for the active beat.
+- **Sage accent** (`accent`): native range, checkbox, and progress accents. `focus` supplies the recurring keyboard outline; `text-action` identifies text actions.
+- **Selection surfaces:** expression cards, option chips, and stage controls use their recorded component colors. They form a related family, not a single interchangeable selected-state token.
 
 ### Secondary
 
-- **Peach / apricot**, **mint / pale mint**, and **lilac / pale lilac**: paired starting character fills reused in the palette picker and default character definitions. These are content defaults and remain editable.
-- **Face ink**: the default face color shared by the starting characters; it remains an editable character setting.
+- **Peach / apricot**, **mint / pale mint**, and **lilac / pale lilac**: starting character pairs shared by the character definitions and palette picker. These are editable content defaults.
+- **Face ink**: the default near-black eye and mouth color, also editable per character.
 
 ### Neutral
 
-- **Ink**: main UI text and inherited field text.
-- **Secondary text**: the repeated final-build value for helper copy, field labels, inactive light-surface tabs, numeric metadata, and utility icons. Dark-stage labels retain their own lighter treatment.
-- **White surface**: header, character bar, inspector, buttons, and size-preview strip.
-- **Workbench**: the slightly toned timeline and surrounding work area.
-- **Fine line**: structural dividers between the main interface regions.
-- **Slate stage / light stage**: actual preview backgrounds, also used by the background selector. The third preview option is a transparency checker, built from four aligned CSS gradients.
+- **Graphite:** the page canvas visible through the header and around all three studio cards.
+- **Charcoal surfaces:** the sequence uses `sequence-surface`; the preview and inspector use subtly graded charcoal fills from the component CSS. Those interface gradients are intentionally quiet.
+- **Ink / control text / secondary text / utility text:** main text, field and numeric values, helper copy, and utility icons respectively.
+- **Fine line:** a translucent white divider. Most component borders are similarly subtle white overlays, with a stronger sage boundary for active choices.
 
-**The Selection Blue Rule.** Use the existing blue accent for primary actions and active controls; pair selected cards with a pale blue fill and visible border. Character body colors remain authored content.
+**The White Anchor Rule.** Keep the primary action and current timeline beat white while using the shipped sage variants for quieter editor selection. Character colors remain authored content.
 
 ## Typography
 
-**UI Font:** the system sans-serif stack recorded in the frontmatter.
-**Code Font:** the system monospace stack recorded in the frontmatter.
+**UI Font:** the Helvetica Neue, Arial, sans-serif stack recorded in the frontmatter.
+**Code Font:** the recorded system monospace stack.
 
-**Character:** tightly set, compact UI type. The source uses one sans-serif family with size and weight changes rather than a contrasting display face. No reusable display-font role is established by this build.
+**Character:** regular, tightly set sans-serif UI text. The supplied logo provides the wordmark; it is not recreated with typed lettering. This build establishes panel headings, not a separate display-font role.
 
 ### Hierarchy
 
-- **Headline:** primary inspector titles; the compact variant appears in the expression editor. These are UI panel headings.
-- **Title:** section headings for grouped controls.
-- **Body:** the root text size, with the majority of component copy locally reduced for editor density.
-- **Button:** primary, secondary, and quiet action labels.
-- **Label:** expression names and timeline beat names.
-- **Supporting UI:** numeric values and secondary labels are generally (11–12px). Some micro-metadata is (9–10px); those smallest sizes are not a reusable body-text standard. The final build uses the secondary-text color for this metadata on light surfaces.
-- **Code:** integration snippets, with the separate monospace stack.
+- **Headline:** main inspector titles. The compact variant appears in the detailed expression editor.
+- **Title:** section headings for grouped controls; timeline headings use a slightly lighter weight (450).
+- **Body:** the root text size. Most component copy is locally reduced to preserve editor density.
+- **Button:** short action labels, usually with an icon and a compact gap.
+- **Label:** field and beat names. Expression card names are slightly lighter (450).
+- **Helper:** panel descriptions and supporting explanations, with comfortable line spacing.
+- **Code:** integration examples. Duration, dimensions, and range readouts use tabular figures where implemented.
 
-**The Compact Type Rule.** Use the compact UI hierarchy for control names, values, and panel titles. Time, size, and numeric settings use tabular figures where the source provides them.
+**The Quiet Type Rule.** Use size, spacing, and modest weight changes to separate controls and headings. Keep the expressive character as the visual focus.
 
 ## Layout
 
-The current studio fills the desktop viewport, with a fixed-height header (64px) and a workbench beside an independently scrolling inspector (400px wide). The left workbench contains a character selector, a flexible stage, a size-preview strip, and a compact timeline. This describes the shipped studio surface; it is not a required composition for every future ClipLab page.
+The desktop studio fills the viewport, with a minimum height (680px), a transparent header (83px), and page padding (0 22px 22px). The workspace is a flexible left column beside an inspector (376px), separated by a visible graphite gutter (18px). The left workbench stacks a flexible preview with a minimum height (260px) above a sequence card (262px), also with an (18px) gap. The preview contains a character selector row (59px); the sequence combines size presets and the timeline. The inspector scrolls independently with content padding (24px). These measurements describe the shipped studio rather than requiring this exact composition for every future ClipLab surface.
 
-The default workbench rows are (58px), a stage with a minimum of (260px), (118px), and (208px). At viewport widths of at least (1500px), the inspector grows to (430px), the stage minimum becomes (300px), and the timeline becomes (220px). At widths up to (1150px), the inspector narrows to (350px) and auxiliary header copy is hidden.
+At widths of at least (1500px), the inspector grows to (410px), workspace and workbench gaps grow to (22px), page padding becomes (0 28px 26px), and inspector padding becomes (27px 28px). At widths up to (1150px), the inspector narrows to (332px), gaps shrink to (14px), page padding becomes (0 16px 16px), and inspector padding becomes (21px 19px). Supporting header copy, save status, character count, and secondary timeline copy disappear to preserve working space.
 
-At widths up to (820px), the document scrolls vertically: the workbench comes first and the inspector follows. The header becomes sticky (58px); inspector tabs stick below it. The inspector content is capped at (640px) and the stage height is (430px). At widths up to (480px), the stage becomes (370px), the size-strip explanation is hidden, and expression cards return to two columns. Between those narrow-phone and stacked-layout breakpoints, the expression grid uses four columns; on desktop it uses two.
+At widths up to (820px), the page scrolls vertically and the inspector follows the workbench. The header is (72px), with ordinary document positioning. Workbench rows become (490px) and (262px), separated by (16px); all three main cards use the mobile panel radius. The inspector has a minimum height (660px) and its content participates in page scrolling. Undo controls disappear. Expression cards use four columns, and the detailed editor footer sticks to the viewport bottom.
 
-Use the observed compact spacing vocabulary: close groups rely on the smaller frontmatter steps; control groups use medium separation; inspector sections use the larger steps. Two-column slider groups and paired actions, three shape choices, and four inspector tabs recur in the source. Timeline blocks remain in a horizontally scrollable track on narrow screens.
+At widths up to (480px), page padding becomes (0 10px 16px), the header logo renders at (138px) inside its cropped wrapper, and Import disappears from the header. Preview and sequence heights become (435px) and (265px), with a (13px) gap; the preview selector row becomes (55px). The size-strip explanation is hidden, the size buttons distribute across the width, and the expression library returns to two columns. Inspector padding becomes (22px 20px). Timeline items retain a minimum width (145px) and scroll horizontally instead of compressing their controls.
+
+Use the repeated spacing steps from the frontmatter for local groups. Two-column sliders, three body-shape choices, four inspector tabs, and four face-preset columns recur. This is a compact tool: helper copy should remain legible, and optional information should yield before primary controls.
+
+**The Visible Gutter Rule.** Preserve graphite space between the preview, sequence, and inspector cards. Keep the header transparent so the workspace reads as independent surfaces.
 
 ## Elevation & Depth
 
-Interface surfaces are primarily separated by color, fine borders, and spacing. They do not all float: the header, stage, timeline, and inspector form adjacent regions. Small ambient shadows support selected expression cards, selected export tabs, switch knobs, and temporary toast feedback. The renderer gives the character its own depth through real geometry, three discrete shade bands, and an optional sharply bounded ellipse beneath it.
+The interface uses tonal layering, generous outer rounding, and faint ambient shadows. Preview and inspector gradients remain close in value; the separate sequence surface is flat. Inner controls mostly use fill and fine border changes rather than floating independently. The character has its own illustrative depth through real geometry and crisp bands, independent of interface shadows.
 
 ### Shadow Vocabulary
 
-- **Selected expression:** a soft blue outer outline (`0 0 0 2px #e8edff`). It strengthens the active card boundary without lifting every card.
-- **Selected timeline block:** a fine blue outer outline (`0 0 0 1px #9dadf322`).
-- **Raised export tab:** a very small ambient shadow (`0 1px 4px #25364f0b`).
-- **Switch knob:** subtle separation from its track (`0 1px 2px #0000000c`).
-- **Toast:** temporary feedback above the interface (`0 8px 30px #25364f16`).
+- **Floating panel:** soft ambient separation (`0 8px 16px #15181520`), shared by preview, sequence, and inspector.
+- **Primary action:** restrained lift (`0 2px 4px #0000001a`).
+- **Current timeline beat:** slight lift under the white selection (`0 3px 7px #0000001a`).
+- **Toast:** temporary feedback elevation (`0 10px 30px #00000044`).
 
-**The Crisp Lighting Rule.** Blend body colors smoothly, but retain the renderer’s discrete lighting bands and sharply bounded ground shadow. Smooth fill is an approved material, not a lighting blur.
+**The Crisp Lighting Rule.** Blend character body colors smoothly while keeping toon lighting boundaries hard. The camera-fixed candle mode uses four slightly offset radial bands; the selectable directional mode uses three normal-based bands. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.
 
 ## Shapes
 
-Controls use modest rounded corners, not one radius everywhere. The frontmatter records the repeated scale: the smallest rounding supports readouts and micro-controls, the middle steps support chips, fields, and buttons, and the larger steps support grouped choices and containers. Expression preview cards have their own observed corner radius (11px). Circles are used for palette swatches, small state indicators, and the orientation display.
+Outer panels use broad rounded corners, buttons and options use pill-like shapes, and fields and smaller cards use intermediate radii. The radius vocabulary is deliberately varied: fields, icon controls, expression cards, timeline beats, and outer panels each keep their established geometry. Palette swatches, eye dots, small indicators, and playback controls use circles. Thin SVG line icons have rounded caps and joins.
 
-The authored body geometry has three silhouettes: a capsule with a (1:2) width-to-height ratio, a square-proportioned end cap, and a sphere. The end cap’s nominally straight lower end keeps a rounded edge. Compact eyes and mouths are mapped to the curved body; optional elevation lifts them onto a larger invisible shell. These character forms are distinct from control-container geometry.
+The body silhouettes remain a capsule with a width-to-height ratio (1:2), a square-proportioned end cap with a rounded lower edge, and a sphere. Face mapping compensates for the face mesh aspect ratio so default dots and half-circle eye arcs remain circular head-on. Eye-height, blinking, and authored pose changes can still alter the expression. Optional cheek cutouts are circular transparent areas that reveal the shaded body; they are not a painted flat body-color patch.
+
+**The Round Face Rule.** Start from circular dot eyes and half-circle arcs, with rounded stroke ends and substantial mouth contours. Keep facial proportions relative to the authored body and preserve the circular geometry when the face is mapped to it.
 
 ## Components
 
 ### Buttons
 
-Compact actions combine an icon and short label with an (8px) gap. Filled blue identifies the primary action; secondary actions use a white fill and fine gray outline; quiet actions expose their background on hover; text actions use blue text and an underline on hover. Icon-only utility buttons use small rounded square hit areas.
+Pill-shaped actions combine a short label with a line icon. Primary buttons use warm white with dark text; secondary buttons use a charcoal fill and faint border; quiet actions expose a translucent white background on hover. Text actions use pale sage and underline on hover. Utility icon buttons remain compact rounded squares.
 
-Primary and secondary hover states adjust fill and border color. Disabled buttons reduce opacity (0.4) and use a non-interactive cursor. The shared keyboard treatment is an external focus outline (3px, offset 3px), except that the current text-field rule suppresses the outline and changes its border on focus. This inconsistency is not a model for future fields.
+Shared action padding is (9px 17px), with a minimum height (38px) and icon gap (8px). Primary hover becomes white; secondary hover lightens the fill and strengthens the border. Disabled buttons reduce opacity (0.4) and use a non-interactive cursor. Keyboard focus uses an external sage outline (3px, offset 3px). Color, border, background, and opacity transitions last (150ms); the reduced-motion media query removes CSS transitions.
 
 ### Chips
 
-Expression options and editor beat selectors are compact bordered choices with pale blue active fills. Options wrap rather than forcing the inspector wider. Their active borders and text colors come from each existing component variant; do not infer a new universal token from their near-matching values.
+Expression options wrap into compact rounded choices, with a charcoal-green fill, muted text, and a sage active variant. Editor beat selectors use a denser row with their own stronger selected fill. Size presets are clickable pills: (12, 16, 24, 48, 96px) sets the actual displayed CSS size in the main stage, while Fit restores the large preview. Their state changes are visual as well as semantic through pressed-state attributes.
 
 ### Cards / Containers
 
-Expression cards are image-first choices: the shared renderer supplies a thumbnail, and a compact footer supplies the expression name and beat count. Selection adds a blue border and outer outline. The expression library places a visible “Edit selected” text action above the grid; selecting and detailed editing are distinct interactions. Shape choices, animation rows, and integration choices share the same pale neutral-to-blue selection language with their own geometry. The timeline uses compact bordered blocks with a main selection area and a lower row for duration and ordering actions.
+The three outer cards use the layout and elevation vocabulary above. Expression cards are image-first choices with shared-renderer thumbnails and a compact name/beat-count footer. Selection changes their fill to the recorded expression-selected surface and strengthens the sage border; it does not add a glow. A visible Edit selected action and double-click both enter detailed editing. Shape choices, animation rows, and integration choices carry related subdued selection treatments with their own established values.
+
+Timeline beats have an upper selection area and lower duration/order controls. The active beat turns white and its text turns dark; inactive beats retain charcoal fills. The track scrolls horizontally. The circular playback button uses a pale sage fill with a dark glyph for readable contrast. Add beat uses a dashed boundary and its own disabled opacity (0.3).
 
 ### Inputs / Fields
 
-Text and numeric fields use a pale cool fill, a fine gray border, and modest rounding. Their border shifts blue and fill turns white on focus. Range controls place a label and numeric readout together above the track. Paired sliders are also used for left/right eye size, placement, and rotation; link and mirror switches expose whether the adjustments move together. Native checkboxes use the accent color. Switches use a small blue track when active, a gray track when inactive, and a white circular knob.
+Text and select fields use the field-surface fill, a faint white border, the field radius, and a height (37px). Focus shifts the fill and sage border; keyboard focus also supplies a visible outline (2px, offset 2px). Range and checkbox controls use the sage accent. Numeric readouts are compact dark rounded rectangles with tabular figures.
 
-Control transitions run for (150ms). The reduced-motion stylesheet disables transitions and smooth scrolling; playback also starts paused when the user requests reduced motion.
+Switches use a small track (30px by 17px) and circular white knob (11px). Checked state changes the track to sage and translates the knob (13px). Their hidden input retains a visible focus outline on the track. The build does not establish a reusable inline field-error appearance.
 
 ### Navigation
 
-The inspector has four evenly distributed icon-and-label tabs. The active tab uses blue text and a short bottom rule. Character selection uses horizontally arranged thumbnail-and-name tabs with a neutral selected fill. Narrow layouts keep character tabs horizontally scrollable and move the inspector below the workbench.
+The transparent header uses `public/cliplab-logo-white.svg`, a quiet studio description, utility actions, and a white Export button. Character tabs sit inside the preview card as rounded thumbnail-and-name choices. Inspector navigation has four icon-over-label controls; active state changes fill and text color without an underline. The navigation remains part of its card on mobile while the layout stacks vertically.
 
-### Character preview and responsive detail
+### Character Rendering
 
-The stage is a real 3D preview with pointer rotation, a synchronized orientation control, a reset action, zoom, and three background choices. Character thumbnails are rendered from the same definition as the stage. The palette can blend smoothly; the toon shader applies three light multipliers (1.0, 0.81, 0.64) with hard transitions. That relationship is the character material rule, rather than a CSS gradient recipe for arbitrary interface panels.
+Use the same 3D renderer for the live stage, expression thumbnails, timeline previews, and exports. White eye dots are optional and increase black eye radius (20%); the white dot itself appears at full detail. Broad open, grin, and crying mouths use substantial dark outlines with optional clipped teeth and tongue details. Tear drops, hearts, sparkles, and sleep marks have deterministic eased entrance, movement, and exit, so their timing survives export.
 
-Below (16 CSS px), render the colored body only. From (16–24 CSS px inclusive), show eyes without the mouth or props. Above (24 CSS px), show the full face and expressive detail. Device pixel ratio does not select the detail level. The existing size strip demonstrates this at five sizes (12, 16, 24, 48, and 96 CSS px).
+Detail follows displayed CSS size independently of device pixel ratio: below (16px), show the body only; from (16px through 24px), show eyes; above (24px), show the complete face and props. True front removes rendered view and pose rotation while retaining authored pose data. Lock position suppresses floating and breathing without suppressing facial or prop animation. Existing saved projects receive defaults for newly introduced settings; their authored expressions remain intact.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- Do use blue selection with visible outlines and pale fills across the existing control families.
-- Do preserve compact UI headings, sentence-case labels, and tabular numeric readouts.
-- Do use the shared renderer for character previews and preserve size-dependent facial detail.
-- Do preserve all three body silhouettes and the end cap’s softened lower edge.
-- Do keep keyboard focus visible and honor the existing reduced-motion behavior.
+- **Do** preserve the graphite canvas, transparent header, supplied white logo, and visible spacing between the three studio cards.
+- **Do** use white for primary actions and the active timeline beat, with the existing sage variants for quieter editor states.
+- **Do** use the quiet UI type hierarchy and maintain legible helper text and keyboard focus.
+- **Do** keep character colors editable and preserve smooth fills alongside crisp lighting bands.
+- **Do** keep circular base eyes, transparent circular cheek cutouts, substantial mouth contours, and eased supporting details consistent across the shared renderer.
+- **Do** choose facial detail from displayed CSS size and preserve authored pose data when toggling view controls.
 
 ### Don't:
 
-- Don't replace the approved smooth body gradient with flat color as a blanket style rule.
-- Don't soften the character’s toon lighting bands or ground-shadow boundary with blur.
-- Don't promote custom character colors into global interface selection colors.
-- Don't copy the smallest metadata sizes into body copy or text-glyph controls into an icon standard.
+- **Don't** reintroduce the obsolete pale inspector, blue primary-action palette, or an opaque header bar into this dark studio.
+- **Don't** merge the three studio cards into one continuous framed surface or apply panel shadows to every inner control.
+- **Don't** replace the supplied logo with typeset lettering or create a separate display treatment from the compact UI headings.
+- **Don't** blur toon-band or ground-shadow boundaries; soft ambient interface shadows and smooth body-color gradients remain valid parts of this world.
+- **Don't** enlarge default facial detail to compensate for an incorrectly scaled preview, or paint cheek cutouts with a flat sampled body color.
 
-**Not canonized:** the smallest micro-metadata sizes as body-text standards, text-glyph zoom controls, and the system-set wordmark as a reusable display treatment. These are observed implementation limitations, not rules for future surfaces. The current text-field focus-outline override is also excluded as a reusable behavior.
-
-<!-- Recorded from src/studio/studio.css, StudioApp.vue, CharacterStage.vue, StudioIcon.vue, renderer.ts, and model.ts. PRODUCT.md and the index.html direction contract establish the approved world; rendered source controls the recorded implementation. -->
+Not canonized: inherited (9–10px) micro-metadata is not a reusable legibility standard. The UI sans stack is documented only for compact tool roles, not as a system display face.

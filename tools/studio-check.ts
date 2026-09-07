@@ -1,4 +1,4 @@
-import { defaultProject, definitionOf, type Sample } from '../src/studio/model'
+import { BASE_POSE, defaultProject, definitionOf, type Sample } from '../src/studio/model'
 import { CharacterRenderer } from '../src/studio/renderer'
 import { demoZip, renderMedia } from '../src/studio/export'
 import { unzipSync } from 'fflate'
@@ -55,6 +55,7 @@ await check('exported runtime integration', async () => {
   player.seek(.8)
   const px = pixels(player.canvas, 160, 160)
   if (!px.some((value, i) => i % 4 === 3 && value > 128)) throw new Error('Exported runtime did not draw a character')
+  const runtimePreview = new Image(); runtimePreview.src = player.canvas.toDataURL(); runtimePreview.alt = 'Rendered by the standalone app runtime'; target.after(runtimePreview)
   player.setExpression('sleepy'); player.seek(1); player.setGaze(.5, -.3); player.setSize(24)
   player.setDefinition(definition); player.setAnimation('playful'); player.play(); player.pause()
   player.destroy()
@@ -75,5 +76,61 @@ await check('small sizes at high pixel density', async () => {
     if (stats[0]!.darkPixels !== 0 || stats[1]!.darkPixels === 0 || stats[2]!.darkPixels === 0) throw new Error('Responsive face rule failed')
     return stats
   } finally { renderer.dispose() }
+})
+await check('front view and position lock survive both preview and export sampling', async () => {
+  const canvas = document.createElement('canvas'), renderer = new CharacterRenderer(canvas, { width: 192, height: 192, pixelRatio: 1 })
+  const character = { ...definition.character, trueFront: true, lockPosition: true, shadow: false }
+  const a = { ...sample, pose: { ...BASE_POSE }, bob: -.7, breathe: -.8 }
+  const b = { ...sample, pose: { ...BASE_POSE, rotationX: 28, rotationY: -47, rotationZ: 13 }, bob: .8, breathe: .9 }
+  try {
+    renderer.render(character, a, { rotation: { x: 20, y: 30, z: 40 } }); const first = pixels(canvas, 192, 192)
+    renderer.render(character, b, { rotation: { x: -30, y: -20, z: -10 } }); const second = pixels(canvas, 192, 192)
+    if (first.some((v, i) => v !== second[i])) throw new Error('Locked front view changed with the animation transform')
+    renderer.render({ ...character, trueFront: false, lockPosition: false }, b); const unlocked = pixels(canvas, 192, 192)
+    const changed = first.reduce((n, v, i) => n + (v !== unlocked[i] ? 1 : 0), 0)
+    if (changed < 100) throw new Error('Unlocked view no longer responds to motion')
+    return { lockedFramesIdentical: true, unlockedChangedChannels: changed }
+  } finally { renderer.dispose() }
+})
+await check('front-facing dot eyes are circular', async () => {
+  const canvas = document.createElement('canvas'), renderer = new CharacterRenderer(canvas, { width: 512, height: 512, pixelRatio: 1 })
+  try {
+    renderer.render({ ...definition.character, shape: 'sphere', color: '#dddddd', gradient: false, toon: false, trueFront: true, lockPosition: true, shadow: false, iris: false, eyeColor: '#000000' }, { ...sample, pose: { ...BASE_POSE, mouth: 'line' } })
+    const px = pixels(canvas, 512, 512), components: { width: number; height: number; area: number }[] = [], seen = new Uint8Array(512 * 512)
+    const dark = (i: number) => px[i * 4 + 3]! > 200 && px[i * 4]! < 30
+    for (let i = 0; i < seen.length; i++) {
+      if (seen[i] || !dark(i)) continue
+      const pending = [i]; seen[i] = 1; let loX = 512, hiX = 0, loY = 512, hiY = 0, area = 0
+      while (pending.length) { const q = pending.pop()!, x = q % 512, y = Math.floor(q / 512); loX = Math.min(loX, x); hiX = Math.max(hiX, x); loY = Math.min(loY, y); hiY = Math.max(hiY, y); area++; for (const n of [q - 1, q + 1, q - 512, q + 512]) if (n >= 0 && n < seen.length && !seen[n] && dark(n)) { seen[n] = 1; pending.push(n) } }
+      if (area > 10) components.push({ width: hiX - loX + 1, height: hiY - loY + 1, area })
+    }
+    const eyes = components.filter(c => c.height > 15)
+    if (eyes.length !== 2 || eyes.some(c => Math.abs(c.width - c.height) > 1)) throw new Error(`Default eyes are not two circles: ${JSON.stringify(components)}`)
+    return eyes
+  } finally { renderer.dispose() }
+})
+await check('tears move while the body remains locked', async () => {
+  const canvas = document.createElement('canvas'), renderer = new CharacterRenderer(canvas, { width: 256, height: 256, pixelRatio: 1 })
+  try {
+    const character = { ...definition.character, trueFront: true, lockPosition: true, shadow: false }
+    const pose = { ...BASE_POSE, tears: true, mouth: 'cry' as const }
+    renderer.render(character, { ...sample, pose, effectPhase: .25 }); const a = pixels(canvas, 256, 256)
+    renderer.render(character, { ...sample, pose, effectPhase: .58 }); const b = pixels(canvas, 256, 256)
+    const changed = a.reduce((n, v, i) => n + (v !== b[i] ? 1 : 0), 0)
+    if (changed < 30) throw new Error('Tears did not animate with position locked')
+    return { changedChannels: changed }
+  } finally { renderer.dispose() }
+})
+await check('new face reference gallery', async () => {
+  const character = { ...project.characters[2]!, trueFront: true, lockPosition: true, shadow: false, gradient: false, color: '#81bd97', candleLight: true }
+  const poses = [
+    ['Happy', { mouth: 'open', mouthOpen: .75 }], ['Smile', { mouth: 'smile' }], ['Neutral', { mouth: 'line' }], ['Sad', { mouth: 'frown' }], ['Tearful', { mouth: 'cry', mouthOpen: .8, tears: true }],
+    ['Happy arcs', { eye: 'arc-up', mouth: 'grin' }], ['Sleepy arcs', { eye: 'arc-down', mouth: 'open', mouthWidth: .6 }], ['Squeeze', { eye: 'squint', mouth: 'u-smile' }], ['Cheeks + iris', { cheeks: true, teeth: true, mouth: 'grin' }], ['Tearful / Let go', project.expressions.find(e => e.id === 'tearful')!.beats[1]!.pose]
+  ] as const
+  for (const [name, partial] of poses) {
+    const canvas = document.createElement('canvas'), renderer = new CharacterRenderer(canvas, { width: 240, height: 240, pixelRatio: 1 })
+    renderer.render({ ...character, iris: name.includes('iris') }, { ...sample, pose: { ...BASE_POSE, ...partial } }); const image = new Image(); image.src = canvas.toDataURL(); append(name, image); renderer.dispose()
+  }
+  return { faces: poses.length }
 })
 document.querySelector('#status')!.textContent = Object.values(results).every(v => (v as { status: string }).status === 'pass') ? 'All checks passed.' : 'Some checks need attention.'

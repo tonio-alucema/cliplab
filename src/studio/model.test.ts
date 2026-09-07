@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BASE_POSE, animationDuration, defaultProject, definitionOf, detailAt, expressionDuration, mixPose, parseProject, sampleDefinition } from './model'
+import { BASE_POSE, animationDuration, defaultProject, definitionOf, detailAt, expressionDuration, mixPose, parseProject, sampleDefinition, sampleExpression } from './model'
 
 describe('responsive character detail', () => {
   it('uses the user-defined boundaries inclusively, independently of rendering resolution', () => {
@@ -48,6 +48,17 @@ describe('animation continuity', () => {
   })
 })
 describe('portable project definitions', () => {
+  it('loads earlier projects without enabling new view or face effects', () => {
+    const old = JSON.parse(JSON.stringify(defaultProject()))
+    for (const character of old.characters) for (const key of ['candleLight', 'trueFront', 'lockPosition']) delete character[key]
+    for (const expression of old.expressions) for (const beat of expression.beats) for (const key of ['cheeks', 'tears', 'mouthStroke']) delete beat.pose[key]
+    const restored = parseProject(old)
+    expect(restored.characters[0]).toMatchObject({ candleLight: false, trueFront: false, lockPosition: false })
+    expect(restored.expressions[0]!.beats[0]!.pose).toMatchObject({ cheeks: false, tears: false, mouthStroke: 1 })
+    restored.characters[0]!.trueFront = restored.characters[0]!.lockPosition = true
+    restored.expressions[0]!.beats[0]!.pose.tears = true
+    expect(parseProject(JSON.parse(JSON.stringify(restored)))).toEqual(restored)
+  })
   it('round-trips the full project and a selected-animation app export', () => {
     const project = defaultProject()
     expect(parseProject(JSON.parse(JSON.stringify(project)))).toEqual(project)
@@ -72,5 +83,26 @@ describe('portable project definitions', () => {
     expect(parsed.expressions[0]!.beats[0]!.duration).toBe(.2)
     expect(parsed.expressions[0]!.beats[0]!.pose.eyeSize).toBe(2)
     expect(parsed.characters[0]!.elevation).toBe(.2)
+  })
+})
+
+describe('supporting expression details', () => {
+  it('makes prop replacements invisible at the categorical switch, then eases them back in', () => {
+    const expression = defaultProject().expressions[0]!
+    expression.beats = ['heart', 'zzz'].map((prop, index) => ({ id: `b${index}`, name: 'Beat', duration: 1, pose: { ...BASE_POSE, prop: prop as 'heart' | 'zzz', tears: index === 1 } }))
+    const before = sampleExpression(expression, .2 - .00001), at = sampleExpression(expression, .2), after = sampleExpression(expression, .2 + .00001)
+    expect(before.pose.prop).not.toBe(after.pose.prop)
+    for (const sample of [before, at, after]) { expect(sample.propAmount).toBeLessThan(.00001); expect(sample.tearAmount).toBeLessThan(.00001) }
+    expect(sampleExpression(expression, .4).propAmount).toBe(1)
+  })
+  it('closes the secondary effect phase and visibility on exported loops', () => {
+    const project = defaultProject(), definition = definitionOf(project, project.characters[0]!)
+    for (const animation of definition.animations) {
+      const duration = animationDuration(animation) / definition.character.speed
+      const start = sampleDefinition(definition, animation.id, 0), end = sampleDefinition(definition, animation.id, duration)
+      expect(end.effectPhase).toBeCloseTo(start.effectPhase!, 9)
+      expect(end.propAmount).toBeCloseTo(start.propAmount!, 9)
+      expect(end.tearAmount).toBeCloseTo(start.tearAmount!, 9)
+    }
   })
 })

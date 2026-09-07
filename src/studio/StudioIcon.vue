@@ -1,6 +1,7 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ name: string; size?: number }>(), { size: 18 })
 const paths: Record<string, string> = {
+  front: 'M5 3h14v18H5ZM9 10h.01M15 10h.01M9 15q3 2 6 0', lock: 'M6 10h12v11H6ZM8 10V6a4 4 0 0 1 8 0v4M12 14v3', unlock: 'M6 10h12v11H6ZM8 10V6a4 4 0 0 1 8 0M12 14v3', minus: 'M5 12h14',
   play: 'm8 5 11 7-11 7Z', pause: 'M8 5v14M16 5v14', back: 'm14 6-6 6 6 6',
   plus: 'M12 5v14M5 12h14', close: 'm6 6 12 12M6 18 18 6',
   download: 'M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5', upload: 'M12 16V4m-5 5 5-5 5 5M5 16v5h14v-5',

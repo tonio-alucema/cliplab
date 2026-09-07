@@ -1,260 +1,442 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-07T00:44:48.851578+00:00",
+  "generatedAt": "2026-09-07T04:36:58.578227Z",
   "title": "Design System: ClipLab",
   "extensions": {
     "colorMeta": {
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "tonalRamp": [
+          "oklch(15.00% 0.00448 145.47)",
+          "oklch(26.43% 0.00448 145.47)",
+          "oklch(37.86% 0.00448 145.47)",
+          "oklch(49.29% 0.00448 145.47)",
+          "oklch(60.71% 0.00448 145.47)",
+          "oklch(72.14% 0.00448 145.47)",
+          "oklch(83.57% 0.00448 145.47)",
+          "oklch(95.00% 0.00448 145.47)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(15.00% 0.00982 125.68)",
+          "oklch(26.43% 0.00982 125.68)",
+          "oklch(37.86% 0.00982 125.68)",
+          "oklch(49.29% 0.00982 125.68)",
+          "oklch(60.71% 0.00982 125.68)",
+          "oklch(72.14% 0.00982 125.68)",
+          "oklch(83.57% 0.00982 125.68)",
+          "oklch(95.00% 0.00982 125.68)"
+        ]
+      },
+      "primary-ink": {
+        "role": "neutral",
+        "displayName": "Primary ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.00738 145.31)",
+          "oklch(26.43% 0.00738 145.31)",
+          "oklch(37.86% 0.00738 145.31)",
+          "oklch(49.29% 0.00738 145.31)",
+          "oklch(60.71% 0.00738 145.31)",
+          "oklch(72.14% 0.00738 145.31)",
+          "oklch(83.57% 0.00738 145.31)",
+          "oklch(95.00% 0.00738 145.31)"
+        ]
+      },
+      "timeline-selected": {
+        "role": "primary",
+        "displayName": "Timeline selected",
+        "tonalRamp": [
+          "oklch(15.00% 0.00797 106.55)",
+          "oklch(26.43% 0.00797 106.55)",
+          "oklch(37.86% 0.00797 106.55)",
+          "oklch(49.29% 0.00797 106.55)",
+          "oklch(60.71% 0.00797 106.55)",
+          "oklch(72.14% 0.00797 106.55)",
+          "oklch(83.57% 0.00797 106.55)",
+          "oklch(95.00% 0.00797 106.55)"
+        ]
+      },
       "accent": {
         "role": "primary",
         "displayName": "Accent",
         "tonalRamp": [
-          "oklch(15.00% 0.1736 268.73)",
-          "oklch(26.43% 0.1736 268.73)",
-          "oklch(37.86% 0.1736 268.73)",
-          "oklch(49.29% 0.1736 268.73)",
-          "oklch(60.71% 0.1736 268.73)",
-          "oklch(72.14% 0.1736 268.73)",
-          "oklch(83.57% 0.1736 268.73)",
-          "oklch(95.00% 0.1736 268.73)"
+          "oklch(15.00% 0.06512 157.26)",
+          "oklch(26.43% 0.06512 157.26)",
+          "oklch(37.86% 0.06512 157.26)",
+          "oklch(49.29% 0.06512 157.26)",
+          "oklch(60.71% 0.06512 157.26)",
+          "oklch(72.14% 0.06512 157.26)",
+          "oklch(83.57% 0.06512 157.26)",
+          "oklch(95.00% 0.06512 157.26)"
         ]
       },
-      "accent-soft": {
+      "focus": {
         "role": "primary",
-        "displayName": "Accent Soft",
+        "displayName": "Focus",
         "tonalRamp": [
-          "oklch(15.00% 0.0193 273.24)",
-          "oklch(26.43% 0.0193 273.24)",
-          "oklch(37.86% 0.0193 273.24)",
-          "oklch(49.29% 0.0193 273.24)",
-          "oklch(60.71% 0.0193 273.24)",
-          "oklch(72.14% 0.0193 273.24)",
-          "oklch(83.57% 0.0193 273.24)",
-          "oklch(95.00% 0.0193 273.24)"
+          "oklch(15.00% 0.06854 159.15)",
+          "oklch(26.43% 0.06854 159.15)",
+          "oklch(37.86% 0.06854 159.15)",
+          "oklch(49.29% 0.06854 159.15)",
+          "oklch(60.71% 0.06854 159.15)",
+          "oklch(72.14% 0.06854 159.15)",
+          "oklch(83.57% 0.06854 159.15)",
+          "oklch(95.00% 0.06854 159.15)"
         ]
       },
-      "selected-surface": {
+      "text-action": {
         "role": "primary",
-        "displayName": "Selected Surface",
+        "displayName": "Text action",
         "tonalRamp": [
-          "oklch(15.00% 0.0164 274.82)",
-          "oklch(26.43% 0.0164 274.82)",
-          "oklch(37.86% 0.0164 274.82)",
-          "oklch(49.29% 0.0164 274.82)",
-          "oklch(60.71% 0.0164 274.82)",
-          "oklch(72.14% 0.0164 274.82)",
-          "oklch(83.57% 0.0164 274.82)",
-          "oklch(95.00% 0.0164 274.82)"
+          "oklch(15.00% 0.06423 133.11)",
+          "oklch(26.43% 0.06423 133.11)",
+          "oklch(37.86% 0.06423 133.11)",
+          "oklch(49.29% 0.06423 133.11)",
+          "oklch(60.71% 0.06423 133.11)",
+          "oklch(72.14% 0.06423 133.11)",
+          "oklch(83.57% 0.06423 133.11)",
+          "oklch(95.00% 0.06423 133.11)"
         ]
       },
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
         "tonalRamp": [
-          "oklch(15.00% 0.0227 248.57)",
-          "oklch(26.43% 0.0227 248.57)",
-          "oklch(37.86% 0.0227 248.57)",
-          "oklch(49.29% 0.0227 248.57)",
-          "oklch(60.71% 0.0227 248.57)",
-          "oklch(72.14% 0.0227 248.57)",
-          "oklch(83.57% 0.0227 248.57)",
-          "oklch(95.00% 0.0227 248.57)"
+          "oklch(15.00% 0.00412 121.56)",
+          "oklch(26.43% 0.00412 121.56)",
+          "oklch(37.86% 0.00412 121.56)",
+          "oklch(49.29% 0.00412 121.56)",
+          "oklch(60.71% 0.00412 121.56)",
+          "oklch(72.14% 0.00412 121.56)",
+          "oklch(83.57% 0.00412 121.56)",
+          "oklch(95.00% 0.00412 121.56)"
         ]
       },
       "secondary-text": {
         "role": "neutral",
-        "displayName": "Secondary Text",
+        "displayName": "Secondary text",
         "tonalRamp": [
-          "oklch(15.00% 0.0288 252.10)",
-          "oklch(26.43% 0.0288 252.10)",
-          "oklch(37.86% 0.0288 252.10)",
-          "oklch(49.29% 0.0288 252.10)",
-          "oklch(60.71% 0.0288 252.10)",
-          "oklch(72.14% 0.0288 252.10)",
-          "oklch(83.57% 0.0288 252.10)",
-          "oklch(95.00% 0.0288 252.10)"
+          "oklch(15.00% 0.01631 126.88)",
+          "oklch(26.43% 0.01631 126.88)",
+          "oklch(37.86% 0.01631 126.88)",
+          "oklch(49.29% 0.01631 126.88)",
+          "oklch(60.71% 0.01631 126.88)",
+          "oklch(72.14% 0.01631 126.88)",
+          "oklch(83.57% 0.01631 126.88)",
+          "oklch(95.00% 0.01631 126.88)"
+        ]
+      },
+      "control-text": {
+        "role": "neutral",
+        "displayName": "Control text",
+        "tonalRamp": [
+          "oklch(15.00% 0.00863 128.57)",
+          "oklch(26.43% 0.00863 128.57)",
+          "oklch(37.86% 0.00863 128.57)",
+          "oklch(49.29% 0.00863 128.57)",
+          "oklch(60.71% 0.00863 128.57)",
+          "oklch(72.14% 0.00863 128.57)",
+          "oklch(83.57% 0.00863 128.57)",
+          "oklch(95.00% 0.00863 128.57)"
+        ]
+      },
+      "utility-text": {
+        "role": "neutral",
+        "displayName": "Utility text",
+        "tonalRamp": [
+          "oklch(15.00% 0.00829 139.44)",
+          "oklch(26.43% 0.00829 139.44)",
+          "oklch(37.86% 0.00829 139.44)",
+          "oklch(49.29% 0.00829 139.44)",
+          "oklch(60.71% 0.00829 139.44)",
+          "oklch(72.14% 0.00829 139.44)",
+          "oklch(83.57% 0.00829 139.44)",
+          "oklch(95.00% 0.00829 139.44)"
         ]
       },
       "line": {
         "role": "neutral",
         "displayName": "Line",
         "tonalRamp": [
-          "oklch(15.00% 0.0063 255.48)",
-          "oklch(26.43% 0.0063 255.48)",
-          "oklch(37.86% 0.0063 255.48)",
-          "oklch(49.29% 0.0063 255.48)",
-          "oklch(60.71% 0.0063 255.48)",
-          "oklch(72.14% 0.0063 255.48)",
-          "oklch(83.57% 0.0063 255.48)",
-          "oklch(95.00% 0.0063 255.48)"
+          "oklch(15.00% 0.00000 0.00 / 0.0706)",
+          "oklch(26.43% 0.00000 0.00 / 0.0706)",
+          "oklch(37.86% 0.00000 0.00 / 0.0706)",
+          "oklch(49.29% 0.00000 0.00 / 0.0706)",
+          "oklch(60.71% 0.00000 0.00 / 0.0706)",
+          "oklch(72.14% 0.00000 0.00 / 0.0706)",
+          "oklch(83.57% 0.00000 0.00 / 0.0706)",
+          "oklch(95.00% 0.00000 0.00 / 0.0706)"
         ]
       },
-      "surface": {
+      "sequence-surface": {
         "role": "neutral",
-        "displayName": "Surface",
+        "displayName": "Sequence surface",
         "tonalRamp": [
-          "oklch(15.00% 0.0000 89.88)",
-          "oklch(26.43% 0.0000 89.88)",
-          "oklch(37.86% 0.0000 89.88)",
-          "oklch(49.29% 0.0000 89.88)",
-          "oklch(60.71% 0.0000 89.88)",
-          "oklch(72.14% 0.0000 89.88)",
-          "oklch(83.57% 0.0000 89.88)",
-          "oklch(95.00% 0.0000 89.88)"
+          "oklch(15.00% 0.00728 145.33)",
+          "oklch(26.43% 0.00728 145.33)",
+          "oklch(37.86% 0.00728 145.33)",
+          "oklch(49.29% 0.00728 145.33)",
+          "oklch(60.71% 0.00728 145.33)",
+          "oklch(72.14% 0.00728 145.33)",
+          "oklch(83.57% 0.00728 145.33)",
+          "oklch(95.00% 0.00728 145.33)"
         ]
       },
-      "workbench": {
+      "field-surface": {
         "role": "neutral",
-        "displayName": "Workbench",
+        "displayName": "Field surface",
         "tonalRamp": [
-          "oklch(15.00% 0.0017 247.84)",
-          "oklch(26.43% 0.0017 247.84)",
-          "oklch(37.86% 0.0017 247.84)",
-          "oklch(49.29% 0.0017 247.84)",
-          "oklch(60.71% 0.0017 247.84)",
-          "oklch(72.14% 0.0017 247.84)",
-          "oklch(83.57% 0.0017 247.84)",
-          "oklch(95.00% 0.0017 247.84)"
+          "oklch(15.00% 0.01588 133.67)",
+          "oklch(26.43% 0.01588 133.67)",
+          "oklch(37.86% 0.01588 133.67)",
+          "oklch(49.29% 0.01588 133.67)",
+          "oklch(60.71% 0.01588 133.67)",
+          "oklch(72.14% 0.01588 133.67)",
+          "oklch(83.57% 0.01588 133.67)",
+          "oklch(95.00% 0.01588 133.67)"
         ]
       },
-      "stage-slate": {
+      "secondary-surface": {
         "role": "neutral",
-        "displayName": "Stage Slate",
+        "displayName": "Secondary surface",
         "tonalRamp": [
-          "oklch(15.00% 0.0171 248.57)",
-          "oklch(26.43% 0.0171 248.57)",
-          "oklch(37.86% 0.0171 248.57)",
-          "oklch(49.29% 0.0171 248.57)",
-          "oklch(60.71% 0.0171 248.57)",
-          "oklch(72.14% 0.0171 248.57)",
-          "oklch(83.57% 0.0171 248.57)",
-          "oklch(95.00% 0.0171 248.57)"
+          "oklch(15.00% 0.00685 145.40)",
+          "oklch(26.43% 0.00685 145.40)",
+          "oklch(37.86% 0.00685 145.40)",
+          "oklch(49.29% 0.00685 145.40)",
+          "oklch(60.71% 0.00685 145.40)",
+          "oklch(72.14% 0.00685 145.40)",
+          "oklch(83.57% 0.00685 145.40)",
+          "oklch(95.00% 0.00685 145.40)"
         ]
       },
-      "stage-light": {
+      "secondary-hover": {
         "role": "neutral",
-        "displayName": "Stage Light",
+        "displayName": "Secondary hover",
         "tonalRamp": [
-          "oklch(15.00% 0.0060 223.46)",
-          "oklch(26.43% 0.0060 223.46)",
-          "oklch(37.86% 0.0060 223.46)",
-          "oklch(49.29% 0.0060 223.46)",
-          "oklch(60.71% 0.0060 223.46)",
-          "oklch(72.14% 0.0060 223.46)",
-          "oklch(83.57% 0.0060 223.46)",
-          "oklch(95.00% 0.0060 223.46)"
+          "oklch(15.00% 0.00880 145.38)",
+          "oklch(26.43% 0.00880 145.38)",
+          "oklch(37.86% 0.00880 145.38)",
+          "oklch(49.29% 0.00880 145.38)",
+          "oklch(60.71% 0.00880 145.38)",
+          "oklch(72.14% 0.00880 145.38)",
+          "oklch(83.57% 0.00880 145.38)",
+          "oklch(95.00% 0.00880 145.38)"
+        ]
+      },
+      "secondary-ink": {
+        "role": "neutral",
+        "displayName": "Secondary ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.00696 124.45)",
+          "oklch(26.43% 0.00696 124.45)",
+          "oklch(37.86% 0.00696 124.45)",
+          "oklch(49.29% 0.00696 124.45)",
+          "oklch(60.71% 0.00696 124.45)",
+          "oklch(72.14% 0.00696 124.45)",
+          "oklch(83.57% 0.00696 124.45)",
+          "oklch(95.00% 0.00696 124.45)"
+        ]
+      },
+      "expression-selected": {
+        "role": "primary",
+        "displayName": "Expression selected",
+        "tonalRamp": [
+          "oklch(15.00% 0.02629 144.95)",
+          "oklch(26.43% 0.02629 144.95)",
+          "oklch(37.86% 0.02629 144.95)",
+          "oklch(49.29% 0.02629 144.95)",
+          "oklch(60.71% 0.02629 144.95)",
+          "oklch(72.14% 0.02629 144.95)",
+          "oklch(83.57% 0.02629 144.95)",
+          "oklch(95.00% 0.02629 144.95)"
+        ]
+      },
+      "chip-surface": {
+        "role": "neutral",
+        "displayName": "Chip surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.02548 133.58)",
+          "oklch(26.43% 0.02548 133.58)",
+          "oklch(37.86% 0.02548 133.58)",
+          "oklch(49.29% 0.02548 133.58)",
+          "oklch(60.71% 0.02548 133.58)",
+          "oklch(72.14% 0.02548 133.58)",
+          "oklch(83.57% 0.02548 133.58)",
+          "oklch(95.00% 0.02548 133.58)"
+        ]
+      },
+      "chip-selected": {
+        "role": "primary",
+        "displayName": "Chip selected",
+        "tonalRamp": [
+          "oklch(15.00% 0.04811 133.13)",
+          "oklch(26.43% 0.04811 133.13)",
+          "oklch(37.86% 0.04811 133.13)",
+          "oklch(49.29% 0.04811 133.13)",
+          "oklch(60.71% 0.04811 133.13)",
+          "oklch(72.14% 0.04811 133.13)",
+          "oklch(83.57% 0.04811 133.13)",
+          "oklch(95.00% 0.04811 133.13)"
+        ]
+      },
+      "chip-selected-ink": {
+        "role": "primary",
+        "displayName": "Chip selected ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.04149 129.62)",
+          "oklch(26.43% 0.04149 129.62)",
+          "oklch(37.86% 0.04149 129.62)",
+          "oklch(49.29% 0.04149 129.62)",
+          "oklch(60.71% 0.04149 129.62)",
+          "oklch(72.14% 0.04149 129.62)",
+          "oklch(83.57% 0.04149 129.62)",
+          "oklch(95.00% 0.04149 129.62)"
+        ]
+      },
+      "view-selected": {
+        "role": "primary",
+        "displayName": "View selected",
+        "tonalRamp": [
+          "oklch(15.00% 0.02898 156.26)",
+          "oklch(26.43% 0.02898 156.26)",
+          "oklch(37.86% 0.02898 156.26)",
+          "oklch(49.29% 0.02898 156.26)",
+          "oklch(60.71% 0.02898 156.26)",
+          "oklch(72.14% 0.02898 156.26)",
+          "oklch(83.57% 0.02898 156.26)",
+          "oklch(95.00% 0.02898 156.26)"
+        ]
+      },
+      "view-selected-ink": {
+        "role": "primary",
+        "displayName": "View selected ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.05147 153.90)",
+          "oklch(26.43% 0.05147 153.90)",
+          "oklch(37.86% 0.05147 153.90)",
+          "oklch(49.29% 0.05147 153.90)",
+          "oklch(60.71% 0.05147 153.90)",
+          "oklch(72.14% 0.05147 153.90)",
+          "oklch(83.57% 0.05147 153.90)",
+          "oklch(95.00% 0.05147 153.90)"
         ]
       },
       "peach": {
         "role": "secondary",
         "displayName": "Peach",
         "tonalRamp": [
-          "oklch(15.00% 0.1367 43.06)",
-          "oklch(26.43% 0.1367 43.06)",
-          "oklch(37.86% 0.1367 43.06)",
-          "oklch(49.29% 0.1367 43.06)",
-          "oklch(60.71% 0.1367 43.06)",
-          "oklch(72.14% 0.1367 43.06)",
-          "oklch(83.57% 0.1367 43.06)",
-          "oklch(95.00% 0.1367 43.06)"
+          "oklch(15.00% 0.13670 43.06)",
+          "oklch(26.43% 0.13670 43.06)",
+          "oklch(37.86% 0.13670 43.06)",
+          "oklch(49.29% 0.13670 43.06)",
+          "oklch(60.71% 0.13670 43.06)",
+          "oklch(72.14% 0.13670 43.06)",
+          "oklch(83.57% 0.13670 43.06)",
+          "oklch(95.00% 0.13670 43.06)"
         ]
       },
       "apricot": {
         "role": "secondary",
         "displayName": "Apricot",
         "tonalRamp": [
-          "oklch(15.00% 0.0948 73.79)",
-          "oklch(26.43% 0.0948 73.79)",
-          "oklch(37.86% 0.0948 73.79)",
-          "oklch(49.29% 0.0948 73.79)",
-          "oklch(60.71% 0.0948 73.79)",
-          "oklch(72.14% 0.0948 73.79)",
-          "oklch(83.57% 0.0948 73.79)",
-          "oklch(95.00% 0.0948 73.79)"
+          "oklch(15.00% 0.09479 73.79)",
+          "oklch(26.43% 0.09479 73.79)",
+          "oklch(37.86% 0.09479 73.79)",
+          "oklch(49.29% 0.09479 73.79)",
+          "oklch(60.71% 0.09479 73.79)",
+          "oklch(72.14% 0.09479 73.79)",
+          "oklch(83.57% 0.09479 73.79)",
+          "oklch(95.00% 0.09479 73.79)"
         ]
       },
       "mint": {
         "role": "secondary",
         "displayName": "Mint",
         "tonalRamp": [
-          "oklch(15.00% 0.0861 177.74)",
-          "oklch(26.43% 0.0861 177.74)",
-          "oklch(37.86% 0.0861 177.74)",
-          "oklch(49.29% 0.0861 177.74)",
-          "oklch(60.71% 0.0861 177.74)",
-          "oklch(72.14% 0.0861 177.74)",
-          "oklch(83.57% 0.0861 177.74)",
-          "oklch(95.00% 0.0861 177.74)"
+          "oklch(15.00% 0.08607 177.74)",
+          "oklch(26.43% 0.08607 177.74)",
+          "oklch(37.86% 0.08607 177.74)",
+          "oklch(49.29% 0.08607 177.74)",
+          "oklch(60.71% 0.08607 177.74)",
+          "oklch(72.14% 0.08607 177.74)",
+          "oklch(83.57% 0.08607 177.74)",
+          "oklch(95.00% 0.08607 177.74)"
         ]
       },
       "pale-mint": {
         "role": "secondary",
-        "displayName": "Pale Mint",
+        "displayName": "Pale mint",
         "tonalRamp": [
-          "oklch(15.00% 0.0579 154.32)",
-          "oklch(26.43% 0.0579 154.32)",
-          "oklch(37.86% 0.0579 154.32)",
-          "oklch(49.29% 0.0579 154.32)",
-          "oklch(60.71% 0.0579 154.32)",
-          "oklch(72.14% 0.0579 154.32)",
-          "oklch(83.57% 0.0579 154.32)",
-          "oklch(95.00% 0.0579 154.32)"
+          "oklch(15.00% 0.05785 154.32)",
+          "oklch(26.43% 0.05785 154.32)",
+          "oklch(37.86% 0.05785 154.32)",
+          "oklch(49.29% 0.05785 154.32)",
+          "oklch(60.71% 0.05785 154.32)",
+          "oklch(72.14% 0.05785 154.32)",
+          "oklch(83.57% 0.05785 154.32)",
+          "oklch(95.00% 0.05785 154.32)"
         ]
       },
       "lilac": {
         "role": "secondary",
         "displayName": "Lilac",
         "tonalRamp": [
-          "oklch(15.00% 0.1091 290.06)",
-          "oklch(26.43% 0.1091 290.06)",
-          "oklch(37.86% 0.1091 290.06)",
-          "oklch(49.29% 0.1091 290.06)",
-          "oklch(60.71% 0.1091 290.06)",
-          "oklch(72.14% 0.1091 290.06)",
-          "oklch(83.57% 0.1091 290.06)",
-          "oklch(95.00% 0.1091 290.06)"
+          "oklch(15.00% 0.10910 290.06)",
+          "oklch(26.43% 0.10910 290.06)",
+          "oklch(37.86% 0.10910 290.06)",
+          "oklch(49.29% 0.10910 290.06)",
+          "oklch(60.71% 0.10910 290.06)",
+          "oklch(72.14% 0.10910 290.06)",
+          "oklch(83.57% 0.10910 290.06)",
+          "oklch(95.00% 0.10910 290.06)"
         ]
       },
       "pale-lilac": {
         "role": "secondary",
-        "displayName": "Pale Lilac",
+        "displayName": "Pale lilac",
         "tonalRamp": [
-          "oklch(15.00% 0.0672 298.34)",
-          "oklch(26.43% 0.0672 298.34)",
-          "oklch(37.86% 0.0672 298.34)",
-          "oklch(49.29% 0.0672 298.34)",
-          "oklch(60.71% 0.0672 298.34)",
-          "oklch(72.14% 0.0672 298.34)",
-          "oklch(83.57% 0.0672 298.34)",
-          "oklch(95.00% 0.0672 298.34)"
+          "oklch(15.00% 0.06724 298.34)",
+          "oklch(26.43% 0.06724 298.34)",
+          "oklch(37.86% 0.06724 298.34)",
+          "oklch(49.29% 0.06724 298.34)",
+          "oklch(60.71% 0.06724 298.34)",
+          "oklch(72.14% 0.06724 298.34)",
+          "oklch(83.57% 0.06724 298.34)",
+          "oklch(95.00% 0.06724 298.34)"
         ]
       },
       "face-ink": {
         "role": "secondary",
-        "displayName": "Face Ink",
+        "displayName": "Face ink",
         "tonalRamp": [
-          "oklch(15.00% 0.0142 220.19)",
-          "oklch(26.43% 0.0142 220.19)",
-          "oklch(37.86% 0.0142 220.19)",
-          "oklch(49.29% 0.0142 220.19)",
-          "oklch(60.71% 0.0142 220.19)",
-          "oklch(72.14% 0.0142 220.19)",
-          "oklch(83.57% 0.0142 220.19)",
-          "oklch(95.00% 0.0142 220.19)"
+          "oklch(15.00% 0.00189 196.94)",
+          "oklch(26.43% 0.00189 196.94)",
+          "oklch(37.86% 0.00189 196.94)",
+          "oklch(49.29% 0.00189 196.94)",
+          "oklch(60.71% 0.00189 196.94)",
+          "oklch(72.14% 0.00189 196.94)",
+          "oklch(83.57% 0.00189 196.94)",
+          "oklch(95.00% 0.00189 196.94)"
         ]
       }
     },
     "typographyMeta": {
       "headline": {
         "displayName": "Headline",
-        "purpose": "Inspector panel headings."
+        "purpose": "Main inspector panel titles."
       },
       "headline-compact": {
-        "displayName": "Headline Compact",
-        "purpose": "Expression editor heading."
+        "displayName": "Headline compact",
+        "purpose": "Detailed expression editor heading."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Inspector control-group headings."
+        "purpose": "Grouped control headings."
       },
       "body": {
         "displayName": "Body",
@@ -266,183 +448,196 @@
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Expression and beat names."
+        "purpose": "Field labels and beat names."
+      },
+      "helper": {
+        "displayName": "Helper",
+        "purpose": "Panel descriptions and supporting instructions."
       },
       "code": {
         "displayName": "Code",
-        "purpose": "Integration examples."
+        "purpose": "Integration snippets."
       }
     },
     "shadows": [
       {
-        "name": "selected-expression",
-        "value": "0 0 0 2px #e8edff",
-        "purpose": "Outer active outline for expression cards."
+        "name": "floating-panel",
+        "value": "0 8px 16px #15181520",
+        "purpose": "Ambient separation shared by the three main cards."
       },
       {
-        "name": "selected-sequence",
-        "value": "0 0 0 1px #9dadf322",
-        "purpose": "Outer active outline for timeline blocks."
+        "name": "primary-action",
+        "value": "0 2px 4px #0000001a",
+        "purpose": "Small lift beneath primary action pills."
       },
       {
-        "name": "export-tab",
-        "value": "0 1px 4px #25364f0b",
-        "purpose": "Ambient separation for the active export tab."
-      },
-      {
-        "name": "switch-knob",
-        "value": "0 1px 2px #0000000c",
-        "purpose": "Subtle knob separation from its switch track."
+        "name": "current-beat",
+        "value": "0 3px 7px #0000001a",
+        "purpose": "Subtle lift beneath the white active timeline beat."
       },
       {
         "name": "toast",
-        "value": "0 8px 30px #25364f16",
-        "purpose": "Temporary feedback above the interface."
+        "value": "0 10px 30px #00000044",
+        "purpose": "Temporary feedback above the studio."
       }
     ],
     "motion": [
       {
         "name": "control-state",
-        "value": "150ms ease",
-        "purpose": "Background, border, color, and opacity transitions on buttons and selects; background and knob position transitions on switches."
+        "value": "background .15s, border-color .15s, color .15s, opacity .15s",
+        "purpose": "Button and select state transitions; removed for prefers-reduced-motion."
       },
       {
-        "name": "reduced-motion",
-        "value": "none",
-        "purpose": "Transitions are disabled; playback initializes paused when reduced motion is requested."
+        "name": "switch-state",
+        "value": "background .15s; transform .15s",
+        "purpose": "Track color and knob translation, respectively."
+      },
+      {
+        "name": "pose-easing",
+        "value": "t * t * (3 - 2 * t)",
+        "purpose": "Deterministic smooth interpolation between authored poses."
+      },
+      {
+        "name": "prop-envelope",
+        "value": "smoothstep(0, .18, phase) * (1 - smoothstep(.72, 1, phase))",
+        "purpose": "Eased entrance and exit of supporting props and tears."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide-desktop",
+        "name": "wide-desktop-min",
         "value": "1500px"
       },
       {
-        "name": "compact-desktop",
+        "name": "compact-desktop-max",
         "value": "1150px"
       },
       {
-        "name": "stacked",
+        "name": "stacked-max",
         "value": "820px"
       },
       {
-        "name": "phone",
+        "name": "phone-max",
         "value": "480px"
       }
     ]
   },
   "components": [
     {
-      "name": "Primary button",
+      "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Compact studio action.",
-      "html": "<button class=\"ds-button-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5\"/></svg>Export</button>",
-      "css": ".ds-button-primary{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:570;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;background:var(--accent,#4967d6);color:#fff;border:1px solid var(--accent,#4967d6);}.ds-button-primary:hover:not(:disabled){background:#3b57c4;}.ds-button-primary:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;}.ds-button-primary:disabled{opacity:.4;cursor:not-allowed} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "Short studio action with the shipped pill geometry.",
+      "html": "<button type=\"button\" class=\"ds-button-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5\"/></svg>Export</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:9px 17px;border-radius:22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:450;white-space:nowrap;background:#ecefe8;color:#171a17;border:0;box-shadow:0 2px 4px #0000001a;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-button-primary:hover:not(:disabled){background:#fff;}.ds-button-primary:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}.ds-button-primary:disabled{opacity:.4;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none!important;}}"
     },
     {
-      "name": "Secondary button",
+      "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Compact studio action.",
-      "html": "<button class=\"ds-button-secondary\">Import</button>",
-      "css": ".ds-button-secondary{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:570;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;background:#fff;color:#3d4753;border:1px solid #dce1e7;}.ds-button-secondary:hover:not(:disabled){background:#f5f6f9;border-color:#c0c8d3;}.ds-button-secondary:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;}.ds-button-secondary:disabled{opacity:.4;cursor:not-allowed} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "Short studio action with the shipped pill geometry.",
+      "html": "<button type=\"button\" class=\"ds-button-secondary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5\"/></svg>Save project</button>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:9px 17px;border-radius:22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:450;white-space:nowrap;background:#292c29;color:#eef0eb;border:1px solid #ffffff14;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-button-secondary:hover:not(:disabled){background:#343834;border-color:#ffffff2b;}.ds-button-secondary:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}.ds-button-secondary:disabled{opacity:.4;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none!important;}}"
     },
     {
-      "name": "Quiet button",
+      "name": "Quiet Button",
       "kind": "button",
       "refersTo": "button-quiet",
-      "description": "Compact studio action.",
-      "html": "<button class=\"ds-button-quiet\">Reset beat</button>",
-      "css": ".ds-button-quiet{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:570;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;background:none;color:var(--ink,#27313b);border:0;}.ds-button-quiet:hover:not(:disabled){background:#f2f4f7;}.ds-button-quiet:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;}.ds-button-quiet:disabled{opacity:.4;cursor:not-allowed} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "Short studio action with the shipped pill geometry.",
+      "html": "<button type=\"button\" class=\"ds-button-quiet\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V4m-5 5 5-5 5 5M5 16v5h14v-5\"/></svg>Import</button>",
+      "css": ".ds-button-quiet{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:9px 17px;border-radius:22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:450;white-space:nowrap;background:transparent;color:var(--ink,#eff0ed);border:0;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-button-quiet:hover:not(:disabled){background:#ffffff0a;}.ds-button-quiet:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}.ds-button-quiet:disabled{opacity:.4;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-quiet{transition:none!important;}}"
     },
     {
-      "name": "Text action",
+      "name": "Text Action",
       "kind": "button",
       "refersTo": "button-text",
-      "description": "Secondary inline inspector action.",
-      "html": "<button class=\"ds-button-text\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7h10m4 0h4M3 17h4m4 0h10M13 3v8M7 13v8\"/></svg>Edit selected</button>",
-      "css": ".ds-button-text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:inline-flex;align-items:center;gap:6px;color:var(--accent,#4967d6);font-size:13px;font-weight:550;padding:5px 0;border:0;background:none;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-button-text:hover{text-decoration:underline}.ds-button-text:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "Low-emphasis sage action used in the expression library.",
+      "html": "<button type=\"button\" class=\"ds-text-action\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>New expression</button>",
+      "css": ".ds-text-action{display:inline-flex;align-items:center;gap:6px;padding:5px 0;background:transparent;border:0;color:#c3ddb2;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;font-weight:450;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-text-action:hover{text-decoration:underline;}.ds-text-action:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}.ds-text-action:disabled{opacity:.4;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-text-action{transition:none!important;}}"
     },
     {
-      "name": "Icon button",
-      "kind": "button",
-      "refersTo": "button-icon",
-      "description": "Compact utility action with accessible name.",
-      "html": "<button class=\"ds-button-icon\" aria-label=\"Duplicate expression\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 9h11v11H9ZM4 15H3V3h12v1\"/></svg></button>",
-      "css": ".ds-button-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:7px;background:none;color:#596675;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-button-icon:hover:not(:disabled){background:#eef0f4;color:var(--ink,#27313b)}.ds-button-icon:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;}.ds-button-icon:disabled{opacity:.4;cursor:not-allowed} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
-    },
-    {
-      "name": "Text field",
+      "name": "Text Field",
       "kind": "input",
       "refersTo": "text-field",
-      "description": "Current field treatment, including its border-based focus state. The missing outline is documented as a limitation.",
-      "html": "<label class=\"ds-field-label\" for=\"ds-character-name\">Name</label><input id=\"ds-character-name\" class=\"ds-text-field\" value=\"Milo\" />",
-      "css": ".ds-field-label{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:block;font-size:12px;color:#596675;margin-bottom:8px;font-weight:500}.ds-text-field{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--ink,#27313b);background:#f9fafc;border:1px solid #dfe4eb;border-radius:7px;width:100%;height:37px;padding:7px 10px;font-size:13px;outline:none}.ds-text-field:focus,.ds-text-field:focus-visible{border-color:#859de9;background:#fff;outline:none} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "Dark single-line field with explicit keyboard focus.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-expression-name\">Expression name</label><input id=\"ds-expression-name\" class=\"ds-text-field\" value=\"Idle\"/>",
+      "css": ".ds-field-label{display:block;font-size:12px;font-weight:500;color:#b3b8ad;margin-bottom:8px;font-family:'Helvetica Neue',Arial,sans-serif;}.ds-text-field{width:100%;height:37px;padding:7px 10px;background:#282d25;border:1px solid #ffffff11;border-radius:10px;color:#e3e6e0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;}.ds-text-field:focus{border-color:#a2c28b;background:#2a3026;}.ds-text-field:focus-visible{outline:2px solid #a2c28b;outline-offset:2px;}"
     },
     {
-      "name": "Option chip",
-      "kind": "chip",
-      "refersTo": "option-chip-selected",
-      "description": "Selected expression eye or mouth option.",
-      "html": "<button class=\"ds-option-chip\" aria-pressed=\"true\">Smile</button>",
-      "css": ".ds-option-chip{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:7px 11px;border:1px solid #b1bff6;border-radius:6px;font-size:12px;text-transform:capitalize;color:#4a65c9;background:var(--accent-soft,#edf1ff);cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-option-chip:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
-    },
-    {
-      "name": "Inspector navigation",
+      "name": "Inspector Navigation",
       "kind": "nav",
-      "description": "Four equal icon-and-label tabs with active underline.",
-      "html": "<nav class=\"ds-inspector-tabs\" aria-label=\"Studio tools\"><button><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 2a5 5 0 0 1 5 5v10a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z\"/></svg><span>Character</span></button><button aria-current=\"page\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 10h.01M16 10h.01M8 15q4 4 8 0M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20\"/></svg><span>Expressions</span></button><button><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 4h16v16H4ZM4 8h16M8 4v4m8-4v4m-6 4 5 3-5 3Z\"/></svg><span>Animations</span></button><button><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5\"/></svg><span>Export</span></button></nav>",
-      "css": ".ds-inspector-tabs{display:grid;grid-template-columns:repeat(4,1fr);height:70px;border-bottom:1px solid var(--line,#e4e7eb);padding:0 15px;gap:2px;background:#fff}.ds-inspector-tabs button{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#596675;font-size:11px;font-weight:530;border:0;background:none;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-inspector-tabs button:hover{color:#4e647c;background:#fafbfc}.ds-inspector-tabs button[aria-current]{color:var(--accent,#4967d6)}.ds-inspector-tabs button[aria-current]:after{position:absolute;content:\"\";bottom:0;height:2px;left:18%;right:18%;background:var(--accent,#4967d6);border-radius:2px}.ds-inspector-tabs button:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "refersTo": "inspector-tab",
+      "description": "Four quiet icon-over-label choices with a tonal active state.",
+      "html": "<nav class=\"ds-inspector-nav\" aria-label=\"Inspector\"><button type=\"button\" class=\"ds-inspector-tab\" aria-pressed=\"false\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 2a5 5 0 0 1 5 5v10a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Z\"/></svg><span>Character</span></button><button type=\"button\" class=\"ds-inspector-tab\" aria-pressed=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 10h.01M16 10h.01M8 15q4 4 8 0M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20\"/></svg><span>Expressions</span></button><button type=\"button\" class=\"ds-inspector-tab\" aria-pressed=\"false\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 4h16v16H4ZM4 8h16M8 4v4m8-4v4m-6 4 5 3-5 3Z\"/></svg><span>Animations</span></button><button type=\"button\" class=\"ds-inspector-tab\" aria-pressed=\"false\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5\"/></svg><span>Export</span></button></nav>",
+      "css": ".ds-inspector-nav{display:flex;align-items:center;gap:2px;height:77px;padding:13px 16px 10px;background:linear-gradient(150deg,#222522 0%,#181b18 80%);border-bottom:1px solid #ffffff08;}.ds-inspector-tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;height:58px;padding:8px 0;border:0;border-radius:14px;background:transparent;color:#b1b8ac;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;font-weight:400;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-inspector-tab svg{flex-shrink:0;}.ds-inspector-tab:hover{color:#fff;background:#ffffff04;}.ds-inspector-tab[aria-pressed=\"true\"]{color:#d7ebcd;background:#ffffff06;}.ds-inspector-tab:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-inspector-nav,.ds-inspector-tab{transition:none!important;}}"
     },
     {
-      "name": "Integration choice",
+      "name": "Expression Option Chips",
+      "kind": "chip",
+      "refersTo": "option-chip",
+      "description": "Wrapping mouth or eye options retain individual selected fills.",
+      "html": "<div class=\"ds-option-chips\"><button type=\"button\" class=\"ds-option-chip\" aria-pressed=\"true\">Round</button><button type=\"button\" class=\"ds-option-chip\" aria-pressed=\"false\">Soft</button><button type=\"button\" class=\"ds-option-chip\" aria-pressed=\"false\">Closed</button></div>",
+      "css": ".ds-option-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 13px;}.ds-option-chip{padding:7px 11px;border:1px solid #ffffff0b;border-radius:17px;background:#272f22;color:#b3b8ad;text-transform:capitalize;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-option-chip[aria-pressed=\"true\"]{background:#3d4d32;border-color:#b1cf9366;color:#e4f3d6;}.ds-option-chip:focus-visible{outline:3px solid #9fd3b5;outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-option-chip,.ds-option-chips{transition:none!important;}}"
+    },
+    {
+      "name": "Expression Panel",
       "kind": "card",
-      "refersTo": "integration-card-selected",
-      "description": "Selected export integration card.",
-      "html": "<button class=\"ds-integration-card\" aria-pressed=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18\"/></svg><strong>React</strong><small>TypeScript component</small></button>",
-      "css": ".ds-integration-card{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;border:1px solid #a7baf7;border-radius:8px;background:var(--selected-surface,#f0f3ff);display:flex;align-items:flex-start;flex-direction:column;padding:13px;gap:6px;text-align:left;color:#5a74d1;cursor:pointer;transition:background .15s,border-color .15s,color .15s,opacity .15s;}.ds-integration-card strong{font-size:12px;font-weight:550;color:#56677b}.ds-integration-card small{font-size:10px;color:#596675}.ds-integration-card:focus-visible{outline:3px solid #90a7ff;outline-offset:3px;} @media(prefers-reduced-motion:reduce){[class^=\"ds-\"]{transition:none!important}}"
+      "description": "The inspector\u2019s quiet charcoal material and regular heading. This panel sample shows its shipped heading and padding; character previews remain the shared WebGL renderer.",
+      "html": "<section class=\"ds-inspector-panel\"><div class=\"ds-panel-heading\"><div><h1>Expressions</h1><p>Small gestures. Plenty of personality.</p></div><span class=\"ds-count-badge\">10</span></div></section>",
+      "css": ".ds-inspector-panel{padding:24px;border-radius:26px;background:linear-gradient(150deg,#222522 0%,#181b18 80%);box-shadow:0 8px 16px #15181520;color:var(--ink,#eff0ed);font-family:'Helvetica Neue',Arial,sans-serif;}.ds-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;}.ds-panel-heading h1{margin:0;font-size:27px;font-weight:400;letter-spacing:-.025em;line-height:1.25;}.ds-panel-heading p{margin:7px 0 0;font-size:12px;color:#b3b8ad;line-height:1.6;}.ds-count-badge{display:flex;align-items:center;justify-content:center;min-width:25px;height:25px;border-radius:8px;background:#ffffff07;color:#b3b8ad;font-size:12px;}"
     }
   ],
   "narrative": {
     "northStar": "The Character Studio",
-    "overview": "ClipLab is a working character studio with a slate preview, white controls, blue selection, crisp outlines, and expressive toon characters. Its identity is carried by the authored character; the surrounding interface uses compact, familiar controls and a restrained system UI font.\n\nThe material distinction is deliberate: the controls use quiet surface changes and borders, while the characters combine smooth two-color fills with discrete lighting bands. The studio, expression thumbnails, and size previews all use the same character renderer, preserving the character\u2019s appearance while it is edited and sequenced.",
+    "overview": "ClipLab is a quiet dark studio: a graphite canvas, a transparent header with the supplied white logo, and separate charcoal cards leave room for the authored character. Regular sans-serif headings, compact controls, sage selections, and a few white action surfaces keep the surrounding interface restrained.\n\nThe character carries the expressive range. Real geometry supports smooth two-color fills and sharply divided toon lighting, with circular eyes, substantial mouths, and optional animated details. The stage, expression library, and timeline share the character renderer so that the same face reads consistently while it is edited, sequenced, and exported. This refresh retains the established studio identity and character principles while replacing the earlier pale surfaces and blue action language with the user-approved dark world.",
     "keyCharacteristics": [
-      "Slate preview and white editing surfaces.",
-      "Blue identifies selection and primary actions.",
-      "Compact controls with fine outlines and modest corner rounding.",
-      "Smooth character color blending with crisp toon shading.",
-      "Character detail follows displayed CSS size."
+      "Graphite gutters separate independently rounded charcoal surfaces.",
+      "The transparent header carries the supplied white ClipLab logo.",
+      "White highlights primary actions and the active timeline beat; sage identifies quieter editing states.",
+      "Compact regular sans-serif type supports a character-led interface.",
+      "Circular facial geometry and crisp toon bands remain consistent across rendering contexts."
     ],
     "rules": [
       {
-        "name": "The Selection Blue Rule",
-        "body": "Use the existing blue accent for primary actions and active controls; pair selected cards with a pale blue fill and visible border. Character body colors remain authored content.",
+        "name": "The White Anchor Rule",
+        "body": "Keep the primary action and current timeline beat white while using the shipped sage variants for quieter editor selection. Character colors remain authored content.",
         "section": "colors"
       },
       {
-        "name": "The Compact Type Rule",
-        "body": "Use the compact UI hierarchy for control names, values, and panel titles. Time, size, and numeric settings use tabular figures where the source provides them.",
+        "name": "The Quiet Type Rule",
+        "body": "Use size, spacing, and modest weight changes to separate controls and headings. Keep the expressive character as the visual focus.",
         "section": "typography"
       },
       {
+        "name": "The Visible Gutter Rule",
+        "body": "Preserve graphite space between the preview, sequence, and inspector cards. Keep the header transparent so the workspace reads as independent surfaces.",
+        "section": "layout"
+      },
+      {
         "name": "The Crisp Lighting Rule",
-        "body": "Blend body colors smoothly, but retain the renderer\u2019s discrete lighting bands and sharply bounded ground shadow. Smooth fill is an approved material, not a lighting blur.",
+        "body": "Blend character body colors smoothly while keeping toon lighting boundaries hard. The camera-fixed candle mode uses four slightly offset radial bands; the selectable directional mode uses three normal-based bands. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.",
         "section": "elevation"
+      },
+      {
+        "name": "The Round Face Rule",
+        "body": "Start from circular dot eyes and half-circle arcs, with rounded stroke ends and substantial mouth contours. Keep facial proportions relative to the authored body and preserve the circular geometry when the face is mapped to it.",
+        "section": "shapes"
       }
     ],
     "dos": [
-      "Do use blue selection with visible outlines and pale fills across the existing control families.",
-      "Do preserve compact UI headings, sentence-case labels, and tabular numeric readouts.",
-      "Do use the shared renderer for character previews and preserve size-dependent facial detail.",
-      "Do preserve all three body silhouettes and the end cap\u2019s softened lower edge.",
-      "Do keep keyboard focus visible and honor the existing reduced-motion behavior."
+      "**Do** preserve the graphite canvas, transparent header, supplied white logo, and visible spacing between the three studio cards.",
+      "**Do** use white for primary actions and the active timeline beat, with the existing sage variants for quieter editor states.",
+      "**Do** use the quiet UI type hierarchy and maintain legible helper text and keyboard focus.",
+      "**Do** keep character colors editable and preserve smooth fills alongside crisp lighting bands.",
+      "**Do** keep circular base eyes, transparent circular cheek cutouts, substantial mouth contours, and eased supporting details consistent across the shared renderer.",
+      "**Do** choose facial detail from displayed CSS size and preserve authored pose data when toggling view controls."
     ],
     "donts": [
-      "Don't replace the approved smooth body gradient with flat color as a blanket style rule.",
-      "Don't soften the character\u2019s toon lighting bands or ground-shadow boundary with blur.",
-      "Don't promote custom character colors into global interface selection colors.",
-      "Don't copy the smallest metadata sizes into body copy or text-glyph controls into an icon standard."
+      "**Don't** reintroduce the obsolete pale inspector, blue primary-action palette, or an opaque header bar into this dark studio.",
+      "**Don't** merge the three studio cards into one continuous framed surface or apply panel shadows to every inner control.",
+      "**Don't** replace the supplied logo with typeset lettering or create a separate display treatment from the compact UI headings.",
+      "**Don't** blur toon-band or ground-shadow boundaries; soft ambient interface shadows and smooth body-color gradients remain valid parts of this world.",
+      "**Don't** enlarge default facial detail to compensate for an incorrectly scaled preview, or paint cheek cutouts with a flat sampled body color."
     ]
   }
 }

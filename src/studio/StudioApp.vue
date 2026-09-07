@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Icon from './StudioIcon.vue'
 import Thumb from './CharacterThumb.vue'
 import Stage from './CharacterStage.vue'
-import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, animationDuration, clone, defaultProject, definitionOf, expressionDuration, parseProject, sampleDefinition, uid, type Animation, type Character, type Expression, type Pose, type Project } from './model'
+import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, parseProject, sampleDefinition, uid, type Animation, type Character, type Expression, type Pose, type Project } from './model'
 import { demoZip, fileName, jsonBlob, renderMedia, saveBlob, setupInstructions } from './export'
 
 type Tab = 'character' | 'expressions' | 'animations' | 'export'
@@ -28,16 +28,31 @@ const beat = computed(() => expression.value.beats[selectedBeat.value] ?? expres
 const playing = ref(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
 const time = ref(0), zoom = ref(1)
 const rotation = ref({ x: -5, y: -12, z: -7 })
-const stageTheme = ref<'dark' | 'light' | 'checker'>('dark')
-const background = computed(() => stageTheme.value === 'dark' ? '#171e25' : stageTheme.value === 'light' ? '#e9eef0' : 'transparent')
+const previewSize = ref<number | null>(null)
+const background = 'transparent'
+const eyeLabels: Record<string, string> = { dot: 'Round', soft: 'Soft', closed: 'Closed', wink: 'Wink', star: 'Stars', heart: 'Hearts', squint: 'Squeeze', wide: 'Wide', 'arc-up': 'Happy arcs', 'arc-down': 'Sleepy arcs' }
+const mouthLabels: Record<string, string> = { smile: 'Smile', open: 'Open smile', line: 'Neutral', frown: 'Frown', oh: 'Surprised', wave: 'Unsure', sleep: 'Sleep', grin: 'Grin', cry: 'Cry', 'u-smile': 'Little U' }
+const facePresets: { name: string; pose: Partial<Pose> }[] = [
+  { name: 'Happy', pose: { eye: 'dot', mouth: 'open', mouthOpen: .75 } },
+  { name: 'Delighted', pose: { eye: 'arc-up', mouth: 'grin', mouthOpen: .65 } },
+  { name: 'Little smile', pose: { eye: 'squint', mouth: 'u-smile' } },
+  { name: 'Content', pose: { eye: 'arc-down', mouth: 'open', mouthWidth: .63, mouthOpen: .4 } },
+  { name: 'Neutral', pose: { eye: 'dot', mouth: 'line' } },
+  { name: 'Sad', pose: { eye: 'dot', mouth: 'frown' } },
+  { name: 'Tearful', pose: { eye: 'dot', mouth: 'cry', tears: true, mouthOpen: .75 } },
+  { name: 'Cheeky', pose: { eye: 'dot', cheeks: true, mouth: 'grin', teeth: true } }
+]
+function applyFace(pose: Partial<Pose>) { beat.value.pose = { ...beat.value.pose, eye: 'dot', mouth: 'smile', cheeks: false, tears: false, tongue: false, teeth: false, drool: false, mouthWidth: 1, mouthOpen: .5, ...pose }; playing.value = false; frozenBeat.value = true }
+const missingPresets = computed(() => defaultExpressions().filter(e => !project.value.expressions.some(saved => saved.id === e.id)))
+function addNewPresets() { for (const e of missingPresets.value) { project.value.expressions.push(e); project.value.animations.push({ id: uid('animation'), name: e.name, loop: true, steps: [{ id: uid('step'), expressionId: e.id, duration: expressionDuration(e) }] }) } }
+function rotatePreview(value: typeof rotation.value) { character.value.trueFront = false; rotation.value = value }
 const duration = computed(() => (mode.value === 'expression' ? expressionDuration(expression.value) : animationDuration(animation.value)) / character.value.speed)
 const sample = computed(() => {
   const value = sampleDefinition(definition.value, selectedAnimation.value, time.value, mode.value === 'expression' ? expression.value.id : undefined)
-  if (frozenBeat.value && !playing.value && mode.value === 'expression') return { ...value, pose: beat.value.pose, beatIndex: selectedBeat.value, blink: 0, bob: 0, breathe: 0 }
+  if (frozenBeat.value && !playing.value && mode.value === 'expression') return { ...value, pose: beat.value.pose, beatIndex: selectedBeat.value, blink: 0, bob: 0, breathe: 0, effectPhase: undefined, propAmount: 1, tearAmount: 1 }
   return value
 })
 const currentLabel = computed(() => mode.value === 'expression' ? expression.value.name : animation.value.name)
-const sizePose = computed(() => mode.value === 'expression' ? (frozenBeat.value ? beat.value.pose : expression.value.beats[0]!.pose) : stepExpression(animation.value.steps[0]!.expressionId).beats[0]!.pose)
 const notice = ref(loadError), saved = ref('Saved on this device')
 let noticeTimer: ReturnType<typeof setTimeout>
 function notify(message: string) { notice.value = message; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice.value = '' }, 6500) }
@@ -98,7 +113,7 @@ const numberControls: { key: NumberKey; label: string; min: number; max: number;
   { key: 'spacing', label: 'Eye spacing', min: .5, max: 1.5, step: .01 }, { key: 'eyeTilt', label: 'Eye tilt', min: -35, max: 35, step: 1 },
   { key: 'leftScale', label: 'Left eye', min: .4, max: 1.6, step: .01 }, { key: 'rightScale', label: 'Right eye', min: .4, max: 1.6, step: .01 },
   { key: 'gazeX', label: 'Look sideways', min: -1, max: 1, step: .01 }, { key: 'gazeY', label: 'Look up / down', min: -1, max: 1, step: .01 },
-  { key: 'mouthWidth', label: 'Mouth width', min: .3, max: 1.6, step: .01 }, { key: 'mouthOpen', label: 'Mouth opening', min: .1, max: 1, step: .01 }
+  { key: 'mouthStroke', label: 'Mouth stroke', min: .5, max: 2.2, step: .05 }, { key: 'mouthWidth', label: 'Mouth width', min: .3, max: 1.6, step: .01 }, { key: 'mouthOpen', label: 'Mouth opening', min: .1, max: 1, step: .01 }
 ]
 const bodyControls: { key: NumberKey; label: string; min: number; max: number; step: number }[] = [
   { key: 'rotationX', label: 'Nod · X', min: -45, max: 45, step: 1 }, { key: 'rotationY', label: 'Turn · Y', min: -60, max: 60, step: 1 }, { key: 'rotationZ', label: 'Tilt · Z', min: -45, max: 45, step: 1 }, { key: 'squash', label: 'Stretch', min: .8, max: 1.2, step: .01 }
@@ -175,8 +190,8 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
 <template>
   <div class="studio-app">
     <header class="studio-header">
-      <a class="wordmark" href="#" aria-label="ClipLab studio"><span class="brand-mark"><i></i><i></i><i></i></span>ClipLab<span class="wordmark-dot">.</span></a>
-      <span class="header-divider"></span><span class="header-description">Character studio</span>
+      <a class="wordmark" href="#" aria-label="ClipLab studio"><img src="/cliplab-logo-white.svg" alt="ClipLab" /></a>
+      <span class="header-description">Character studio</span>
       <div class="header-actions">
         <span class="save-state"><span class="saved-dot"></span>{{ saved }}</span>
         <div class="undo-group"><button class="icon-button" :disabled="!history.length && saved !== 'Saving…'" aria-label="Undo" title="Undo · ⌘Z" @click="undo"><Icon name="undo" /></button><button class="icon-button" :disabled="!future.length" aria-label="Redo" title="Redo · ⇧⌘Z" @click="redo"><Icon name="redo" /></button></div>
@@ -188,23 +203,31 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
 
     <main class="studio-workspace">
       <section class="workbench" aria-label="Character preview and sequencing">
+        <div class="preview-card">
         <div class="character-bar">
           <div class="character-tabs" aria-label="Characters"><button v-for="c in project.characters" :key="c.id" :class="['character-tab', { active: c.id === character.id }]" :aria-pressed="c.id === character.id" @click="selectedCharacter = c.id"><Thumb :character="c" :size="38" /><span>{{ c.name }}</span></button><button class="icon-button add-character" title="Duplicate character" aria-label="Duplicate character" @click="duplicateCharacter"><Icon name="plus" :size="17" /></button></div>
           <span class="character-count">{{ project.characters.length }} characters</span>
         </div>
 
-        <div :class="['preview-frame', stageTheme]">
-          <Stage :character="character" :sample="sample" :rotation="rotation" :zoom="zoom" :background="background" :playing="playing" @rotate="rotation = $event" @reset="resetRotation" />
+        <div class="preview-frame">
+          <Stage :character="character" :sample="sample" :rotation="rotation" :zoom="zoom" :background="background" :playing="playing" :preview-size="previewSize" @rotate="rotatePreview" @reset="resetRotation" />
           <div class="preview-status"><span :class="['status-light', { playing }]" /><span>{{ currentLabel }}</span><span class="status-divider">/</span><span class="status-action">{{ playing ? 'Playing' : 'Paused' }}</span></div>
           <div class="stage-tools">
-            <span class="drag-hint">Drag to rotate <span>·</span> Shift to roll</span>
-            <div class="stage-tool-actions"><button class="stage-icon" :class="{ active: character.followCursor }" title="Eyes follow cursor" aria-label="Toggle cursor following" :aria-pressed="character.followCursor" @click="character.followCursor = !character.followCursor"><Icon name="cursor" :size="17" /></button><span class="stage-tool-divider"></span><button class="stage-icon" aria-label="Zoom out" :disabled="zoom <= .65" @click="zoom = Math.max(.65, zoom - .1)">−</button><span class="zoom-label">{{ Math.round(zoom * 100) }}%</span><button class="stage-icon" aria-label="Zoom in" :disabled="zoom >= 1.4" @click="zoom = Math.min(1.4, zoom + .1)">+</button><span class="stage-tool-divider"></span><button v-for="theme in (['dark','light','checker'] as const)" :key="theme" :class="['background-choice', theme, { selected: stageTheme === theme }]" :aria-label="`${theme} preview background`" :aria-pressed="stageTheme === theme" @click="stageTheme = theme"></button><button class="stage-icon photo-button" aria-label="Export this pose as an image" title="Photo mode" @click="exportTab = 'image'; tab = 'export'; playing = false"><Icon name="camera" /></button></div>
+            <div class="view-controls">
+              <button class="stage-pill" :class="{ active: character.trueFront }" aria-label="True front view" :aria-pressed="character.trueFront" title="Keep the character facing straight ahead, including during animation" @click="character.trueFront = !character.trueFront"><Icon name="front" :size="16" /><span>Front</span></button>
+              <button class="stage-pill" :class="{ active: character.lockPosition }" aria-label="Lock position" :aria-pressed="character.lockPosition" title="Stop floating and breathing; keep expressions and details moving" @click="character.lockPosition = !character.lockPosition"><Icon :name="character.lockPosition ? 'lock' : 'unlock'" :size="16" /><span>Position</span></button>
+              <button class="stage-icon" :class="{ active: character.followCursor }" title="Eyes follow cursor" aria-label="Toggle cursor following" :aria-pressed="character.followCursor" @click="character.followCursor = !character.followCursor"><Icon name="cursor" :size="17" /></button>
+            </div>
+            <div class="stage-tool-actions"><button class="stage-icon" aria-label="Zoom out" :disabled="previewSize !== null || zoom <= .65" @click="zoom = Math.max(.65, zoom - .1)"><Icon name="minus" :size="16" /></button><span class="zoom-label">{{ previewSize ? `${previewSize} px` : `${Math.round(zoom * 100)}%` }}</span><button class="stage-icon" aria-label="Zoom in" :disabled="previewSize !== null || zoom >= 1.4" @click="zoom = Math.min(1.4, zoom + .1)"><Icon name="plus" :size="16" /></button><button class="stage-icon photo-button" aria-label="Export this pose as an image" title="Photo mode" @click="exportTab = 'image'; tab = 'export'; playing = false"><Icon name="camera" /></button></div>
           </div>
+          <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size</span>
+        </div>
         </div>
 
+        <div class="sequence-card">
         <div class="size-strip">
-          <div class="size-copy"><Icon name="expand" :size="16" /><span>In product</span><span class="size-copy-sub">Detail adapts to size</span></div>
-          <div class="size-samples"><div v-for="size in [12, 16, 24, 48, 96]" :key="size" class="size-sample"><div class="size-sample-image"><Thumb :character="character" :pose="sizePose" :size="size" /></div><span>{{ size }}<span class="unit"> px</span></span></div></div>
+          <div class="size-copy"><span>Preview size</span><span class="size-copy-sub">Tap to view in context</span></div>
+          <div class="size-samples" aria-label="Preview sizes"><button class="size-preset fit-preset" :class="{ active: previewSize === null }" :aria-pressed="previewSize === null" @click="previewSize = null"><Icon name="expand" :size="15" />Fit</button><button v-for="size in [12, 16, 24, 48, 96]" :key="size" class="size-preset" :class="{ active: previewSize === size }" :aria-label="`Preview at ${size} pixels`" :aria-pressed="previewSize === size" @click="previewSize = size">{{ size }}<span>px</span></button></div>
         </div>
 
         <section class="timeline" aria-label="Animation sequence">
@@ -228,6 +251,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
             <button class="add-beat" @click="tab = 'animations'"><Icon name="plus" :size="18" /><span>Add expression</span></button>
           </div>
         </section>
+        </div>
       </section>
 
       <aside class="inspector" aria-label="Character controls">
@@ -238,7 +262,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
             <div class="control-section"><label class="field-label" for="character-name">Name</label><input id="character-name" class="text-field" maxlength="60" v-model="character.name" />
               <div class="section-heading"><h2>Body shape</h2></div><div class="shape-options"><button v-for="shape in SHAPES" :key="shape.id" :class="['shape-option', { active: character.shape === shape.id }]" :aria-pressed="character.shape === shape.id" @click="character.shape = shape.id"><Thumb :character="characterForShape(shape.id)" :size="62" /><strong>{{ shape.name }}</strong><span>{{ shape.ratio }}</span></button></div>
             </div>
-            <div class="control-section"><div class="section-heading"><h2>Body color</h2><label class="switch-label">Gradient<input type="checkbox" v-model="character.gradient" role="switch" /><span class="switch-track"></span></label></div><div class="color-fields"><label class="color-field"><input aria-label="Primary body color" type="color" v-model="character.color" /><span>{{ character.color }}</span></label><label v-if="character.gradient" class="color-field"><input aria-label="Second body color" type="color" v-model="character.color2" /><span>{{ character.color2 }}</span></label></div><div class="palette-row"><button v-for="(colors, i) in PALETTES" :key="i" class="palette-swatch" :style="{ background: `linear-gradient(145deg, ${colors[0]}, ${colors[1]})` }" :aria-label="`Apply palette ${i + 1}`" @click="applyPalette(colors)"><Icon v-if="character.color === colors[0]" name="check" :size="14" /></button></div><label v-if="character.gradient" class="range-control"><span>Gradient direction<output>{{ character.gradientAngle }}°</output></span><input aria-label="Gradient direction" type="range" min="-180" max="180" step="1" v-model.number="character.gradientAngle" /></label><label class="toggle-row"><span><strong>Toon shading</strong><small>Crisp shadows, subtle depth</small></span><input type="checkbox" v-model="character.toon" role="switch" /><span class="switch-track"></span></label></div>
+            <div class="control-section"><div class="section-heading"><h2>Body color</h2><label class="switch-label">Gradient<input type="checkbox" v-model="character.gradient" role="switch" /><span class="switch-track"></span></label></div><div class="color-fields"><label class="color-field"><input aria-label="Primary body color" type="color" v-model="character.color" /><span>{{ character.color }}</span></label><label v-if="character.gradient" class="color-field"><input aria-label="Second body color" type="color" v-model="character.color2" /><span>{{ character.color2 }}</span></label></div><div class="palette-row"><button v-for="(colors, i) in PALETTES" :key="i" class="palette-swatch" :style="{ background: `linear-gradient(145deg, ${colors[0]}, ${colors[1]})` }" :aria-label="`Apply palette ${i + 1}`" @click="applyPalette(colors)"><Icon v-if="character.color === colors[0]" name="check" :size="14" /></button></div><label v-if="character.gradient" class="range-control"><span>Gradient direction<output>{{ character.gradientAngle }}°</output></span><input aria-label="Gradient direction" type="range" min="-180" max="180" step="1" v-model.number="character.gradientAngle" /></label><label class="toggle-row"><span><strong>Toon shading</strong><small>Crisp shadows, subtle depth</small></span><input type="checkbox" v-model="character.toon" role="switch" /><span class="switch-track"></span></label><label v-if="character.toon" class="toggle-row"><span><strong>Candle light</strong><small>Round bands, fixed to the camera</small></span><input type="checkbox" v-model="character.candleLight" role="switch" /><span class="switch-track"></span></label></div>
             <div class="control-section"><div class="section-heading"><h2>Face & surface</h2></div><label class="color-field ink-field"><span>Face color</span><input aria-label="Face color" type="color" v-model="character.eyeColor" /><span>{{ character.eyeColor }}</span></label><label class="toggle-row"><span><strong>White eye dots</strong><small>A small highlight inside each eye</small></span><input type="checkbox" v-model="character.iris" role="switch" /><span class="switch-track"></span></label><label class="toggle-row"><span><strong>Elevate the face</strong><small>Lift the features above the body</small></span><input type="checkbox" v-model="character.elevated" role="switch" /><span class="switch-track"></span></label><label v-if="character.elevated" class="range-control"><span>Separation<output>{{ Math.round(character.elevation * 100) }}%</output></span><input aria-label="Face separation" type="range" min="0.005" max="0.15" step="0.005" v-model.number="character.elevation" /></label><label class="toggle-row"><span>Ground shadow</span><input type="checkbox" v-model="character.shadow" role="switch" /><span class="switch-track"></span></label></div>
             <div class="control-section detail-guide"><h2>Responsive detail</h2><p><strong>Above 24 px</strong>Full face and expression details</p><p><strong>16–24 px</strong>Eyes carry the expression</p><p><strong>Below 16 px</strong>Color and shape only</p></div>
           </template>
@@ -247,15 +271,16 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
             <div class="panel-heading"><div><h1>Expressions</h1><p>Small gestures. Plenty of personality.</p></div><span class="count-badge">{{ project.expressions.length }}</span></div>
             <div class="library-actions library-actions-top"><span>Double-click to edit</span><button class="text-button" @click="editExpression(expression)"><Icon name="tune" :size="15" />Edit selected</button></div>
             <div class="expression-grid"><button v-for="e in project.expressions" :key="e.id" :class="['expression-card', { active: selectedExpression === e.id && mode === 'expression' }]" :aria-pressed="selectedExpression === e.id && mode === 'expression'" @click="selectExpression(e)" @dblclick="editExpression(e)"><div class="expression-preview"><Thumb :character="character" :pose="e.beats[Math.min(1, e.beats.length - 1)]!.pose" :size="92" /></div><div class="expression-card-label"><strong>{{ e.name }}</strong><span>{{ e.beats.length }} beats</span></div></button></div>
-            <div class="library-actions"><button class="text-button" @click="newExpression"><Icon name="plus" :size="15" />New expression</button></div>
+            <div class="library-actions"><button class="text-button" @click="newExpression"><Icon name="plus" :size="15" />New expression</button><button v-if="missingPresets.length" class="text-button" @click="addNewPresets">Add new presets</button></div>
           </template>
 
           <template v-if="tab === 'expressions' && editing">
             <div class="editor-heading"><button class="icon-button" aria-label="Back to expressions" @click="editing = false; frozenBeat = false"><Icon name="back" /></button><div><h1>Edit expression</h1><p>{{ expression.name }} · Beat {{ selectedBeat + 1 }}</p></div><button class="icon-button" title="Duplicate expression" aria-label="Duplicate expression" @click="duplicateExpression"><Icon name="copy" /></button></div>
             <div class="control-section"><label class="field-label" for="expression-name">Expression name</label><input id="expression-name" class="text-field" maxlength="60" v-model="expression.name" /><div class="beat-pills"><button v-for="(item, index) in expression.beats" :key="item.id" :class="{ active: index === selectedBeat }" @click="pickBeat(index)">{{ index + 1 }}<span>{{ item.name }}</span></button></div><label class="field-label" for="beat-name">Beat name</label><input id="beat-name" class="text-field" maxlength="40" v-model="beat.name" /></div>
-            <div class="control-section"><div class="section-heading"><h2>Eyes</h2></div><div class="option-chips"><button v-for="eye in EYES" :key="eye" :class="{ active: beat.pose.eye === eye }" @click="beat.pose.eye = eye; playing = false; frozenBeat = true">{{ eye }}</button></div><label class="toggle-row compact"><span>White eye dots</span><input type="checkbox" role="switch" v-model="character.iris" /><span class="switch-track"></span></label><label class="toggle-row compact"><span>Link eye sizes</span><input type="checkbox" role="switch" v-model="linkedEyes" /><span class="switch-track"></span></label><div class="sliders"><label v-for="control in numberControls.slice(0, 10)" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ Number(beat.pose[control.key]).toFixed(control.step === 1 ? 0 : 2) }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label></div></div>
+            <div class="control-section"><div class="section-heading"><h2>Face presets</h2></div><div class="face-presets"><button v-for="preset in facePresets" :key="preset.name" :aria-label="`Apply ${preset.name} face`" @click="applyFace(preset.pose)"><Thumb :character="{ ...character, trueFront: true }" :pose="{ ...BASE_POSE, ...preset.pose }" :size="60" /><span>{{ preset.name }}</span></button></div></div>
+            <div class="control-section"><div class="section-heading"><h2>Eyes</h2></div><div class="option-chips"><button v-for="eye in EYES" :key="eye" :class="{ active: beat.pose.eye === eye }" @click="beat.pose.eye = eye; playing = false; frozenBeat = true">{{ eyeLabels[eye] }}</button></div><label class="toggle-row compact"><span>White eye dots · eyes +20%</span><input type="checkbox" role="switch" v-model="character.iris" /><span class="switch-track"></span></label><label class="toggle-row compact"><span>Cheek cutouts</span><input type="checkbox" role="switch" v-model="beat.pose.cheeks" /><span class="switch-track"></span></label><label class="toggle-row compact"><span>Link eye sizes</span><input type="checkbox" role="switch" v-model="linkedEyes" /><span class="switch-track"></span></label><div class="sliders"><label v-for="control in numberControls.slice(0, 10)" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ Number(beat.pose[control.key]).toFixed(control.step === 1 ? 0 : 2) }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label></div></div>
             <div class="control-section"><div class="section-heading"><h2>Eye placement & rotation</h2></div><label class="toggle-row compact"><span>Mirror eye adjustments</span><input type="checkbox" role="switch" v-model="mirroredEyes" /><span class="switch-track"></span></label><p class="panel-hint">Move and turn each eye independently, or mirror adjustments across the face.</p><div class="sliders"><label v-for="control in eyePlacementControls" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ beat.pose[control.key] }}{{ control.key.endsWith('Rotation') ? '°' : '' }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label></div></div>
-            <div class="control-section"><div class="section-heading"><h2>Mouth</h2></div><div class="option-chips"><button v-for="mouth in MOUTHS" :key="mouth" :class="{ active: beat.pose.mouth === mouth }" @click="beat.pose.mouth = mouth; playing = false; frozenBeat = true">{{ mouth }}</button></div><label v-for="control in numberControls.slice(10)" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ Number(beat.pose[control.key]).toFixed(2) }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label><div class="inline-checks"><label><input type="checkbox" v-model="beat.pose.tongue" />Tongue</label><label><input type="checkbox" v-model="beat.pose.teeth" />Teeth</label><label><input type="checkbox" v-model="beat.pose.drool" />Drool</label></div></div>
+            <div class="control-section"><div class="section-heading"><h2>Mouth</h2></div><div class="option-chips"><button v-for="mouth in MOUTHS" :key="mouth" :class="{ active: beat.pose.mouth === mouth }" @click="beat.pose.mouth = mouth; playing = false; frozenBeat = true">{{ mouthLabels[mouth] }}</button></div><label v-for="control in numberControls.slice(10)" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ Number(beat.pose[control.key]).toFixed(2) }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label><div class="inline-checks"><label><input type="checkbox" v-model="beat.pose.tongue" />Tongue</label><label><input type="checkbox" v-model="beat.pose.teeth" />Teeth</label><label><input type="checkbox" v-model="beat.pose.drool" />Drool</label><label><input type="checkbox" v-model="beat.pose.tears" />Tears</label></div></div>
             <div class="control-section"><div class="section-heading"><h2>Pose & props</h2></div><label v-for="control in bodyControls" :key="control.key" class="range-control"><span>{{ control.label }}<output>{{ Number(beat.pose[control.key]).toFixed(control.step === 1 ? 0 : 2) }}</output></span><input :aria-label="control.label" type="range" :min="control.min" :max="control.max" :step="control.step" :value="beat.pose[control.key]" @input="updatePose(control.key, $event)" /></label><label class="field-label" for="prop-select">Expression detail</label><select id="prop-select" class="text-field" v-model="beat.pose.prop"><option v-for="prop in PROPS" :key="prop" :value="prop">{{ prop === 'zzz' ? 'Sleep marks · Zzz' : prop.charAt(0).toUpperCase() + prop.slice(1) }}</option></select><button class="text-button reset-beat" @click="beat.pose = clone(BASE_POSE)"><Icon name="reset" :size="14" />Reset this beat</button></div>
           </template>
 
