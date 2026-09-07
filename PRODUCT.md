@@ -101,7 +101,7 @@ These are directions explicitly supplied by the user, not an inferred design sys
 ## Current refinements
 
 - Reduce the supplied logo by 40% on desktop and mobile.
-- Replace the orbit globe with compact view buttons and direct stage dragging.
+- Restore the orbit globe with thin monochrome rings, crosshair, corner brackets, perimeter ticks and orientation readouts inspired by the supplied instrument reference. Preserve direct stage dragging, keyboard rotation, roll and reset.
 - Add independent body cursor following and preserve the current cursor pose in PNG exports.
 - Make Add expression open a visible picker, reveal the appended step, and repair selection after Undo/import. Add animation deletion with Undo support.
 - Group existing face presets as Set 1. Set 2 uses the supplied emoji sheet for twelve bolder reactions, with brows, blush, half-lids, pupils, kisses, tongue-out mouths, and tears.

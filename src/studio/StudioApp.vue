@@ -266,7 +266,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
         </div>
 
         <div class="preview-frame" :class="{ light: previewBackground === 'light', checker: previewBackground === 'transparent' }">
-          <Stage :character="character" :sample="sample" :rotation="rotation" :zoom="zoom" :background="background" :playing="playing" :preview-size="previewSize" @rotate="rotatePreview" @reset="resetRotation" @front="character.trueFront = true; character.followRotation = false" @cursor="previewCursor = $event" />
+          <Stage :character="character" :sample="sample" :rotation="rotation" :zoom="zoom" :background="background" :playing="playing" :preview-size="previewSize" @rotate="rotatePreview" @reset="resetRotation" @cursor="previewCursor = $event" />
           <div class="preview-status"><span :class="['status-light', { playing }]" /><span>{{ currentLabel }}</span><span class="status-divider">/</span><span class="status-action">{{ playing ? 'Playing' : 'Paused' }}</span></div>
           <div class="stage-tools">
             <div class="view-controls">

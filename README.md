@@ -51,7 +51,7 @@ ClipLab started as a fork of [bloub](https://github.com/jeremy-prt/bloub) by Jé
 
 Face styles are grouped into **Set 1** (simple faces) and **Set 2** (12 emoji reactions). Choose a face to create a three-beat expression, or apply it to a beat in the editor. **Add expression** opens a visual picker. **Delete animation** supports Undo and keeps at least one animation in the project.
 
-Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. Compact view buttons and stage dragging replace the orbit globe. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG captures the current pointer pose, while rendered loops use a centered cursor.
+Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. The orbit globe uses fine monochrome rings, a crosshair, perimeter ticks, and live X/Y/Z readouts. Drag the globe or stage to rotate; Shift-drag tilts. Arrow keys rotate, Shift-left/right tilts, and Home or Reset restores the starting angle. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG captures the current pointer pose, while rendered loops use a centered cursor.
 
 Use the three **Background** swatches beside the character tabs to preview on Dark, Light, or a transparency checkerboard. This changes only the preview; choose the asset background separately in Export.
 

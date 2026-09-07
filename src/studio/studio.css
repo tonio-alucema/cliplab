@@ -450,10 +450,29 @@ img {
   color: #b6b6b6;
 }
 
-/* Compact orientation controls keep all axes available through stage dragging. */
-.view-selector { position:absolute;right:20px;top:9px;display:flex;align-items:center;padding:4px;gap:2px;border:1px solid #ffffff14;border-radius:18px;background:#222222 }
-.view-selector button { display:flex;align-items:center;justify-content:center;min-height:29px;padding:0 9px;border-radius:13px;font-size:11px;color:#bcbcbc;cursor:pointer }
-.view-selector button:hover,.view-selector button.active { background:#3a3a3a;color:#f1f1f1 }
+/* A monochrome orientation instrument stays legible on every preview background. */
+.orientation-control {
+  position: absolute;
+  right: 20px;
+  top: 9px;
+  width: 160px;
+  padding: 0 8px 10px;
+  background: #191919;
+  color: #d0cfca;
+  border-radius: 10px;
+  user-select: none;
+}
+
+.orbit-heading { display:flex;align-items:center;justify-content:space-between;height:34px;padding-left:5px }
+.orbit-heading>span { font-size:12px;letter-spacing:.08em;text-transform:uppercase }
+.orbit-heading button { display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:7px;color:#bcbcbc;cursor:pointer }
+.orbit-heading button:hover { background:#333333;color:#f0f0f0 }
+.orbit-globe { display:block;width:100%;aspect-ratio:1;height:auto;cursor:grab;touch-action:none;border-radius:4px }
+.orbit-globe:active { cursor:grabbing }
+.orbit-globe:hover { background:#202020 }
+.orbit-readout { display:flex;justify-content:space-between;gap:3px;padding:8px 2px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.2 }
+.orbit-readout span { display:flex;gap:4px;white-space:nowrap }
+.orbit-readout i { color:#999997;font-style:normal;text-transform:uppercase }
 
 .stage-tools {
   position: absolute;
@@ -2005,9 +2024,11 @@ input:checked+.switch-track:after {
   .character-bar { padding:0 10px }
   .character-tab { padding-right:9px;font-size:12px }
   .preview-status { left:16px;top:7px }
-  .view-selector { right:10px;top:44px }
+  .orientation-control { right:10px;top:43px;width:116px;padding:0 6px 8px }
+  .orbit-heading { height:30px;padding-left:3px }
+  .orbit-readout { padding-top:5px;font-size:10px;gap:2px }
+  .orbit-readout span { flex-direction:column;gap:2px }
   .stage-canvas:not(.actual) { position:absolute;top:78px;height:calc(100% - 124px) }
-  .view-selector button { padding:0 8px;min-height:28px }
   .stage-tools { left:12px;right:10px;bottom:14px }
   .stage-pill { font-size:11px;gap:4px;padding:7px }
   .stage-icon { width:25px }
