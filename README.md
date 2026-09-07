@@ -35,6 +35,8 @@ Changes autosave to this browser. Undo and redo keep recent edits. Export a **Pr
 
 App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, `followCursor`, and `followRotation`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
 
+Turning on **White eye dots** also enables **Eyes follow cursor**. The dots ease toward the pointer inside the black eye shapes, leaving the face in place. Tracking continues while playback is paused and returns to center when the pointer leaves the window. Turn **Eyes follow cursor** off for a fixed or authored gaze; app integrations can also override it with `followCursor: false` and use `setGaze()` directly.
+
 ## Implementation
 
 The new studio lives in `src/studio/`. `model.ts` defines the portable data and deterministic animation sampling; `renderer.ts` draws the actual geometry and curved face shell; `runtime.ts` provides the independent player; `export.ts` creates packages and rendered assets. `tools/build-studio-runtime.mjs` builds the standalone player before development or production builds.

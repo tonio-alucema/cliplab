@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { CharacterRenderer } from './renderer'
+import { centeredGaze, easeGaze, pointerGaze } from './gaze'
 import type { Character, Sample } from './model'
 import Icon from './StudioIcon.vue'
 const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; playing: boolean }>()
@@ -9,7 +10,8 @@ const host = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>()
 const error = ref('')
 let renderer: CharacterRenderer | undefined, observer: ResizeObserver | undefined
 let start: { x: number; y: number; rotation: { x: number; y: number; z: number }; roll: boolean } | undefined
-let gaze = { x: 0, y: 0 }
+let gaze = centeredGaze(), gazeTarget = centeredGaze(), followFrame = 0, lastFollow = 0
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 function render() {
   if (!renderer || !host.value || !canvas.value) return
   const size = props.previewSize
@@ -29,6 +31,7 @@ function setup() {
 }
 function down(event: PointerEvent, roll = false) {
   if (event.button !== 0) return
+  leave()
   start = { x: event.clientX, y: event.clientY, rotation: { ...props.rotation }, roll: roll || event.shiftKey }
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
 }
@@ -39,11 +42,18 @@ function move(event: PointerEvent) {
   }
 }
 function follow(event: PointerEvent) {
-  if (!start && (props.character.followCursor || props.character.followRotation) && host.value) {
-    const rect = host.value.getBoundingClientRect(); gaze = { x: Math.max(-1, Math.min(1, (event.clientX - rect.left) / rect.width * 2 - 1)), y: Math.max(-1, Math.min(1, -((event.clientY - rect.top) / rect.height * 2 - 1))) }; emit('cursor', gaze); render()
+  if (!start && (props.character.followCursor || props.character.followRotation) && canvas.value) {
+    gazeTarget = pointerGaze(event, canvas.value.getBoundingClientRect()); scheduleFollow()
   }
 }
-function leave() { gaze = { x: 0, y: 0 }; emit('cursor', gaze); render() }
+function scheduleFollow() { if (!followFrame) { lastFollow = performance.now(); followFrame = requestAnimationFrame(animateFollow) } }
+function animateFollow(now: number) {
+  followFrame = 0
+  gaze = easeGaze(gaze, gazeTarget, (now - lastFollow) / 1000, reducedMotion.matches)
+  lastFollow = now; emit('cursor', { ...gaze }); render()
+  if (gaze.x !== gazeTarget.x || gaze.y !== gazeTarget.y) followFrame = requestAnimationFrame(animateFollow)
+}
+function leave() { gazeTarget = centeredGaze(); scheduleFollow() }
 const views = [{ label: 'Left', y: -90 }, { label: 'Front', y: 0 }, { label: 'Right', y: 90 }, { label: 'Back', y: 180 }]
 function view(y: number) { if (y === 0) emit('front'); else emit('rotate', { x: 0, y, z: 0 }) }
 function keyboard(event: KeyboardEvent) {
@@ -54,8 +64,11 @@ function keyboard(event: KeyboardEvent) {
   else emit('rotate', { ...props.rotation, x: props.rotation.x + (event.key === 'ArrowUp' ? -delta : event.key === 'ArrowDown' ? delta : 0), y: props.rotation.y + (event.key === 'ArrowLeft' ? -delta : event.key === 'ArrowRight' ? delta : 0) })
 }
 watch(() => [props.character, props.sample, props.rotation, props.zoom, props.previewSize], render, { deep: true })
+watch(() => [props.character.id, props.character.followCursor, props.character.followRotation], () => {
+  cancelAnimationFrame(followFrame); followFrame = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); emit('cursor', { ...gaze }); render()
+})
 onMounted(() => { setup(); window.addEventListener('pointermove', follow, { passive: true }); document.documentElement.addEventListener('pointerleave', leave) })
-onBeforeUnmount(() => { observer?.disconnect(); renderer?.dispose(); window.removeEventListener('pointermove', follow); document.documentElement.removeEventListener('pointerleave', leave) })
+onBeforeUnmount(() => { cancelAnimationFrame(followFrame); observer?.disconnect(); renderer?.dispose(); window.removeEventListener('pointermove', follow); document.documentElement.removeEventListener('pointerleave', leave) })
 </script>
 <template>
   <div ref="host" class="stage-canvas-wrap" :style="{ background }">

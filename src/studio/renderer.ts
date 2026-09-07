@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { BASE_POSE, detailAt, type Character, type Detail, type Pose, type Sample, type Shape } from './model'
+import { irisOffset } from './gaze'
 
 export interface RenderOptions {
   width: number; height: number; displaySize?: number; background?: string | null
@@ -78,7 +79,8 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   ctx.clearRect(0, 0, 512, 512)
   if (detail === 'body') return
   const ink = character.eyeColor, eyeY = detail === 'eyes' ? 254 : 197, spacing = 103 * pose.spacing
-  const gx = (pose.gazeX + gaze.x) * 20, gy = -(pose.gazeY + gaze.y) * 15
+  const internalGaze = character.iris && detail === 'full'
+  const gx = internalGaze ? 0 : (pose.gazeX + gaze.x) * 20, gy = internalGaze ? 0 : -(pose.gazeY + gaze.y) * 15
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   for (const side of [-1, 1]) {
     const r = eyeRadius(pose, character, detail, side)
@@ -118,7 +120,12 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
         ctx.fillStyle = ink; ctx.beginPath(); ctx.arc((pose.gazeX + gaze.x) * outer * .52, -(pose.gazeY + gaze.y) * outer * .52, outer * .4, 0, Math.PI * 2); ctx.fill()
       }
       else { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill() }
-      if (character.iris && detail === 'full' && !pupilEyes && pose.eye !== 'half-lidded') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-r * .29 + gaze.x * 3, -r * .32 - gaze.y * 3, r * .28, 0, Math.PI * 2); ctx.fill() }
+      if (internalGaze && !pupilEyes && pose.eye !== 'half-lidded') {
+        // The eye path also clips star/heart shapes and intersects cheek cutouts.
+        ctx.clip()
+        const dot = irisOffset(r, { x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }, pose.eyeTilt * side + localRotation, pose.cheeks)
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dot.x, dot.y, r * .28, 0, Math.PI * 2); ctx.fill()
+      }
     }
     ctx.restore()
     if (detail === 'full' && pose.brows !== 'none') {
@@ -276,8 +283,10 @@ export class CharacterRenderer {
     const half = Math.max(height * .72, .72 / aspect) / zoom
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
     this.face.visible = detail !== 'body'
-    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, gaze.x.toFixed(3), gaze.y.toFixed(3)])
-    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
+    // Pointer directions stay relative to the screen when the character rolls or turns.
+    const faceGaze = character.iris ? new THREE.Vector3(gaze.x, gaze.y, 0).applyQuaternion(this.root.quaternion.clone().invert()) : gaze
+    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3)])
+    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!

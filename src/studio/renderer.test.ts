@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bodyHeight, radiusAt, eyeRadius, effectEnvelope } from './renderer'
+import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace } from './renderer'
 import { BASE_POSE, defaultProject } from './model'
 describe('three requested body profiles', () => {
   it('keeps exact 1:2 and 1:1 outer dimensions', () => {
@@ -24,6 +24,38 @@ describe('three requested body profiles', () => {
   })
 })
 describe('illustrative face and supporting motion', () => {
+  function recordFace(gaze: { x: number; y: number }, overrides = {}, blink = 0, detail: 'full' | 'eyes' | 'body' = 'full') {
+    const dots: number[][] = [], positions: number[][] = []
+    let fillStyle = '', clips = 0
+    const ctx = new Proxy({}, {
+      get: (_, key) => {
+        if (key === 'fillStyle') return fillStyle
+        if (key === 'arc') return (...args: number[]) => { if (fillStyle === '#ffffff') dots.push(args) }
+        if (key === 'translate') return (...args: number[]) => positions.push(args)
+        if (key === 'clip') return () => clips++
+        return () => {}
+      },
+      set: (_, key, value) => { if (key === 'fillStyle') fillStyle = value; return true }
+    }) as CanvasRenderingContext2D
+    drawFace(ctx, { ...BASE_POSE, ...overrides }, { ...defaultProject().characters[0]!, iris: true }, blink, detail, gaze)
+    return { dots, positions, clips }
+  }
+  it('moves white dots within clipped eyes while keeping the eyes and mouth in place', () => {
+    const left = recordFace({ x: -1, y: 0 }), right = recordFace({ x: 1, y: 0 })
+    expect(left.positions).toEqual(right.positions)
+    expect(left.dots).toHaveLength(2); expect(right.dots).toHaveLength(2)
+    expect(left.dots[0]![0]).toBeLessThan(-15); expect(right.dots[0]![0]).toBeGreaterThan(15)
+    expect(left.clips).toBeGreaterThanOrEqual(2)
+    const authored = recordFace({ x: 0, y: 0 }, { gazeX: 1 })
+    expect(authored.dots).toEqual(right.dots)
+  })
+  it('hides white dots on closed eyes, during a blink, and at small app sizes', () => {
+    expect(recordFace({ x: 1, y: 1 }, { eye: 'closed' }).dots).toHaveLength(0)
+    expect(recordFace({ x: 1, y: 1 }, {}, .8).dots).toHaveLength(0)
+    expect(recordFace({ x: 1, y: 1 }, {}, 0, 'eyes').dots).toHaveLength(0)
+    expect(recordFace({ x: 1, y: 1 }, {}, 0, 'body').dots).toHaveLength(0)
+    expect(recordFace({ x: 0, y: -1 }, { cheeks: true }).clips).toBeGreaterThanOrEqual(4)
+  })
   it('enlarges both black eyes by exactly 20% when the iris is enabled', () => {
     const character = defaultProject().characters[0]!
     for (const side of [-1, 1]) for (const detail of ['full', 'eyes'] as const) {
