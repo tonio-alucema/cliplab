@@ -17,6 +17,15 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
     z: rotation.z + pose.rotationZ
   }
 }
+/** Size adaptation is render-only; resizing restores the authored face and iris. */
+export function faceForSize(character: Character, sample: Sample, size: number) {
+  const simpleEyes = size >= 24 && size <= 48
+  return {
+    character: simpleEyes ? { ...character, iris: false } : character,
+    sample: simpleEyes ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.3 } } : sample,
+    simpleEyes
+  }
+}
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : 1
 export function radiusAt(shape: Shape, y: number): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
@@ -119,19 +128,19 @@ export function resolveEyeGazes(character: Character, pose: Pose, blink: number,
 function drop(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath(); ctx.moveTo(x, y - r * 1.5); ctx.bezierCurveTo(x - r * .25, y - r * .8, x - r, y - r * .2, x - r, y + r * .35); ctx.bezierCurveTo(x - r, y + r * 1.65, x + r, y + r * 1.65, x + r, y + r * .35); ctx.bezierCurveTo(x + r, y - r * .2, x + r * .25, y - r * .8, x, y - r * 1.5); ctx.fill()
 }
-export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes; faceLayers?: FaceLayer[] } = {}) {
+export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes; faceLayers?: FaceLayer[]; simpleEyes?: boolean } = {}) {
   ctx.clearRect(0, 0, 512, 512)
   if (detail === 'body') return
   const ink = character.eyeColor, eyeY = detail === 'eyes' ? 254 : 197, spacing = 103 * pose.spacing
   const internalGaze = character.iris && detail === 'full'
   const gx = internalGaze ? 0 : (pose.gazeX + gaze.x) * 20, gy = internalGaze ? 0 : -(pose.gazeY + gaze.y) * 15
   const layers = effects.faceLayers
-  const pupilAmount = detail === 'full' ? layers ? traitWeight(layers, t => t.eye === 'pupil') : pose.eye === 'pupil' ? 1 : 0 : 0
+  const pupilAmount = !effects.simpleEyes && detail === 'full' ? layers ? traitWeight(layers, t => t.eye === 'pupil') : pose.eye === 'pupil' ? 1 : 0 : 0
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   for (const side of [-1, 1]) {
     const r = eyeRadius(pose, character, detail, side)
     const eyeGaze = side < 0 ? effects.eyeGazes?.left : effects.eyeGazes?.right
-    const pupilEyes = pose.eye === 'pupil' && detail === 'full'
+    const pupilEyes = !effects.simpleEyes && pose.eye === 'pupil' && detail === 'full'
     const x = 256 + side * spacing + gx * (1 - pupilAmount) + (side < 0 ? pose.leftX : pose.rightX), y = eyeY + gy * (1 - pupilAmount) - (side < 0 ? pose.leftY : pose.rightY)
     if (detail === 'full' && pose.blush > 0) {
       ctx.save(); ctx.globalAlpha = pose.blush * .8; ctx.fillStyle = '#ff647a'; ctx.beginPath(); ctx.ellipse(x + side * 20, y + 56, 31, 24 * faceAspect, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore()
@@ -142,7 +151,11 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
     ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = Math.max(13, r * .43)
     const happyMouth = ['open', 'grin', 'smile', 'u-smile'].includes(pose.mouth)
     const closed = ['closed', 'arc-up', 'arc-down'].includes(pose.eye) || (pose.eye === 'wink' && side > 0) || (detail === 'eyes' && ['open', 'grin'].includes(pose.mouth) && pose.eye === 'dot')
-    if (layers) {
+    if (effects.simpleEyes) {
+      // Keep literal round dots even at eyes-only sizes or between styled beats.
+      ctx.fillStyle = '#000000'; ctx.scale(1, Math.max(.12, 1 - blink))
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill()
+    } else if (layers) {
       const look = eyeGaze ?? localGaze({ x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }, pose.eyeTilt * side + localRotation)
       drawMorphEye(ctx, pose, layers, r, side, blink, detail, ink, character.iris, look)
     } else if (pose.faceSet === 'set-2' && pose.eye === 'wink' && side > 0) {
@@ -311,10 +324,13 @@ export class CharacterRenderer {
   render(character: Character, sample: Sample, options: Partial<RenderOptions> = {}, gaze = { x: 0, y: 0 }) {
     if (this.disposed) return
     this.options = { ...this.options, ...options }
+    const displaySize = this.options.displaySize ?? Math.min(this.options.width, this.options.height)
+    const appearance = faceForSize(character, sample, displaySize)
+    character = appearance.character; sample = appearance.sample
     if (character.shape !== this.shape) { this.shape = character.shape; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }
     const { pose } = sample
     const height = bodyHeight(this.shape)
-    const detail = detailAt(this.options.displaySize ?? Math.min(this.options.width, this.options.height))
+    const detail = detailAt(displaySize)
     const u = this.body.material.uniforms
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
     u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
@@ -344,9 +360,9 @@ export class CharacterRenderer {
     this.face.visible = detail !== 'body'
     // Pointer directions stay relative to the screen when the character rolls or turns.
     const faceGaze = character.iris ? new THREE.Vector3(gaze.x, gaze.y, 0).applyQuaternion(this.root.quaternion.clone().invert()) : gaze
-    this.resolvedEyes = detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? this.options.eyeGazes ?? resolveEyeGazes(character, pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, this.options.pointerLook, sample.faceLayers) : undefined
-    const key = JSON.stringify([pose, sample.faceLayers, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
-    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
+    this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? this.options.eyeGazes ?? resolveEyeGazes(character, pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, this.options.pointerLook, sample.faceLayers) : undefined
+    const key = JSON.stringify([pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
+    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!

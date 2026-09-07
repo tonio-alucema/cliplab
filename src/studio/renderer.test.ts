@@ -1,8 +1,51 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation } from './renderer'
-import { BASE_POSE, defaultProject } from './model'
+import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation, faceForSize } from './renderer'
+import { BASE_POSE, defaultProject, detailAt, faceLayers } from './model'
 import type { EyeGazes } from './gaze'
+describe('compact faces from 24 through 48 CSS pixels', () => {
+  const character = { ...defaultProject().characters[0]!, iris: true, eyeColor: '#663399' }
+  const sample = { pose: { ...BASE_POSE, faceScale: .8 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
+  it('enlarges only the requested sizes, without changing the stored face or accumulating scale', () => {
+    for (const size of [24, 24.01, 32, 48]) {
+      const adapted = faceForSize(character, sample, size)
+      expect(adapted.sample.pose.faceScale).toBeCloseTo(1.04)
+      expect(adapted.character.iris).toBe(false); expect(adapted.simpleEyes).toBe(true)
+      expect(adapted.character.eyeColor).toBe(character.eyeColor)
+    }
+    for (const size of [12, 16, 23, 23.99, 48.01, 49, 96]) {
+      const restored = faceForSize(character, sample, size)
+      expect(restored.sample).toBe(sample); expect(restored.character).toBe(character)
+      expect(restored.simpleEyes).toBe(false)
+    }
+    expect(sample.pose.faceScale).toBe(.8); expect(character.iris).toBe(true)
+  })
+  it('draws black circles instead of pupils, hearts, cheek cuts or happy arcs, including during morphs', () => {
+    for (const size of [24, 48]) for (const eye of ['pupil', 'heart', 'closed'] as const) for (const morphing of [false, true]) {
+      const pose = { ...sample.pose, eye, eyeHeight: .3, cheeks: true, mouth: 'open' as const, faceSet: 'set-2' as const }
+      const adapted = faceForSize(character, { ...sample, pose }, size)
+      const circles: number[][] = [], colors: string[] = [], scales: number[][] = []
+      let ink = '', clips = 0
+      const ctx = new Proxy({}, {
+        get: (_, key) => {
+          if (key === 'arc') return (...args: number[]) => { if (ink === '#000000') circles.push(args) }
+          if (key === 'fill') return () => colors.push(ink)
+          if (key === 'clip') return () => clips++
+          if (key === 'scale') return (...args: number[]) => scales.push(args)
+          return () => {}
+        },
+        set: (_, key, value) => { if (key === 'fillStyle') ink = value; return true }
+      }) as CanvasRenderingContext2D
+      drawFace(ctx, adapted.sample.pose, adapted.character, 0, detailAt(size), { x: 0, y: 0 }, { simpleEyes: adapted.simpleEyes, faceLayers: morphing ? faceLayers(pose) : undefined })
+      expect(circles).toHaveLength(2)
+      expect(circles.every(c => c[2] === (size === 24 ? 29 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
+      expect(scales.filter(s => s[0] === 1 && s[1] === 1)).toHaveLength(2)
+      expect(colors).not.toContain('#ffffff'); expect(colors).not.toContain('#fffef9')
+      if (size === 24) { expect(colors).toEqual(['#000000', '#000000']); expect(clips).toBe(0) }
+      else expect(colors).toContain(character.eyeColor)
+    }
+  })
+})
 describe('vertical body cursor following', () => {
   it('looks equally far up and down despite manual or expression pitch', () => {
     const project = defaultProject(), character = { ...project.characters[0]!, followRotation: true, trueFront: false }
