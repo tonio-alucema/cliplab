@@ -16,3 +16,5 @@ Compact Left, Front, Right, Back, and reset controls replace the orientation glo
 Animation creation reveals the selected animation editor. Add expression opens a visual picker, appends and previews the selected step, and confirms the change. Animations can be deleted and restored with Undo; one animation remains required. Import and Undo repair stale selections.
 
 Set 1 keeps simple circular eyes and rounded mouths. Set 2 adds expressive brows, blush, half-lids, white eyes with pupils, kisses, and tongue-out faces. The libraries create editable expressions or replace the selected beat's face without replacing other saved expressions. Circular cheek cutouts, thicker mouth strokes, face elevation, and optional white highlights remain available. Candle light uses one crisp, rounded inset shadow treatment; props and tears ease through repeatable loops. Existing CSS-size detail rules and portable export behavior remain binding.
+
+Preview-only background swatches beside the character tabs offer Dark, Light, and Transparent (checkerboard). Light/checker views retain dark control overlays. Export backgrounds are configured independently.

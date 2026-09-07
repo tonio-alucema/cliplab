@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source('../');
 
 :root {
   font-family: 'Helvetica Neue',Arial,sans-serif;
@@ -387,14 +387,13 @@ img {
 }
 
 .preview-frame.light {
-  background: #282828;
+  background: #f3f3f3;
 }
 
-.preview-frame.checker,.background-choice.checker {
-  background-color: #282828;
-  background-image: linear-gradient(45deg,#e4e4e4 25%,transparent 25%),linear-gradient(-45deg,#e4e4e4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e4e4e4 75%),linear-gradient(-45deg,transparent 75%,#e4e4e4 75%);
-  background-size: 16px 16px;
-  background-position: 0 0,0 8px,8px -8px,-8px 0px;
+.preview-frame.checker,.background-choice.transparent>span {
+  background-color: #f3f3f3;
+  background-image: repeating-conic-gradient(#dddddd 0% 25%, transparent 0% 50%);
+  background-size: 20px 20px;
 }
 
 .stage-canvas-wrap {
@@ -520,25 +519,37 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
+.preview-backgrounds {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.preview-backgrounds>span {
+  font-size: 11px;
+  color: #b6b6b6;
+  margin-right: 5px;
+}
+
 .background-choice {
-  height: 15px;
-  width: 15px;
-  border: 1px solid #ffffff13;
-  border-radius: 4px;
-  margin: 0 3px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
-.background-choice.dark {
-  background: #282828;
-}
-
-.background-choice.light {
-  background: #282828;
-}
-
+.background-choice>span { width: 16px; height: 16px; border-radius: 4px; border: 1px solid #ffffff55; }
+.background-choice.dark>span { background: #202020; }
+.background-choice.light>span { background: #f3f3f3; }
+.background-choice.transparent>span { background-size: 8px 8px; }
+.background-choice:hover { background: #ffffff0b; }
 .background-choice.selected {
-  outline: 1px solid #c6c6c6;
-  outline-offset: 2px;
+  border-color: #999999;
+  background: #3a3a3a;
 }
 
 .photo-button {
@@ -566,6 +577,21 @@ img {
 .light .stage-tool-divider,.checker .stage-tool-divider {
   background: #282828;
 }
+
+.light .stage-tools,.checker .stage-tools {
+  background: #222222;
+  outline: 5px solid #222222;
+  border-radius: 16px;
+}
+
+.light .actual-size-label,.checker .actual-size-label {
+  background: #222222;
+  color: #eeeeee;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+@media(max-width:1150px) { .preview-backgrounds>span { display:none; } }
 
 .size-strip {
   display: flex;

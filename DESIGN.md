@@ -290,6 +290,8 @@ The transparent header uses `public/cliplab-logo-white.svg`, a quiet studio desc
 
 ### View Controls and Animation Editing
 
+The character bar includes Dark, Light, and Transparent preview swatches. Light uses #f3f3f3; Transparent uses a #dddddd/#f3f3f3 checkerboard beneath the alpha canvas. Overlays retain solid dark surfaces for contrast, while the surrounding studio remains dark. Preview backgrounds are separate from export background settings.
+
 Compact Left, Front, Right, and Back buttons replace the orbit globe. Drag the stage or use arrow keys to rotate, hold Shift to roll, and use Reset to restore the initial angle. True front overrides authored rotation; body cursor following releases that lock when enabled. Eyes and body have separate cursor toggles. Still exports include the current cursor pose; rendered loops use a centered cursor. App exports preserve live tracking.
 
 Add expression opens a dark modal picker from both the timeline and selected animation editor. Appending reveals the new block and previews it while paused. The selected animation editor precedes the library; Delete removes that animation with Undo support. Keep at least one animation and limit sequences to 64 expressions.

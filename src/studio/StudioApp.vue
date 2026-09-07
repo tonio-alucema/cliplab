@@ -32,6 +32,8 @@ const rotation = ref({ x: -5, y: -12, z: -7 })
 const previewSize = ref<number | null>(null)
 const previewCursor = ref({ x: 0, y: 0 })
 const background = 'transparent'
+const previewBackground = ref<'dark' | 'light' | 'transparent'>('dark')
+const previewBackgrounds = ['dark', 'light', 'transparent'] as const
 const eyeLabels: Record<string, string> = { dot: 'Round', soft: 'Soft', closed: 'Closed', wink: 'Wink', star: 'Stars', heart: 'Hearts', squint: 'Squeeze', wide: 'Wide', 'arc-up': 'Happy arcs', 'arc-down': 'Sleepy arcs', 'half-lidded': 'Half lids', pupil: 'White eyes' }
 const mouthLabels: Record<string, string> = { smile: 'Smile', open: 'Open smile', line: 'Neutral', frown: 'Frown', oh: 'Surprised', wave: 'Unsure', sleep: 'Sleep', grin: 'Grin', cry: 'Cry', 'u-smile': 'Little U', kiss: 'Kiss', 'tongue-out': 'Tongue out' }
 const activeFaceSet = ref('set-1')
@@ -246,10 +248,10 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
         <div class="preview-card">
         <div class="character-bar">
           <div class="character-tabs" aria-label="Characters"><button v-for="c in project.characters" :key="c.id" :class="['character-tab', { active: c.id === character.id }]" :aria-pressed="c.id === character.id" @click="selectedCharacter = c.id"><Thumb :character="c" :size="38" /><span>{{ c.name }}</span></button><button class="icon-button add-character" title="Duplicate character" aria-label="Duplicate character" @click="duplicateCharacter"><Icon name="plus" :size="17" /></button></div>
-          <span class="character-count">{{ project.characters.length }} characters</span>
+          <div class="preview-backgrounds" role="group" aria-label="Preview background"><span>Background</span><button v-for="option in previewBackgrounds" :key="option" :class="['background-choice', option, { selected: previewBackground === option }]" :aria-label="`${option.charAt(0).toUpperCase() + option.slice(1)} preview background`" :title="`${option.charAt(0).toUpperCase() + option.slice(1)} background`" :aria-pressed="previewBackground === option" @click="previewBackground = option"><span aria-hidden="true"></span></button></div>
         </div>
 
-        <div class="preview-frame">
+        <div class="preview-frame" :class="{ light: previewBackground === 'light', checker: previewBackground === 'transparent' }">
           <Stage :character="character" :sample="sample" :rotation="rotation" :zoom="zoom" :background="background" :playing="playing" :preview-size="previewSize" @rotate="rotatePreview" @reset="resetRotation" @front="character.trueFront = true; character.followRotation = false" @cursor="previewCursor = $event" />
           <div class="preview-status"><span :class="['status-light', { playing }]" /><span>{{ currentLabel }}</span><span class="status-divider">/</span><span class="status-action">{{ playing ? 'Playing' : 'Paused' }}</span></div>
           <div class="stage-tools">
