@@ -48,13 +48,14 @@ describe('animation continuity', () => {
   })
 })
 describe('portable project definitions', () => {
-  it('loads earlier projects without enabling new view or face effects', () => {
+  it('loads earlier projects with default shading and preserves saved choices', () => {
     const old = JSON.parse(JSON.stringify(defaultProject()))
-    for (const character of old.characters) for (const key of ['candleLight', 'trueFront', 'lockPosition']) delete character[key]
+    for (const character of old.characters) for (const key of ['toon', 'candleLight', 'trueFront', 'lockPosition']) delete character[key]
     for (const expression of old.expressions) for (const beat of expression.beats) for (const key of ['cheeks', 'tears', 'mouthStroke']) delete beat.pose[key]
     const restored = parseProject(old)
-    expect(restored.characters[0]).toMatchObject({ candleLight: false, trueFront: false, lockPosition: false })
+    expect(restored.characters[0]).toMatchObject({ toon: true, candleLight: true, trueFront: false, lockPosition: false })
     expect(restored.expressions[0]!.beats[0]!.pose).toMatchObject({ cheeks: false, tears: false, mouthStroke: 1 })
+    restored.characters[0]!.toon = restored.characters[0]!.candleLight = false
     restored.characters[0]!.trueFront = restored.characters[0]!.lockPosition = true
     restored.expressions[0]!.beats[0]!.pose.tears = true
     expect(parseProject(JSON.parse(JSON.stringify(restored)))).toEqual(restored)

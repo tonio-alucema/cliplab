@@ -22,7 +22,7 @@ Click a size preset to resize the main preview to that exact CSS size; **Fit** r
 
 **Front** keeps the camera and animated body turns at a true front angle. **Position** stops floating and secondary breathing while preserving authored stretch, facial expressions, and supporting effects. Both settings are saved with the character and included in app and media exports. Dragging the orientation control releases Front.
 
-In **Character**, **Candle light** uses one rounded, slightly offset lighter silhouette with a single darker shade. Turning it off restores directional shading. In the expression editor, face presets combine circular eyes, half-circle arcs, and broad outlined mouths. **Cheek cutouts** remove a circular section from the lower eyes; white eye dots enlarge the black eyes by 20%. Tears and supporting props ease through deterministic loops, including when Position is locked.
+**Toon shading** and **Candle light** are on by default. Saved choices to turn them off are remembered. In **Character**, **Candle light** uses one rounded, slightly offset lighter silhouette with a single darker shade. Turning it off restores directional shading. In the expression editor, face presets combine circular eyes, half-circle arcs, and broad outlined mouths. **Cheek cutouts** remove a circular section from the lower eyes; white eye dots enlarge the black eyes by 20%. Tears and supporting props ease through deterministic loops, including when Position is locked.
 
 Changes autosave to this browser. Undo and redo keep recent edits. Export a **Project** file to back up all characters and sequences or move them to another browser; import validates the file before replacing the current project. Local browser storage is not cloud synchronization.
 
