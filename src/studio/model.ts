@@ -14,7 +14,7 @@ export interface Pose {
   rotationX: number; rotationY: number; rotationZ: number; squash: number
   tongue: boolean; teeth: boolean; drool: boolean; cheeks: boolean; tears: boolean; mouthStroke: number
 }
-export interface Beat { id: string; name: string; duration: number; pose: Pose }
+export interface Beat { id: string; name: string; duration: number; pose: Pose; gradientAction?: 'rotate' | 'hold' }
 export interface Expression { id: string; name: string; description: string; beats: Beat[] }
 export interface Step { id: string; expressionId: string; duration: number }
 export interface Animation { id: string; name: string; steps: Step[]; loop: boolean }
@@ -26,7 +26,7 @@ export interface Character {
 }
 export interface Definition { version: 1; character: Character; expressions: Expression[]; animations: Animation[] }
 export interface Project { version: 1; name: string; characters: Character[]; expressions: Expression[]; animations: Animation[] }
-export interface Sample { pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number }
+export interface Sample { pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number }
 
 export const EYES: Eye[] = ['dot', 'soft', 'closed', 'wink', 'star', 'heart', 'squint', 'wide', 'arc-up', 'arc-down', 'half-lidded', 'pupil']
 export const MOUTHS: Mouth[] = ['smile', 'open', 'line', 'frown', 'oh', 'wave', 'sleep', 'grin', 'cry', 'u-smile', 'kiss', 'tongue-out']
@@ -83,6 +83,10 @@ export function defaultExpressions(): Expression[] {
     ] },
     { id: 'playful', name: 'Playful', description: 'A wink, a grin, a little mischief.', beats: [
       b('play-1', 'Peek', 1.1, { mouth: 'open', tongue: true, rotationY: -10, rotationZ: -8 }), b('play-2', 'Wink', 1.2, { eye: 'squint', mouth: 'u-smile', tongue: true, mouthOpen: .7, rotationZ: 9, prop: 'sparkle' }), b('play-3', 'Grin', 1.3, { mouth: 'grin', cheeks: true, teeth: true, mouthOpen: .45, rotationZ: -3 })
+    ] },
+    { id: 'loading', name: 'Loading', description: 'A slow start, one gradient turn, then a half-second rest.', beats: [
+      { ...b('loading-rotate', 'Rotate', 2, {}), gradientAction: 'rotate' },
+      { ...b('loading-hold', 'Hold', .5, {}), gradientAction: 'hold' }
     ] }
   ]
 }
@@ -114,6 +118,21 @@ export function defaultProject(): Project {
 const safeDuration = (value: number) => Number.isFinite(value) ? Math.max(.2, value) : 1
 export function expressionDuration(expression: Expression) { return expression.beats.reduce((n, beat) => n + safeDuration(beat.duration), 0) }
 export function animationDuration(animation: Animation) { return animation.steps.reduce((n, step) => n + safeDuration(step.duration), 0) }
+export function isGradientExpression(expression: Expression) { return expression.beats.some(beat => beat.gradientAction !== undefined) }
+export function addLoadingAnimation(project: Project): Animation {
+  let expression = project.expressions.find(e => e.id === 'loading' && isGradientExpression(e)) ?? project.expressions.find(isGradientExpression)
+  const existing = expression && project.animations.find(a => a.steps.length === 1 && a.steps[0]!.expressionId === expression!.id)
+  if (existing) return existing
+  if (project.animations.length >= 100 || (!expression && project.expressions.length >= 100)) throw new Error('Make room in the library before adding Loading. Projects support up to 100 expressions and animations.')
+  if (!expression) {
+    expression = defaultExpressions().find(e => e.id === 'loading')!
+    if (project.expressions.some(e => e.id === expression!.id)) expression.id = uid('loading')
+    project.expressions.push(expression)
+  }
+  const animation: Animation = { id: project.animations.some(a => a.id === 'loading') ? uid('loading') : 'loading', name: 'Loading', loop: true, steps: [{ id: uid('step'), expressionId: expression.id, duration: expressionDuration(expression) }] }
+  project.animations.push(animation)
+  return animation
+}
 export function definitionOf(project: Project, character: Character, animationIds?: string[]): Definition {
   const animations = project.animations.filter(a => !animationIds || animationIds.includes(a.id))
   const used = new Set(animations.flatMap(a => a.steps.map(s => s.expressionId)))
@@ -132,9 +151,11 @@ export function mixPose(a: Pose, b: Pose, t: number): Pose {
 const smooth = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v * v * (3 - 2 * v) }
 function featureAmount(a: unknown, b: unknown, blend: number) { return a === b ? 1 : blend < .5 ? 1 - smooth(blend * 2) : smooth((blend - .5) * 2) }
 const mod = (t: number, d: number) => ((t % d) + d) % d
-export function sampleExpression(expression: Expression, time: number): { pose: Pose; beatIndex: number; propAmount: number; tearAmount: number } {
+export function sampleExpression(expression: Expression, time: number): { pose: Pose; beatIndex: number; propAmount: number; tearAmount: number; gradientRotation?: number } {
   const duration = expressionDuration(expression)
   let t = mod(time, duration)
+  const gradient = isGradientExpression(expression)
+  let gradientStart = 0
   for (let i = 0; i < expression.beats.length; i++) {
     const beat = expression.beats[i]!
     const beatDuration = safeDuration(beat.duration)
@@ -143,8 +164,11 @@ export function sampleExpression(expression: Expression, time: number): { pose: 
       const transition = Math.min(.45, beatDuration * .4)
       const progress = Math.min(t / transition, 1)
       const eased = progress * progress * (3 - 2 * progress)
-      return { pose: mixPose(previous.pose, beat.pose, eased), beatIndex: i, propAmount: featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: featureAmount(previous.pose.tears, beat.pose.tears, eased) }
+      const turn = Math.min(1, t / beatDuration)
+      const turnEased = turn < .5 ? 16 * turn ** 5 : 1 - (-2 * turn + 2) ** 5 / 2
+      return { pose: mixPose(previous.pose, beat.pose, eased), beatIndex: i, propAmount: featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: featureAmount(previous.pose.tears, beat.pose.tears, eased), ...(gradient ? { gradientRotation: gradientStart + (beat.gradientAction === 'rotate' ? 360 * turnEased : 0) } : {}) }
     }
+    if (beat.gradientAction === 'rotate') gradientStart += 360
     t -= beatDuration
   }
   return { pose: p(), beatIndex: 0, propAmount: 1, tearAmount: 1 }
@@ -184,14 +208,20 @@ export function sampleDefinition(def: Definition, animationId: string, time: num
     sample.propAmount *= featureAmount(oldProp, sample.pose.prop, eased)
     sample.tearAmount *= featureAmount(oldTears, sample.pose.tears, eased)
     sample.pose = mixPose(previous.pose, sample.pose, eased)
+    if (previous.gradientRotation !== undefined || sample.gradientRotation !== undefined) {
+      const from = previous.gradientRotation ?? 0, to = sample.gradientRotation ?? 0
+      const delta = mod(to - from + 180, 360) - 180
+      sample.gradientRotation = from + delta * eased
+    }
   }
   // All secondary motion uses the cycle period, so exported loops close exactly.
   const period = expressionId ? expressionDuration(expression) : animation ? animationDuration(animation) : expressionDuration(expression)
   const phase = 2 * Math.PI * mod(speedTime, period) / period
   const blinkCount = Math.max(1, Math.round(period / def.character.blinkInterval))
   const blinkPhase = mod(speedTime + period * .17, period / blinkCount)
-  const blink = def.character.blink && blinkPhase < .19 ? Math.sin(blinkPhase / .19 * Math.PI) ** 2 : 0
-  return { ...sample, expressionId: expression.id, stepIndex, blink, effectPhase: mod(speedTime, period) / period * Math.max(1, Math.round(period / 2.4)), bob: Math.sin(phase) * def.character.motion, breathe: Math.cos(phase) * def.character.motion }
+  const gradientOnly = isGradientExpression(expression)
+  const blink = !gradientOnly && def.character.blink && blinkPhase < .19 ? Math.sin(blinkPhase / .19 * Math.PI) ** 2 : 0
+  return { ...sample, expressionId: expression.id, stepIndex, blink, effectPhase: mod(speedTime, period) / period * Math.max(1, Math.round(period / 2.4)), bob: gradientOnly ? 0 : Math.sin(phase) * def.character.motion, breathe: gradientOnly ? 0 : Math.cos(phase) * def.character.motion }
 }
 
 function obj(v: unknown): Record<string, unknown> { if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('This file is not a ClipLab project.'); return v as Record<string, unknown> }
@@ -218,7 +248,7 @@ export function parseProject(value: unknown): Project {
   const expressions = v.expressions.map((item, index): Expression => {
     const e = obj(item)
     if (!Array.isArray(e.beats) || !e.beats.length || e.beats.length > 32) throw new Error('Each expression needs 1–32 beats.')
-    return { id: str(e.id, `expression-${index}`), name: str(e.name, 'Expression'), description: str(e.description, '', 160), beats: e.beats.map((item, i) => { const b = obj(item); return { id: str(b.id, `beat-${i}`), name: str(b.name, `Beat ${i + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose) } }) }
+    return { id: str(e.id, `expression-${index}`), name: str(e.name, 'Expression'), description: str(e.description, '', 160), beats: e.beats.map((item, i) => { const b = obj(item); return { id: str(b.id, `beat-${i}`), name: str(b.name, `Beat ${i + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose), ...(b.gradientAction === 'rotate' || b.gradientAction === 'hold' ? { gradientAction: b.gradientAction } : {}) } }) }
   })
   if (new Set(expressions.map(e => e.id)).size !== expressions.length) throw new Error('Expression names in the file must have unique IDs.')
   const animations = v.animations.map((item, index): Animation => {

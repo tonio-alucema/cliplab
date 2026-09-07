@@ -5,12 +5,12 @@ import { defaultProject, parseProject, sampleExpression } from './model'
 describe('face style library', () => {
   it('keeps both families editable and preserves every new feature through project export/import', () => {
     const project = defaultProject()
-    const original = JSON.stringify(project.expressions)
+    const original = JSON.stringify(project.expressions), originalCount = project.expressions.length
     const added = FACE_SETS.flatMap(set => set.presets.map(preset => expressionFromFace(set, preset)))
     project.expressions.push(...added)
     const restored = parseProject(JSON.parse(JSON.stringify(project)))
-    expect(JSON.stringify(restored.expressions.slice(0, 10))).toBe(original)
-    expect(restored.expressions.slice(10)).toEqual(added)
+    expect(JSON.stringify(restored.expressions.slice(0, originalCount))).toBe(original)
+    expect(restored.expressions.slice(originalCount)).toEqual(added)
     expect(new Set(added.map(e => e.id)).size).toBe(added.length)
     for (const expression of added) {
       const pose = sampleExpression(expression, 1.5).pose

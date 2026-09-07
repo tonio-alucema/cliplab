@@ -15,7 +15,7 @@ Open http://localhost:5190. `pnpm build` checks TypeScript, bundles the portable
 
 1. Choose Milo, Pip, or Lumi. In **Character**, choose a body, colors, shading, white eye dots, or face elevation.
 2. Select an **Expression** to preview it; double-click or choose **Edit selected** to adjust its face and body. Each expression has timed beats; select, reorder, duplicate, or add beats in the strip below the stage.
-3. In **Animations**, combine expressions, adjust their duration, and turn looping on or off. The ten starters are Idle, Listening, Thinking, Working, Success, Confused, Sleepy, Playful, Sad, and Tearful. Older saved projects can use **Add new presets** to add missing expressions without replacing their edits.
+3. In **Animations**, combine expressions, adjust their duration, and turn looping on or off. The starters are Idle, Listening, Thinking, Working, Success, Confused, Sleepy, Playful, Sad, Tearful, and Loading. Older saved projects can use **Add new presets** to add missing expressions without replacing their edits.
 4. Drag the character or orientation globe to rotate; hold Shift while dragging to roll. The globe also supports arrow keys and Home to reset. Motion controls adjust speed, body movement, blinking, and cursor following.
 
 Click a size preset to resize the main preview to that exact CSS size; **Fit** restores the large preview. Below 16 px the face disappears; 16–24 px shows eyes only; above 24 px shows the full face. Display density does not change these thresholds. Marketing export dimensions are configured independently.
@@ -54,3 +54,5 @@ Face styles are grouped into **Set 1** (simple faces) and **Set 2** (12 emoji re
 Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. Compact view buttons and stage dragging replace the orbit globe. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG captures the current pointer pose, while rendered loops use a centered cursor.
 
 Use the three **Background** swatches beside the character tabs to preview on Dark, Light, or a transparency checkerboard. This changes only the preview; choose the asset background separately in Export.
+
+**Loading** rotates the character’s two-color gradient through one full turn over 2 seconds with strong ease-in/out, then holds for 0.5 seconds. The face and body stay still; the gradient is enabled for this sequence without changing the character’s saved fill setting. Existing projects can add it directly from the Loading card in Animations. Edit its Rotate/Hold beat durations in Expressions; those actions stay with their beats when reordered or duplicated. Step duration and playback speed scale the full cycle, including its hold. App and rendered exports use the same deterministic loop.
