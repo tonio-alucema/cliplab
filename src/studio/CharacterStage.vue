@@ -48,6 +48,7 @@ function manualRotation() {
 function down(event: PointerEvent) {
   if (event.button !== 0 || start) return
   const rotation = manualRotation()
+  emit('rotate', rotation)
   leave()
   start = { x: event.clientX, y: event.clientY, rotation, roll: event.shiftKey, pointerId: event.pointerId }
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)

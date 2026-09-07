@@ -13,11 +13,21 @@ vi.mock('./renderer', () => ({ CharacterRenderer: class {
 vi.mock('./orbit', () => ({ drawOrbit: vi.fn() }))
 
 let app: App
+let now = 0, frameId = 0
+const frames = new Map<number, FrameRequestCallback>()
 beforeEach(() => {
-  vi.stubGlobal('requestAnimationFrame', () => 1)
-  vi.stubGlobal('cancelAnimationFrame', () => {})
+  now = 0; frameId = 0; frames.clear()
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++frameId, callback); return frameId })
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id))
 })
-afterEach(() => { app?.unmount(); document.body.innerHTML = ''; vi.unstubAllGlobals() })
+afterEach(() => { app?.unmount(); document.body.innerHTML = ''; vi.restoreAllMocks(); vi.unstubAllGlobals() })
+function tick(count = 40) {
+  for (let i = 0; i < count; i++) {
+    now += 1000 / 60
+    const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(now))
+  }
+}
 
 function mount(front = false) {
   const state = reactive({
@@ -69,5 +79,20 @@ describe('restored orbit controls', () => {
     dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }))
     host.querySelector<HTMLButtonElement>('[aria-label="Reset orientation"]')!.click()
     expect(reset).toHaveBeenCalledTimes(2)
+  })
+
+  it('takes over cursor-following immediately when the dial is held before dragging', async () => {
+    const { state, host, point } = mount()
+    state.character.followRotation = true; await nextTick()
+    vi.spyOn(host.querySelector<HTMLCanvasElement>('.stage-canvas')!, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 100, width: 200, height: 200 } as DOMRect)
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 600, clientY: 200 }))
+    tick(); await nextTick()
+    await point('pointerdown', 50, 50)
+    expect(state.character.followRotation).toBe(false)
+    expect(state.rotation.y).toBeCloseTo(51)
+    tick(); await nextTick()
+    expect(state.rotation.y).toBeCloseTo(51)
+    await point('pointermove', 60, 50)
+    expect(state.rotation.y).toBeCloseTo(55)
   })
 })
