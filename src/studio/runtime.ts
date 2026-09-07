@@ -1,7 +1,7 @@
 import { CharacterRenderer } from './renderer'
 import { animationDuration, definitionOf, parseProject, sampleDefinition, type Definition } from './model'
 export type { Definition, Character, Expression, Animation, Pose } from './model'
-export interface CharacterOptions { animation?: string; size?: number; autoplay?: boolean; followCursor?: boolean; background?: string | null; respectReducedMotion?: boolean }
+export interface CharacterOptions { animation?: string; size?: number; autoplay?: boolean; followCursor?: boolean; followRotation?: boolean; background?: string | null; respectReducedMotion?: boolean }
 
 /** Standalone runtime: the studio, React wrapper and plain JavaScript export share this renderer. */
 export function createCharacter(target: HTMLElement, value: Definition, options: CharacterOptions = {}) {
@@ -17,19 +17,20 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
   let animation = options.animation ?? definition.animations[0]?.id ?? 'idle'
   let expression: string | undefined
   let playing = options.autoplay !== false, completed = false, visible = true, destroyed = false, elapsed = 0, last = performance.now(), raf = 0
-  let gaze = { x: 0, y: 0 }
+  let gaze = { x: 0, y: 0 }, cursor = { x: 0, y: 0 }
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-  const render = () => renderer.render(definition.character, sampleDefinition(definition, animation, elapsed, expression), { background: options.background }, gaze)
+  const render = () => renderer.render({ ...definition.character, followRotation: options.followRotation ?? definition.character.followRotation }, sampleDefinition(definition, animation, elapsed, expression), { background: options.background, cursor }, gaze)
   const resize = () => { width = target.clientWidth || options.size || 120; height = target.clientHeight || options.size || 120; renderer.resize(width, height, Math.min(width, height)); render() }
   const observer = new ResizeObserver(resize); observer.observe(target)
   const intersection = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? true }); intersection.observe(target)
   const pointer = (event: PointerEvent) => {
-    if (!(options.followCursor ?? definition.character.followCursor)) return
+    if (!(options.followCursor ?? definition.character.followCursor) && !(options.followRotation ?? definition.character.followRotation)) return
     const rect = target.getBoundingClientRect()
-    gaze = { x: Math.max(-1, Math.min(1, (event.clientX - rect.left - rect.width / 2) / Math.max(80, rect.width))), y: Math.max(-1, Math.min(1, -(event.clientY - rect.top - rect.height / 2) / Math.max(80, rect.height))) }
+    cursor = { x: Math.max(-1, Math.min(1, (event.clientX - rect.left - rect.width / 2) / Math.max(80, rect.width))), y: Math.max(-1, Math.min(1, -(event.clientY - rect.top - rect.height / 2) / Math.max(80, rect.height))) }
+    if (options.followCursor ?? definition.character.followCursor) gaze = { ...cursor }
     if (visible) render()
   }
-  const leave = () => { gaze = { x: 0, y: 0 }; if (visible) render() }
+  const leave = () => { cursor = { x: 0, y: 0 }; if (options.followCursor ?? definition.character.followCursor) gaze = { x: 0, y: 0 }; if (visible) render() }
   window.addEventListener('pointermove', pointer, { passive: true }); document.documentElement.addEventListener('pointerleave', leave)
   function frame(now: number) {
     if (destroyed) return

@@ -22,7 +22,7 @@ Click a size preset to resize the main preview to that exact CSS size; **Fit** r
 
 **Front** keeps the camera and animated body turns at a true front angle. **Position** stops floating and secondary breathing while preserving authored stretch, facial expressions, and supporting effects. Both settings are saved with the character and included in app and media exports. Dragging the orientation control releases Front.
 
-In **Character**, **Candle light** fixes slightly offset, concentric toon bands to the camera. Turning it off restores directional shading. In the expression editor, face presets combine circular eyes, half-circle arcs, and broad outlined mouths. **Cheek cutouts** remove a circular section from the lower eyes; white eye dots enlarge the black eyes by 20%. Tears and supporting props ease through deterministic loops, including when Position is locked.
+In **Character**, **Candle light** uses one rounded, slightly offset lighter silhouette with a single darker shade. Turning it off restores directional shading. In the expression editor, face presets combine circular eyes, half-circle arcs, and broad outlined mouths. **Cheek cutouts** remove a circular section from the lower eyes; white eye dots enlarge the black eyes by 20%. Tears and supporting props ease through deterministic loops, including when Position is locked.
 
 Changes autosave to this browser. Undo and redo keep recent edits. Export a **Project** file to back up all characters and sequences or move them to another browser; import validates the file before replacing the current project. Local browser storage is not cloud synchronization.
 
@@ -33,7 +33,7 @@ Changes autosave to this browser. Undo and redo keep recent edits. Export a **Pr
 - **Animation:** MP4 with an opaque background, WebM with optional transparency, or transparent GIF. Video supports up to 2048 px and 60 seconds. GIF uses 20 fps and at most 512 px. MP4 requires even dimensions. Browser video encoding support varies; encoding errors are shown in the studio.
 - **Project:** the full editable studio, including characters, expressions, and sequences.
 
-App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, and `followCursor`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
+App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, `followCursor`, and `followRotation`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
 
 ## Implementation
 
@@ -46,3 +46,7 @@ The previous SVG studio and tests remain in the repository for reference; its fo
 ## Credits
 
 ClipLab started as a fork of [bloub](https://github.com/jeremy-prt/bloub) by Jérémy Perret. Its GIF and MP4 export helpers are reused. The studio workflow is inspired by the [Bible Strong Avatar Lab](https://avatars.bible-strong.app/); no source from that application is copied. Three.js is MIT licensed. See [LICENSE](LICENSE) for this repository's license.
+
+Face styles are grouped into **Set 1** (simple faces) and **Set 2** (12 emoji reactions). Choose a face to create a three-beat expression, or apply it to a beat in the editor. **Add expression** opens a visual picker. **Delete animation** supports Undo and keeps at least one animation in the project.
+
+Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. Compact view buttons and stage dragging replace the orbit globe. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG captures the current pointer pose, while rendered loops use a centered cursor.

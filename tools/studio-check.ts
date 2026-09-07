@@ -2,6 +2,7 @@ import { BASE_POSE, defaultProject, definitionOf, type Sample } from '../src/stu
 import { CharacterRenderer } from '../src/studio/renderer'
 import { demoZip, renderMedia } from '../src/studio/export'
 import { unzipSync } from 'fflate'
+import { FACE_SETS, expressionFromFace } from '../src/studio/face-styles'
 
 const results: Record<string, unknown> = {}
 const host = document.querySelector('#results')!
@@ -132,5 +133,36 @@ await check('new face reference gallery', async () => {
     renderer.render({ ...character, iris: name.includes('iris') }, { ...sample, pose: { ...BASE_POSE, ...partial } }); const image = new Image(); image.src = canvas.toDataURL(); append(name, image); renderer.dispose()
   }
   return { faces: poses.length }
+})
+await check('PNG preserves cursor-driven body and eye pose', async () => {
+  const cursor = { x: .75, y: -.4 }
+  const d = { ...definition, character: { ...definition.character, followRotation: true, followCursor: true, trueFront: false, lockPosition: true } }
+  const canvas = document.createElement('canvas'), renderer = new CharacterRenderer(canvas, { width: 128, height: 128, pixelRatio: 1 })
+  try {
+    renderer.render(d.character, sample, { rotation: opts.rotation, cursor, zoom: 1 }, cursor)
+    const expected = pixels(canvas, 128, 128)
+    const png = await imageFrom(await renderMedia(d, { ...opts, format: 'png', sample, cursor }))
+    const actual = pixels(png, 128, 128)
+    if (expected.some((v, i) => v !== actual[i])) throw new Error('PNG differs from the authored cursor pose')
+    return { identical: true }
+  } finally { renderer.dispose() }
+})
+await check('exported runtime keeps manual eye gaze independent from body tracking', async () => {
+  const { createCharacter } = await import(/* @vite-ignore */ new URL('/runtime/cliplab.js', window.location.origin).href)
+  const d = { ...definition, character: { ...definition.character, trueFront: true, lockPosition: true, followRotation: true, followCursor: false } }
+  const target = document.createElement('div'); target.style.cssText = 'position:fixed;top:0;left:0;width:128px;height:128px'; document.body.append(target)
+  const player = createCharacter(target, d, { autoplay: false })
+  try {
+    player.seek(.8); player.setGaze(.8, -.4)
+    const a = pixels(player.canvas, 128, 128)
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 180, clientY: 80 }))
+    const b = pixels(player.canvas, 128, 128)
+    if (a.some((v, i) => v !== b[i])) throw new Error('Body-only tracking changed manual eyes or overrode front lock')
+    const set = FACE_SETS[1]!, expression = expressionFromFace(set, set.presets[11]!)
+    player.setDefinition({ ...d, expressions: [...d.expressions, expression] }); player.setExpression(expression.id); player.seek(1.5)
+    const c = pixels(player.canvas, 128, 128)
+    if (!c.some((v, i) => v !== a[i])) throw new Error('Exported runtime did not render Set 2')
+    return { independent: true, set2: true }
+  } finally { player.destroy(); target.remove() }
 })
 document.querySelector('#status')!.textContent = Object.values(results).every(v => (v as { status: string }).status === 'pass') ? 'All checks passed.' : 'Some checks need attention.'

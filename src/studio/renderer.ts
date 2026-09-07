@@ -3,7 +3,7 @@ import { BASE_POSE, detailAt, type Character, type Detail, type Pose, type Sampl
 
 export interface RenderOptions {
   width: number; height: number; displaySize?: number; background?: string | null
-  rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
+  cursor?: { x: number; y: number }; rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
 }
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : 1
 export function radiusAt(shape: Shape, y: number): number {
@@ -23,12 +23,12 @@ function geometryFor(shape: Shape): THREE.BufferGeometry {
   return new THREE.LatheGeometry(points, 80)
 }
 const vertexShader = `
+  uniform vec3 fillScale;
+  uniform vec3 fillOffset;
   varying vec3 vPosition;
-  varying vec2 vViewXY;
   varying vec3 vWorldNormal;
   void main() {
-    vPosition = position;
-    vViewXY = (modelViewMatrix * vec4(position, 1.0)).xy - (modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xy;
+    vPosition = position * fillScale + fillOffset;
     vWorldNormal = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
@@ -39,20 +39,18 @@ const fragmentShader = `
   uniform float gradientOn;
   uniform float toonOn;
   uniform float candleLight;
+  uniform float insetFill;
   uniform float angle;
   uniform float bodyHeight;
   varying vec3 vPosition;
-  varying vec2 vViewXY;
   varying vec3 vWorldNormal;
   void main() {
     float t = clamp(0.5 + vPosition.y / bodyHeight * cos(angle) + vPosition.x * sin(angle), 0.0, 1.0);
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
     float light = dot(normalize(vWorldNormal), normalize(vec3(-0.6, 0.85, 1.0)));
     float shade = light > 0.58 ? 1.0 : (light > 0.08 ? 0.81 : 0.64);
-    // An illustrative radial field keeps cylindrical bodies free from angular light bands.
-    vec2 radial = vec2((vViewXY.x + 0.035) / 0.5, (vViewXY.y - 0.04) / (bodyHeight * 0.5));
-    float ring = length(radial);
-    float candle = ring < 0.48 ? 1.0 : (ring < 0.7 ? 0.88 : (ring < 0.9 ? 0.74 : 0.59));
+    // The light fill uses an inset copy of the silhouette, with one crisp shade step.
+    float candle = mix(0.8, 1.0, insetFill);
     gl_FragColor = vec4(color * mix(1.0, mix(shade, candle, candleLight), toonOn), 1.0);
     #include <colorspace_fragment>
   }
@@ -84,14 +82,20 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   for (const side of [-1, 1]) {
     const r = eyeRadius(pose, character, detail, side)
-    const x = 256 + side * spacing + gx + (side < 0 ? pose.leftX : pose.rightX), y = eyeY + gy - (side < 0 ? pose.leftY : pose.rightY)
+    const pupilEyes = pose.eye === 'pupil' && detail === 'full'
+    const x = 256 + side * spacing + (pupilEyes ? 0 : gx) + (side < 0 ? pose.leftX : pose.rightX), y = eyeY + (pupilEyes ? 0 : gy) - (side < 0 ? pose.leftY : pose.rightY)
+    if (detail === 'full' && pose.blush > 0) {
+      ctx.save(); ctx.globalAlpha = pose.blush * .8; ctx.fillStyle = '#ff647a'; ctx.beginPath(); ctx.ellipse(x + side * 20, y + 56, 31, 24 * faceAspect, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore()
+    }
     const localRotation = side < 0 ? pose.leftRotation : pose.rightRotation
     // Equal world units in X/Y: the face mesh is wider than it is tall.
     ctx.save(); ctx.translate(x, y); ctx.scale(1, faceAspect); ctx.rotate((pose.eyeTilt * side + localRotation) * Math.PI / 180)
     ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = Math.max(13, r * .43)
     const happyMouth = ['open', 'grin', 'smile', 'u-smile'].includes(pose.mouth)
     const closed = ['closed', 'arc-up', 'arc-down'].includes(pose.eye) || (pose.eye === 'wink' && side > 0) || (detail === 'eyes' && ['open', 'grin'].includes(pose.mouth) && pose.eye === 'dot')
-    if (closed) {
+    if (pose.faceSet === 'set-2' && pose.eye === 'wink' && side > 0) {
+      ctx.beginPath(); ctx.moveTo(r * .7, -r * .65); ctx.lineTo(-r * .55, 0); ctx.lineTo(r * .7, r * .65); ctx.stroke()
+    } else if (closed) {
       const up = pose.eye === 'arc-up' || (pose.eye !== 'arc-down' && happyMouth)
       ctx.beginPath(); ctx.arc(0, 0, r, up ? Math.PI : 0, up ? Math.PI * 2 : Math.PI); ctx.stroke()
     } else if (pose.eye === 'squint') {
@@ -106,11 +110,24 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
         ctx.beginPath(); ctx.rect(-r * 2, -r * 2, r * 4, r * 4); ctx.moveTo(r * .82, r * 1.13); ctx.arc(0, r * 1.13, r * .82, 0, Math.PI * 2); ctx.clip('evenodd')
       }
       if (pose.eye === 'star') star(ctx, 0, 0, r * 1.2)
-      else if (pose.eye === 'heart') heart(ctx, 0, 0, r)
+      else if (pose.eye === 'heart') { if (pose.faceSet === 'set-2' && detail === 'full') ctx.fillStyle = '#ff3f58'; heart(ctx, 0, 0, r) }
+      else if (pose.eye === 'half-lidded') { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI); ctx.closePath(); ctx.fill() }
+      else if (pupilEyes) {
+        const outer = r * 1.5
+        ctx.fillStyle = '#fffef9'; ctx.beginPath(); ctx.arc(0, 0, outer, 0, Math.PI * 2); ctx.fill(); ctx.clip()
+        ctx.fillStyle = ink; ctx.beginPath(); ctx.arc((pose.gazeX + gaze.x) * outer * .52, -(pose.gazeY + gaze.y) * outer * .52, outer * .4, 0, Math.PI * 2); ctx.fill()
+      }
       else { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill() }
-      if (character.iris && detail === 'full') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-r * .29 + gaze.x * 3, -r * .32 - gaze.y * 3, r * .28, 0, Math.PI * 2); ctx.fill() }
+      if (character.iris && detail === 'full' && !pupilEyes && pose.eye !== 'half-lidded') { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-r * .29 + gaze.x * 3, -r * .32 - gaze.y * 3, r * .28, 0, Math.PI * 2); ctx.fill() }
     }
     ctx.restore()
+    if (detail === 'full' && pose.brows !== 'none') {
+      ctx.save(); ctx.translate(x, y - (pupilEyes ? r * 1.8 : r * 1.45)); ctx.scale(1, faceAspect); ctx.strokeStyle = ink; ctx.lineWidth = 12; ctx.beginPath()
+      if (pose.brows === 'raised') { ctx.arc(0, 10, r * .85, Math.PI * 1.15, Math.PI * 1.85) }
+      else if (pose.brows === 'worried') { ctx.moveTo(side * r, 2); ctx.quadraticCurveTo(-side * r * .1, 10, -side * r * .75, -16) }
+      else { ctx.moveTo(side * r, -10); ctx.lineTo(-side * r * .75, 8) }
+      ctx.stroke(); ctx.restore()
+    }
     if (pose.tears && detail === 'full') {
       const phase = fract((effects.phase ?? .35) + (side < 0 ? .46 : 0)), alpha = effectEnvelope(phase) * (effects.tearAmount ?? 1)
       ctx.save(); ctx.translate(x + side * (r + 18), y + 23 + phase * phase * 123); ctx.scale(1, faceAspect); ctx.rotate(-side * .2); ctx.globalAlpha = alpha; ctx.fillStyle = '#f6fdff'; drop(ctx, 0, 0, 12 + phase * 3); ctx.restore()
@@ -125,6 +142,11 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   else if (pose.mouth === 'u-smile') { ctx.arc(0, -8, w * .56, 0, Math.PI); ctx.stroke() }
   else if (pose.mouth === 'frown') { ctx.arc(0, 39, w, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke() }
   else if (pose.mouth === 'line' || pose.mouth === 'sleep') { ctx.moveTo(-w * .58, 0); ctx.lineTo(w * .58, 0); ctx.stroke() }
+  else if (pose.mouth === 'kiss') { ctx.moveTo(-w * .25, -21); ctx.bezierCurveTo(w * .48, -34, w * .53, -2, 0, 0); ctx.bezierCurveTo(w * .53, 2, w * .48, 34, -w * .25, 21); ctx.stroke() }
+  else if (pose.mouth === 'tongue-out') {
+    ctx.beginPath(); ctx.moveTo(-w, -9); ctx.quadraticCurveTo(0, -2, w, -9); ctx.stroke()
+    ctx.fillStyle = '#ff526c'; ctx.beginPath(); ctx.moveTo(-w * .6, 5); ctx.lineTo(w * .6, 5); ctx.bezierCurveTo(w * .88, 85 * pose.mouthOpen + 28, -w * .88, 85 * pose.mouthOpen + 28, -w * .6, 5); ctx.fill()
+  }
   else if (pose.mouth === 'wave') { ctx.moveTo(-w, 4); ctx.bezierCurveTo(-w * .35, -25, w * .35, 25, w, -4); ctx.stroke() }
   else {
     const h = (broad ? 48 : 22) + 72 * pose.mouthOpen
@@ -172,6 +194,7 @@ export class CharacterRenderer {
   private camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 30)
   private root = new THREE.Group()
   private body: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
+  private lightFill: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
   private face: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   private faceCanvas = document.createElement('canvas')
   private faceCtx: CanvasRenderingContext2D
@@ -198,9 +221,11 @@ export class CharacterRenderer {
     this.propCanvas.width = this.propCanvas.height = 256; this.propCtx = this.propCanvas.getContext('2d')!
     this.propTexture = new THREE.CanvasTexture(this.propCanvas); this.propTexture.colorSpace = THREE.SRGBColorSpace
     const material = new THREE.ShaderMaterial({
-      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, candleLight: { value: 0 }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
+      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, candleLight: { value: 0 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
     })
     this.body = new THREE.Mesh(geometryFor('capsule'), material)
+    const fillMaterial = material.clone(); fillMaterial.depthTest = false; fillMaterial.depthWrite = false; fillMaterial.uniforms.insetFill!.value = 1
+    this.lightFill = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .94, 24, 80), fillMaterial); this.lightFill.renderOrder = 1
     this.face = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 56, 40), new THREE.MeshBasicMaterial({ map: this.faceTexture, transparent: true, alphaTest: .008, depthWrite: false, side: THREE.FrontSide, toneMapped: false }))
     this.face.geometry.setAttribute('faceValid', new THREE.BufferAttribute(new Float32Array(this.face.geometry.attributes.position!.count).fill(1), 1))
     this.face.material.onBeforeCompile = shader => {
@@ -209,7 +234,7 @@ export class CharacterRenderer {
     }
     this.prop = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.propTexture, transparent: true, depthWrite: false, toneMapped: false }))
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(.35, 64), new THREE.MeshBasicMaterial({ color: '#809299', transparent: true, opacity: .2, depthWrite: false }))
-    this.root.add(this.body, this.face, this.prop); this.scene.add(this.root, this.shadow)
+    this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root, this.shadow)
     this.camera.position.set(0, 0, 8); this.camera.lookAt(0, 0, 0)
     this.resize(options.width, options.height, options.displaySize)
   }
@@ -220,7 +245,7 @@ export class CharacterRenderer {
   render(character: Character, sample: Sample, options: Partial<RenderOptions> = {}, gaze = { x: 0, y: 0 }) {
     if (this.disposed) return
     this.options = { ...this.options, ...options }
-    if (character.shape !== this.shape) { this.shape = character.shape; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape) }
+    if (character.shape !== this.shape) { this.shape = character.shape; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }
     const { pose } = sample
     const height = bodyHeight(this.shape)
     const detail = detailAt(this.options.displaySize ?? Math.min(this.options.width, this.options.height))
@@ -228,11 +253,24 @@ export class CharacterRenderer {
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
     u.gradientOn!.value = character.gradient ? 1 : 0; u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
     u.angle!.value = character.gradientAngle * Math.PI / 180; u.bodyHeight!.value = height
+    const cursor = character.followRotation ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
     const rotation = this.options.rotation ?? { x: -5, y: -12, z: -7 }
-    this.root.rotation.set((character.trueFront ? 0 : rotation.x + pose.rotationX) * Math.PI / 180, (character.trueFront ? 0 : rotation.y + pose.rotationY) * Math.PI / 180, (character.trueFront ? 0 : rotation.z + pose.rotationZ) * Math.PI / 180, 'YXZ')
+    this.root.rotation.set((character.trueFront ? 0 : rotation.x + pose.rotationX - cursor.y * 16) * Math.PI / 180, (character.trueFront ? 0 : rotation.y + pose.rotationY + cursor.x * 28) * Math.PI / 180, (character.trueFront ? 0 : rotation.z + pose.rotationZ) * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))
+    this.lightFill.visible = character.toon && character.candleLight
+    const fillScale = this.shape === 'capsule' ? 1 : .85
+    this.lightFill.scale.setScalar(fillScale)
+    this.root.updateMatrixWorld(true)
+    // Keep the small light offset in the camera plane as the body turns.
+    const lightOffset = new THREE.Vector3(-.035, -.035, 0).applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert())
+      .sub(new THREE.Vector3().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert()))
+    this.lightFill.position.copy(lightOffset)
+    const fu = this.lightFill.material.uniforms
+    for (const name of ['colorA', 'colorB']) (fu[name]!.value as THREE.Color).copy(u[name]!.value as THREE.Color)
+    for (const name of ['gradientOn', 'toonOn', 'candleLight', 'angle', 'bodyHeight']) fu[name]!.value = u[name]!.value
+    ;(fu.fillScale!.value as THREE.Vector3).setScalar(fillScale); (fu.fillOffset!.value as THREE.Vector3).copy(lightOffset)
     const zoom = this.options.zoom ?? 1
     const aspect = this.options.width / this.options.height
     const half = Math.max(height * .72, .72 / aspect) / zoom
@@ -272,7 +310,7 @@ export class CharacterRenderer {
   dispose() {
     if (this.disposed) return
     this.disposed = true
-    this.body.geometry.dispose(); this.body.material.dispose(); this.face.geometry.dispose(); this.face.material.dispose()
+    this.body.geometry.dispose(); this.body.material.dispose(); this.lightFill.geometry.dispose(); this.lightFill.material.dispose(); this.face.geometry.dispose(); this.face.material.dispose()
     this.faceTexture.dispose(); this.propTexture.dispose(); this.prop.material.dispose(); this.shadow.geometry.dispose(); this.shadow.material.dispose()
     this.gl.dispose(); this.gl.forceContextLoss()
   }
@@ -288,20 +326,4 @@ export function thumbnail(character: Character, pose: Pose = BASE_POSE, size = 9
     thumbRenderer.render({ ...character, shadow: false }, { pose, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }, { displaySize: size, rotation: { x: -3, y: -8, z: -5 }, zoom: 1.08 })
     const url = thumbRenderer.canvas.toDataURL('image/png'); if (thumbs.size > 250) thumbs.clear(); thumbs.set(key, url); return url
   } catch { return '' }
-}
-
-export function drawOrientation(canvas: HTMLCanvasElement, quaternion: THREE.Quaternion) {
-  const ctx = canvas.getContext('2d')!; const d = canvas.width, c = d / 2, r = d * .36
-  ctx.clearRect(0, 0, d, d); ctx.strokeStyle = '#89939c'; ctx.lineWidth = 1.2
-  ctx.beginPath(); ctx.arc(c, c, r * 1.16, 0, Math.PI * 2); ctx.stroke()
-  const axes = ['#f18788', '#84caae', '#96adff']
-  for (let axis = 0; axis < 3; axis++) {
-    ctx.strokeStyle = axes[axis]!; ctx.lineWidth = 1.7
-    for (let i = 0; i < 96; i++) {
-      const point = (n: number) => { const a = n / 96 * Math.PI * 2; return (axis === 0 ? new THREE.Vector3(0, Math.cos(a), Math.sin(a)) : axis === 1 ? new THREE.Vector3(Math.cos(a), 0, Math.sin(a)) : new THREE.Vector3(Math.cos(a), Math.sin(a), 0)).applyQuaternion(quaternion) }
-      const a = point(i), b = point(i + 1); ctx.globalAlpha = a.z < 0 ? .3 : 1
-      ctx.beginPath(); ctx.moveTo(c + a.x * r, c - a.y * r); ctx.lineTo(c + b.x * r, c - b.y * r); ctx.stroke()
-    }
-  }
-  ctx.globalAlpha = 1
 }

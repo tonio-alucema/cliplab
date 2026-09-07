@@ -2,29 +2,29 @@
 name: ClipLab
 description: A quiet dark studio for expressive toon characters and looping animation.
 colors:
-  graphite: "#303230"
-  primary: "#ecefe8"
-  primary-ink: "#171a17"
-  timeline-selected: "#eeeee8"
-  accent: "#a9d9bb"
-  focus: "#9fd3b5"
-  text-action: "#c3ddb2"
-  ink: "#eff0ed"
-  secondary-text: "#b3b8ad"
-  control-text: "#e3e6e0"
-  utility-text: "#b2b6b1"
+  graphite: "#313131"
+  primary: "#eeeeee"
+  primary-ink: "#191919"
+  timeline-selected: "#3a3a3a"
+  accent: "#cdcdcd"
+  focus: "#c6c6c6"
+  text-action: "#d4d4d4"
+  ink: "#f0f0f0"
+  secondary-text: "#b6b6b6"
+  control-text: "#e5e5e5"
+  utility-text: "#b5b5b5"
   line: "#ffffff12"
-  sequence-surface: "#1a1d1a"
-  field-surface: "#282d25"
-  secondary-surface: "#292c29"
-  secondary-hover: "#343834"
-  secondary-ink: "#eef0eb"
-  expression-selected: "#2d392d"
-  chip-surface: "#272f22"
-  chip-selected: "#3d4d32"
-  chip-selected-ink: "#e4f3d6"
-  view-selected: "#304136"
-  view-selected-ink: "#c8ecd2"
+  sequence-surface: "#1c1c1c"
+  field-surface: "#2b2b2b"
+  secondary-surface: "#2b2b2b"
+  secondary-hover: "#373737"
+  secondary-ink: "#efefef"
+  expression-selected: "#363636"
+  chip-surface: "#2c2c2c"
+  chip-selected: "#484848"
+  chip-selected-ink: "#eeeeee"
+  view-selected: "#3d3d3d"
+  view-selected-ink: "#e2e2e2"
   peach: "#ff986d"
   apricot: "#ffd092"
   mint: "#81d4c1"
@@ -102,7 +102,7 @@ components:
     rounded: "{rounded.button}"
     padding: "9px 17px"
   button-primary-hover:
-    backgroundColor: "#fff"
+    backgroundColor: "#ffffff"
   button-secondary:
     backgroundColor: "{colors.secondary-surface}"
     textColor: "{colors.secondary-ink}"
@@ -156,11 +156,11 @@ components:
     backgroundColor: "{colors.expression-selected}"
     rounded: "{rounded.expression}"
   sequence-beat:
-    backgroundColor: "#272c26"
+    backgroundColor: "#2b2b2b"
     rounded: "{rounded.timeline}"
   sequence-beat-selected:
     backgroundColor: "{colors.timeline-selected}"
-    textColor: "#252d23"
+    textColor: "#f0f0f0"
     rounded: "{rounded.timeline}"
 ---
 
@@ -170,26 +170,26 @@ components:
 
 **Creative North Star: "The Character Studio"**
 
-ClipLab is a quiet dark studio: a graphite canvas, a transparent header with the supplied white logo, and separate charcoal cards leave room for the authored character. Regular sans-serif headings, compact controls, sage selections, and a few white action surfaces keep the surrounding interface restrained.
+ClipLab is a quiet dark studio: a graphite canvas, a transparent header with the supplied white logo, and separate charcoal cards leave room for the authored character. Regular sans-serif headings, compact controls, gray selections, and a few white action surfaces keep the surrounding interface restrained.
 
 The character carries the expressive range. Real geometry supports smooth two-color fills and sharply divided toon lighting, with circular eyes, substantial mouths, and optional animated details. The stage, expression library, and timeline share the character renderer so that the same face reads consistently while it is edited, sequenced, and exported. This refresh retains the established studio identity and character principles while replacing the earlier pale surfaces and blue action language with the user-approved dark world.
 
 **Key Characteristics:**
 
 - Graphite gutters separate independently rounded charcoal surfaces.
-- The transparent header carries the supplied white ClipLab logo.
-- White highlights primary actions and the active timeline beat; sage identifies quieter editing states.
+- The transparent header carries the supplied white ClipLab logo at 60% of its previous width (99.6px desktop, 82.8px mobile).
+- White highlights primary actions; dark fills and brighter gray borders identify selections.
 - Compact regular sans-serif type supports a character-led interface.
 - Circular facial geometry and crisp toon bands remain consistent across rendering contexts.
 
 ## Colors
 
-The interface combines subtly green charcoal neutrals with warm white actions and quiet sage states; editable character colors provide the stronger hues.
+The interface combines neutral charcoal surfaces with white actions and gray selection states; editable character colors provide the stronger hues.
 
 ### Primary
 
-- **Warm white action** (`primary`): primary action fills, paired with `primary-ink`. Hover approaches pure white. The timeline uses its own `timeline-selected` white for the active beat.
-- **Sage accent** (`accent`): native range, checkbox, and progress accents. `focus` supplies the recurring keyboard outline; `text-action` identifies text actions.
+- **Warm white action** (`primary`): primary action fills, paired with `primary-ink`. Hover approaches pure white. The timeline uses a dark `timeline-selected` surface for the active beat.
+- **Gray accent** (`accent`): native range, checkbox, and progress accents. `focus` supplies the recurring keyboard outline; `text-action` identifies text actions.
 - **Selection surfaces:** expression cards, option chips, and stage controls use their recorded component colors. They form a related family, not a single interchangeable selected-state token.
 
 ### Secondary
@@ -202,9 +202,9 @@ The interface combines subtly green charcoal neutrals with warm white actions an
 - **Graphite:** the page canvas visible through the header and around all three studio cards.
 - **Charcoal surfaces:** the sequence uses `sequence-surface`; the preview and inspector use subtly graded charcoal fills from the component CSS. Those interface gradients are intentionally quiet.
 - **Ink / control text / secondary text / utility text:** main text, field and numeric values, helper copy, and utility icons respectively.
-- **Fine line:** a translucent white divider. Most component borders are similarly subtle white overlays, with a stronger sage boundary for active choices.
+- **Fine line:** a translucent white divider. Most component borders are similarly subtle white overlays, with a stronger gray boundary for active choices.
 
-**The White Anchor Rule.** Keep the primary action and current timeline beat white while using the shipped sage variants for quieter editor selection. Character colors remain authored content.
+**The Monochrome Controls Rule.** Keep controls neutral. Use white for primary actions and dark gray for active sequence cards; stronger borders identify selections. Character colors remain authored content.
 
 ## Typography
 
@@ -233,7 +233,7 @@ At widths of at least (1500px), the inspector grows to (410px), workspace and wo
 
 At widths up to (820px), the page scrolls vertically and the inspector follows the workbench. The header is (72px), with ordinary document positioning. Workbench rows become (490px) and (262px), separated by (16px); all three main cards use the mobile panel radius. The inspector has a minimum height (660px) and its content participates in page scrolling. Undo controls disappear. Expression cards use four columns, and the detailed editor footer sticks to the viewport bottom.
 
-At widths up to (480px), page padding becomes (0 10px 16px), the header logo renders at (138px) inside its cropped wrapper, and Import disappears from the header. Preview and sequence heights become (435px) and (265px), with a (13px) gap; the preview selector row becomes (55px). The size-strip explanation is hidden, the size buttons distribute across the width, and the expression library returns to two columns. Inspector padding becomes (22px 20px). Timeline items retain a minimum width (145px) and scroll horizontally instead of compressing their controls.
+At widths up to (480px), page padding becomes (0 10px 16px), the header logo renders at (82.8px) inside its cropped wrapper, and Import disappears from the header. Preview and sequence heights become (435px) and (265px), with a (13px) gap; the preview selector row becomes (55px). The size-strip explanation is hidden, the size buttons distribute across the width, and the expression library returns to two columns. Inspector padding becomes (22px 20px). The narrow preview reserves (78px) above and (46px) below its drawing area for view controls and the toolbar. Timeline items retain a minimum width (145px) and scroll horizontally instead of compressing their controls.
 
 Use the repeated spacing steps from the frontmatter for local groups. Two-column sliders, three body-shape choices, four inspector tabs, and four face-preset columns recur. This is a compact tool: helper copy should remain legible, and optional information should yield before primary controls.
 
@@ -245,12 +245,12 @@ The interface uses tonal layering, generous outer rounding, and faint ambient sh
 
 ### Shadow Vocabulary
 
-- **Floating panel:** soft ambient separation (`0 8px 16px #15181520`), shared by preview, sequence, and inspector.
+- **Floating panel:** soft ambient separation (`0 8px 16px #17171720`), shared by preview, sequence, and inspector.
 - **Primary action:** restrained lift (`0 2px 4px #0000001a`).
-- **Current timeline beat:** slight lift under the white selection (`0 3px 7px #0000001a`).
+- **Current timeline beat:** slight lift under the dark selection (`0 3px 7px #0000001a`).
 - **Toast:** temporary feedback elevation (`0 10px 30px #00000044`).
 
-**The Crisp Lighting Rule.** Blend character body colors smoothly while keeping toon lighting boundaries hard. The camera-fixed candle mode uses four slightly offset radial bands; the selectable directional mode uses three normal-based bands. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.
+**The Crisp Lighting Rule.** Blend character body colors smoothly while keeping toon lighting boundaries hard. The camera-fixed candle mode uses one rounded inset silhouette over a single darker outer shade, following the cap, capsule, or sphere as it rotates; the selectable directional mode uses three normal-based bands. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.
 
 ## Shapes
 
@@ -264,33 +264,39 @@ The body silhouettes remain a capsule with a width-to-height ratio (1:2), a squa
 
 ### Buttons
 
-Pill-shaped actions combine a short label with a line icon. Primary buttons use warm white with dark text; secondary buttons use a charcoal fill and faint border; quiet actions expose a translucent white background on hover. Text actions use pale sage and underline on hover. Utility icon buttons remain compact rounded squares.
+Pill-shaped actions combine a short label with a line icon. Primary buttons use warm white with dark text; secondary buttons use a charcoal fill and faint border; quiet actions expose a translucent white background on hover. Text actions use light gray and underline on hover. Utility icon buttons remain compact rounded squares.
 
-Shared action padding is (9px 17px), with a minimum height (38px) and icon gap (8px). Primary hover becomes white; secondary hover lightens the fill and strengthens the border. Disabled buttons reduce opacity (0.4) and use a non-interactive cursor. Keyboard focus uses an external sage outline (3px, offset 3px). Color, border, background, and opacity transitions last (150ms); the reduced-motion media query removes CSS transitions.
+Shared action padding is (9px 17px), with a minimum height (38px) and icon gap (8px). Primary hover becomes white; secondary hover lightens the fill and strengthens the border. Disabled buttons reduce opacity (0.4) and use a non-interactive cursor. Keyboard focus uses an external gray outline (3px, offset 3px). Color, border, background, and opacity transitions last (150ms); the reduced-motion media query removes CSS transitions.
 
 ### Chips
 
-Expression options wrap into compact rounded choices, with a charcoal-green fill, muted text, and a sage active variant. Editor beat selectors use a denser row with their own stronger selected fill. Size presets are clickable pills: (12, 16, 24, 48, 96px) sets the actual displayed CSS size in the main stage, while Fit restores the large preview. Their state changes are visual as well as semantic through pressed-state attributes.
+Expression options wrap into compact rounded choices, with a charcoal fill, muted text, and a gray active variant. Editor beat selectors use a denser row with their own stronger selected fill. Size presets are clickable pills: (12, 16, 24, 48, 96px) sets the actual displayed CSS size in the main stage, while Fit restores the large preview. Their state changes are visual as well as semantic through pressed-state attributes.
 
 ### Cards / Containers
 
-The three outer cards use the layout and elevation vocabulary above. Expression cards are image-first choices with shared-renderer thumbnails and a compact name/beat-count footer. Selection changes their fill to the recorded expression-selected surface and strengthens the sage border; it does not add a glow. A visible Edit selected action and double-click both enter detailed editing. Shape choices, animation rows, and integration choices carry related subdued selection treatments with their own established values.
+The three outer cards use the layout and elevation vocabulary above. Expression cards are image-first choices with shared-renderer thumbnails and a compact name/beat-count footer. Selection changes their fill to the recorded expression-selected surface and strengthens the gray border; it does not add a glow. A visible Edit selected action and double-click both enter detailed editing. Shape choices, animation rows, and integration choices carry related subdued selection treatments with their own established values.
 
-Timeline beats have an upper selection area and lower duration/order controls. The active beat turns white and its text turns dark; inactive beats retain charcoal fills. The track scrolls horizontally. The circular playback button uses a pale sage fill with a dark glyph for readable contrast. Add beat uses a dashed boundary and its own disabled opacity (0.3).
+Timeline beats have an upper selection area and lower duration/order controls. The active beat uses a dark gray fill, light text, and a brighter gray border; inactive beats retain charcoal fills. The track scrolls horizontally. The circular playback button uses a pale gray fill with a dark glyph for readable contrast. Add beat uses a dashed boundary and its own disabled opacity (0.3).
 
 ### Inputs / Fields
 
-Text and select fields use the field-surface fill, a faint white border, the field radius, and a height (37px). Focus shifts the fill and sage border; keyboard focus also supplies a visible outline (2px, offset 2px). Range and checkbox controls use the sage accent. Numeric readouts are compact dark rounded rectangles with tabular figures.
+Text and select fields use the field-surface fill, a faint white border, the field radius, and a height (37px). Focus shifts the fill and gray border; keyboard focus also supplies a visible outline (2px, offset 2px). Range and checkbox controls use the gray accent. Numeric readouts are compact dark rounded rectangles with tabular figures.
 
-Switches use a small track (30px by 17px) and circular white knob (11px). Checked state changes the track to sage and translates the knob (13px). Their hidden input retains a visible focus outline on the track. The build does not establish a reusable inline field-error appearance.
+Switches use a small track (30px by 17px) and circular white knob (11px). Checked state changes the track to light gray and translates the knob (13px). Their hidden input retains a visible focus outline on the track. The build does not establish a reusable inline field-error appearance.
 
 ### Navigation
 
 The transparent header uses `public/cliplab-logo-white.svg`, a quiet studio description, utility actions, and a white Export button. Character tabs sit inside the preview card as rounded thumbnail-and-name choices. Inspector navigation has four icon-over-label controls; active state changes fill and text color without an underline. The navigation remains part of its card on mobile while the layout stacks vertically.
 
+### View Controls and Animation Editing
+
+Compact Left, Front, Right, and Back buttons replace the orbit globe. Drag the stage or use arrow keys to rotate, hold Shift to roll, and use Reset to restore the initial angle. True front overrides authored rotation; body cursor following releases that lock when enabled. Eyes and body have separate cursor toggles. Still exports include the current cursor pose; rendered loops use a centered cursor. App exports preserve live tracking.
+
+Add expression opens a dark modal picker from both the timeline and selected animation editor. Appending reveals the new block and previews it while paused. The selected animation editor precedes the library; Delete removes that animation with Undo support. Keep at least one animation and limit sequences to 64 expressions.
+
 ### Character Rendering
 
-Use the same 3D renderer for the live stage, expression thumbnails, timeline previews, and exports. White eye dots are optional and increase black eye radius (20%); the white dot itself appears at full detail. Broad open, grin, and crying mouths use substantial dark outlines with optional clipped teeth and tongue details. Tear drops, hearts, sparkles, and sleep marks have deterministic eased entrance, movement, and exit, so their timing survives export.
+Use the same 3D renderer for the live stage, expression thumbnails, timeline previews, and exports. Set 1 preserves the eight simple face presets; Set 2 adds twelve emoji reactions with brows, blush, half-lidded circles, white eyes with pupils, kisses, and tongue-out mouths. Choosing a library face creates a three-beat expression; choosing one while editing replaces only the selected beat’s face. New fields default quietly when importing older work. White eye dots are optional and increase black eye radius (20%); the white dot itself appears at full detail. Broad open, grin, and crying mouths use substantial dark outlines with optional clipped teeth and tongue details. Tear drops, hearts, sparkles, and sleep marks have deterministic eased entrance, movement, and exit, so their timing survives export.
 
 Detail follows displayed CSS size independently of device pixel ratio: below (16px), show the body only; from (16px through 24px), show eyes; above (24px), show the complete face and props. True front removes rendered view and pose rotation while retaining authored pose data. Lock position suppresses floating and breathing without suppressing facial or prop animation. Existing saved projects receive defaults for newly introduced settings; their authored expressions remain intact.
 
@@ -299,7 +305,7 @@ Detail follows displayed CSS size independently of device pixel ratio: below (16
 ### Do:
 
 - **Do** preserve the graphite canvas, transparent header, supplied white logo, and visible spacing between the three studio cards.
-- **Do** use white for primary actions and the active timeline beat, with the existing sage variants for quieter editor states.
+- **Do** use white for primary actions, dark gray for active sequence cards, and neutral gray variants for all controls.
 - **Do** use the quiet UI type hierarchy and maintain legible helper text and keyboard focus.
 - **Do** keep character colors editable and preserve smooth fills alongside crisp lighting bands.
 - **Do** keep circular base eyes, transparent circular cheek cutouts, substantial mouth contours, and eased supporting details consistent across the shared renderer.
