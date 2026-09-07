@@ -5,7 +5,7 @@ import { Quaternion } from 'three'
 import Stage from './CharacterStage.vue'
 import { BASE_POSE, defaultProject } from './model'
 
-vi.mock('./renderer', () => ({ CharacterRenderer: class {
+vi.mock('./renderer', async importOriginal => ({ ...await importOriginal<typeof import('./renderer')>(), CharacterRenderer: class {
   render() {} resize() {} dispose() {}
   orientation() { return new Quaternion() }
   eyeGazes() { return { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } } }
@@ -117,6 +117,21 @@ describe('restored orbit controls', () => {
     expect(x.readOnly).toBe(true)
     x.focus(); x.value = '90'; x.dispatchEvent(new Event('input')); x.blur(); await nextTick()
     expect(state.rotation.x + state.sample.pose.rotationX).toBe(45.5)
+  })
+
+  it('shows symmetric cursor pitch and preserves it when manual orbit takes over', async () => {
+    const { state, host, point } = mount()
+    state.rotation.x = -45; state.character.followRotation = true; await nextTick()
+    vi.spyOn(host.querySelector<HTMLCanvasElement>('.stage-canvas')!, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 100, width: 200, height: 200 } as DOMRect)
+    const input = host.querySelector<HTMLInputElement>('[aria-label="Orbit X angle in degrees"]')!
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 0 })); tick(); await nextTick()
+    expect(Number(input.value)).toBe(-16)
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 400 })); tick(); await nextTick()
+    expect(Number(input.value)).toBe(16)
+    await point('pointerdown', 50, 50)
+    expect(state.character.followRotation).toBe(false)
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(16)
+    tick(); await nextTick(); expect(Number(input.value)).toBe(16)
   })
 
   it('preserves Front and cursor-follow settings when angle entry is cancelled or empty', async () => {

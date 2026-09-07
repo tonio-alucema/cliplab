@@ -8,6 +8,15 @@ export interface RenderOptions {
   cursor?: { x: number; y: number }; rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
   pointerLook?: PointerLook; eyeGazes?: EyeGazes
 }
+/** Cursor pitch owns the vertical look direction, independent of the resting tilt. */
+export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5, y: -12, z: -7 }, cursor: Gaze = { x: 0, y: 0 }) {
+  if (character.trueFront) return { x: 0, y: 0, z: 0 }
+  return {
+    x: character.followRotation ? -cursor.y * 16 : rotation.x + pose.rotationX,
+    y: rotation.y + pose.rotationY + (character.followRotation ? cursor.x * 28 : 0),
+    z: rotation.z + pose.rotationZ
+  }
+}
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : 1
 export function radiusAt(shape: Shape, y: number): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
@@ -310,9 +319,8 @@ export class CharacterRenderer {
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
     u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height
-    const cursor = character.followRotation ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
-    const rotation = this.options.rotation ?? { x: -5, y: -12, z: -7 }
-    this.root.rotation.set((character.trueFront ? 0 : rotation.x + pose.rotationX - cursor.y * 16) * Math.PI / 180, (character.trueFront ? 0 : rotation.y + pose.rotationY + cursor.x * 28) * Math.PI / 180, (character.trueFront ? 0 : rotation.z + pose.rotationZ) * Math.PI / 180, 'YXZ')
+    const rotation = characterRotation(character, pose, this.options.rotation, this.options.cursor)
+    this.root.rotation.set(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))

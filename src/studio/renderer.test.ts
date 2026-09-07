@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes } from './renderer'
+import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation } from './renderer'
 import { BASE_POSE, defaultProject } from './model'
 import type { EyeGazes } from './gaze'
+describe('vertical body cursor following', () => {
+  it('looks equally far up and down despite manual or expression pitch', () => {
+    const project = defaultProject(), character = { ...project.characters[0]!, followRotation: true, trueFront: false }
+    const listening = project.expressions.find(e => e.id === 'listening')!.beats[1]!.pose
+    for (const pose of [BASE_POSE, listening]) for (const pitch of [-80, -5, 40]) {
+      const rest = { x: pitch, y: -12, z: -7 }
+      const up = characterRotation(character, pose, rest, { x: 0, y: 1 })
+      const down = characterRotation(character, pose, rest, { x: 0, y: -1 })
+      const facing = (r: typeof rest) => new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(r.x * Math.PI / 180, r.y * Math.PI / 180, r.z * Math.PI / 180, 'YXZ'))
+      expect(up.x).toBe(-16); expect(down.x).toBe(16)
+      expect(facing(up).y).toBeGreaterThan(0); expect(facing(down).y).toBeLessThan(0)
+      expect(facing(up).y).toBeCloseTo(-facing(down).y)
+      expect(characterRotation(character, pose, rest).x).toBeCloseTo(0)
+      expect(characterRotation({ ...character, followRotation: false }, pose, rest).x).toBe(pitch + pose.rotationX)
+      expect(characterRotation({ ...character, trueFront: true }, pose, rest, { x: 1, y: -1 })).toEqual({ x: 0, y: 0, z: 0 })
+    }
+  })
+})
 describe('independent eye focus', () => {
   const character = { ...defaultProject().characters[0]!, iris: true }
   function rig(aspect = 1, zoom = 1) {

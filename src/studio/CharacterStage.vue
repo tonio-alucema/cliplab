@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { CharacterRenderer } from './renderer'
+import { CharacterRenderer, characterRotation } from './renderer'
 import { drawOrbit } from './orbit'
 import { centeredGaze, easeGaze, easePointer, inactivePointer, pointerGaze, pointerLook, type EyeGazes } from './gaze'
 import type { Character, Sample } from './model'
@@ -44,9 +44,8 @@ function setup() {
 }
 function manualRotation() {
   const pose = props.sample.pose
-  if (props.character.trueFront) return { x: -pose.rotationX, y: -pose.rotationY, z: -pose.rotationZ }
-  const cursor = props.character.followRotation ? gaze : centeredGaze()
-  return { x: props.rotation.x - cursor.y * 16, y: props.rotation.y + cursor.x * 28, z: props.rotation.z }
+  const rotation = characterRotation(props.character, pose, props.rotation, gaze)
+  return { x: rotation.x - pose.rotationX, y: rotation.y - pose.rotationY, z: rotation.z - pose.rotationZ }
 }
 function editAngle(axis: Axis, event: FocusEvent) {
   if (props.character.lockPosition) return
