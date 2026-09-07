@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Euler } from 'three'
 import { CharacterRenderer } from './renderer'
 import { drawOrbit } from './orbit'
 import { centeredGaze, easeGaze, easePointer, inactivePointer, pointerGaze, pointerLook, type EyeGazes } from './gaze'
 import type { Character, Sample } from './model'
 import Icon from './StudioIcon.vue'
 const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; playing: boolean }>()
-const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes }] }>()
+const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; pause: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes }] }>()
 const host = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), globe = ref<HTMLCanvasElement>()
 const angles = ref({ x: 0, y: 0, z: 0 })
+type Axis = 'x' | 'y' | 'z'
+const editingAxis = ref<Axis>(), angleDraft = ref('')
+let angleRotation: { x: number; y: number; z: number } | undefined
 const error = ref('')
 let renderer: CharacterRenderer | undefined, observer: ResizeObserver | undefined
 let start: { x: number; y: number; rotation: { x: number; y: number; z: number }; roll: boolean; pointerId: number } | undefined
@@ -25,8 +27,9 @@ function render() {
   renderer.render(props.character, props.sample, { displaySize: size ?? 400, rotation: props.rotation, zoom: size ? 1 : props.zoom, cursor: gaze, pointerLook: props.character.followCursor ? pointer : undefined }, props.character.followCursor ? gaze : { x: 0, y: 0 })
   const orientation = renderer.orientation()
   if (globe.value) drawOrbit(globe.value, orientation)
-  const euler = new Euler().setFromQuaternion(orientation, 'YXZ')
-  angles.value = { x: Math.round(euler.x * 180 / Math.PI), y: Math.round(euler.y * 180 / Math.PI), z: Math.round(euler.z * 180 / Math.PI) }
+  const base = manualRotation(), pose = props.sample.pose
+  const degrees = (value: number) => Math.round(((((value + 180) % 360) + 360) % 360 - 180) * 10) / 10
+  angles.value = { x: degrees(base.x + pose.rotationX), y: degrees(base.y + pose.rotationY), z: degrees(base.z + pose.rotationZ) }
   emit('cursor', { ...gaze, eyes: renderer.eyeGazes() })
 }
 function setup() {
@@ -44,6 +47,27 @@ function manualRotation() {
   if (props.character.trueFront) return { x: -pose.rotationX, y: -pose.rotationY, z: -pose.rotationZ }
   const cursor = props.character.followRotation ? gaze : centeredGaze()
   return { x: props.rotation.x - cursor.y * 16, y: props.rotation.y + cursor.x * 28, z: props.rotation.z }
+}
+function editAngle(axis: Axis, event: FocusEvent) {
+  if (props.character.lockPosition) return
+  emit('pause')
+  editingAxis.value = axis; angleDraft.value = String(angles.value[axis])
+  angleRotation = manualRotation()
+  nextTick(() => (event.target as HTMLInputElement).select())
+}
+function commitAngle(axis: Axis) {
+  if (editingAxis.value !== axis) return
+  editingAxis.value = undefined
+  const value = Number(angleDraft.value)
+  if (props.character.lockPosition || !angleDraft.value.trim() || !Number.isFinite(value)) return
+  const rotation = angleRotation ?? manualRotation(), pose = props.sample.pose
+  const poseAngle = axis === 'x' ? pose.rotationX : axis === 'y' ? pose.rotationY : pose.rotationZ
+  rotation[axis] = Math.min(180, Math.max(-180, value)) - poseAngle
+  emit('rotate', rotation); leave()
+}
+function angleKey(axis: Axis, event: KeyboardEvent) {
+  if (event.key === 'Enter') { commitAngle(axis); (event.target as HTMLInputElement).blur() }
+  if (event.key === 'Escape') { editingAxis.value = undefined; (event.target as HTMLInputElement).blur() }
 }
 function down(event: PointerEvent) {
   if (event.button !== 0 || start) return
@@ -104,7 +128,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(followFrame); observer?.disconnect(
     <div class="orientation-control" role="group" aria-label="3D orbit controls">
       <div class="orbit-heading"><span>Orbit</span><button aria-label="Reset orientation" title="Reset orientation · Home" @click="emit('reset')"><Icon name="reset" :size="14" /></button></div>
       <canvas ref="globe" class="orbit-globe" width="288" height="288" tabindex="0" role="slider" aria-label="Character orientation. Drag or use arrow keys to rotate. Shift-drag or Shift-left/right to roll. Home resets." :aria-valuenow="angles.y" :aria-valuetext="`Pitch ${angles.x} degrees, turn ${angles.y} degrees, tilt ${angles.z} degrees`" aria-valuemin="-180" aria-valuemax="180" title="Drag to orbit · Shift to roll" @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
-      <div class="orbit-readout" aria-hidden="true"><span v-for="axis in (['x', 'y', 'z'] as const)" :key="axis"><i>{{ axis }}</i>{{ angles[axis] }}°</span></div>
+      <div class="orbit-readout"><label v-for="axis in (['x', 'y', 'z'] as const)" :key="axis"><span>{{ axis }}</span><input type="number" :aria-label="`Orbit ${axis.toUpperCase()} angle in degrees`" :title="character.lockPosition ? 'Unlock Position to edit angles' : 'Enter angle · −180° to 180°'" min="-180" max="180" step="0.1" :readonly="character.lockPosition" :value="editingAxis === axis ? angleDraft : angles[axis]" @focus="editAngle(axis, $event)" @input="angleDraft = ($event.target as HTMLInputElement).value" @blur="commitAngle(axis)" @keydown.stop="angleKey(axis, $event)" /></label></div>
     </div>
     <div v-if="error" class="renderer-error" role="alert"><strong>Preview unavailable</strong><p>{{ error }}</p><button class="button secondary" @click="setup">Retry preview</button></div>
   </div>

@@ -102,6 +102,9 @@ These are directions explicitly supplied by the user, not an inferred design sys
 
 - Reduce the supplied logo by 40% on desktop and mobile.
 - Restore the orbit globe with thin monochrome rings, crosshair, corner brackets, perimeter ticks and orientation readouts inspired by the supplied instrument reference. Preserve direct stage dragging, keyboard rotation, roll and reset.
+- With Position unlocked, X/Y/Z readouts accept manual angles and pause playback during entry. Position lock makes those fields read-only.
+- Default faces are 25% smaller. Preserve authored custom sizes. Morph eye and mouth contours continuously across beats and expression boundaries.
+- Loading uses gentler sine easing for its gradient turn, keeps the half-second hold, and plays Working concurrently through the full cycle.
 - Add independent body cursor following and preserve the current cursor pose in PNG exports.
 - Make Add expression open a visible picker, reveal the appended step, and repair selection after Undo/import. Add animation deletion with Undo support.
 - Group existing face presets as Set 1. Set 2 uses the supplied emoji sheet for twelve bolder reactions, with brows, blush, half-lids, pupils, kisses, tongue-out mouths, and tears.

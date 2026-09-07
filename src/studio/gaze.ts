@@ -50,11 +50,15 @@ export function easeGaze(current: Gaze, target: Gaze, seconds: number, immediate
 }
 
 /** Keep the complete white dot inside the eye, with a small margin at every angle. */
-export function irisOffset(radius: number, gaze: Gaze, eyeRotation = 0, cheeks = false): Gaze {
+export function irisOffset(radius: number, gaze: Gaze, eyeRotation = 0, cheeks: boolean | number = false): Gaze {
   const look = clampGaze(gaze), angle = eyeRotation * Math.PI / 180
   const x = look.x * radius * .62, y = -look.y * radius * .62
   const dot = { x: x * Math.cos(angle) + y * Math.sin(angle), y: -x * Math.sin(angle) + y * Math.cos(angle) }
   // Stay above the cheek's circular cutout, including the dot radius and a small gap.
-  if (cheeks) dot.y = Math.min(dot.y, radius * 1.13 - Math.sqrt((radius * 1.125) ** 2 - dot.x ** 2))
+  if (cheeks) {
+    const amount = typeof cheeks === 'number' ? Math.max(0, Math.min(1, cheeks)) : 1
+    const clearance = radius * (.82 * Math.sqrt(amount) + .305)
+    if (Math.abs(dot.x) < clearance) dot.y = Math.min(dot.y, radius * 1.13 - Math.sqrt(clearance ** 2 - dot.x ** 2))
+  }
   return dot
 }

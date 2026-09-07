@@ -35,10 +35,10 @@ function mount(front = false) {
     sample: { pose: { ...BASE_POSE, rotationX: 10, rotationY: 20, rotationZ: 30 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 },
     rotation: { x: 17, y: 23, z: -8 }
   })
-  const reset = vi.fn()
+  const reset = vi.fn(), pause = vi.fn()
   const host = document.createElement('div'); document.body.appendChild(host)
   app = createApp(() => h(Stage, { ...state, zoom: 1, background: '', previewSize: null, playing: false,
-    onRotate: rotation => { state.character.trueFront = false; state.character.followRotation = false; state.rotation = rotation }, onReset: reset
+    onRotate: rotation => { state.character.trueFront = false; state.character.followRotation = false; state.rotation = rotation }, onReset: reset, onPause: pause
   }))
   app.mount(host)
   const dial = host.querySelector<HTMLCanvasElement>('.orbit-globe')!
@@ -46,7 +46,7 @@ function mount(front = false) {
   const point = async (type: string, x: number, y: number, options = {}) => {
     dial.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: 1, button: 0, ...options })); await nextTick()
   }
-  return { state, dial, point, reset, host }
+  return { state, dial, point, reset, host, pause }
 }
 
 describe('restored orbit controls', () => {
@@ -94,5 +94,46 @@ describe('restored orbit controls', () => {
     expect(state.rotation.y).toBeCloseTo(51)
     await point('pointermove', 60, 50)
     expect(state.rotation.y).toBeCloseTo(55)
+  })
+
+  it('accepts explicit visible angles, pauses playback, and leaves authored poses unchanged', async () => {
+    const { state, host, pause } = mount()
+    await nextTick()
+    const x = host.querySelector<HTMLInputElement>('[aria-label="Orbit X angle in degrees"]')!
+    const authored = { ...state.sample.pose }
+    x.focus(); await nextTick()
+    expect(pause).toHaveBeenCalledOnce()
+    x.value = '45.5'; x.dispatchEvent(new Event('input'))
+    x.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); await nextTick()
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(45.5)
+    expect(state.rotation.y).toBe(23); expect(state.sample.pose).toEqual(authored)
+    expect(Number(x.value)).toBe(45.5)
+    x.focus(); await nextTick(); x.value = '-60'; x.dispatchEvent(new Event('input'))
+    x.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await nextTick()
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(45.5)
+    x.focus(); await nextTick(); x.value = ''; x.dispatchEvent(new Event('input')); x.blur(); await nextTick()
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(45.5)
+    state.character.lockPosition = true; await nextTick()
+    expect(x.readOnly).toBe(true)
+    x.focus(); x.value = '90'; x.dispatchEvent(new Event('input')); x.blur(); await nextTick()
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(45.5)
+  })
+
+  it('preserves Front and cursor-follow settings when angle entry is cancelled or empty', async () => {
+    const { state, host } = mount(true)
+    state.character.followRotation = true; await nextTick()
+    const original = { ...state.rotation }
+    const x = host.querySelector<HTMLInputElement>('[aria-label="Orbit X angle in degrees"]')!
+    x.focus(); await nextTick(); x.value = '45'; x.dispatchEvent(new Event('input'))
+    x.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await nextTick()
+    expect(state.character.trueFront).toBe(true); expect(state.character.followRotation).toBe(true)
+    expect(state.rotation).toEqual(original)
+    x.focus(); await nextTick(); x.value = ''; x.dispatchEvent(new Event('input')); x.blur(); await nextTick()
+    expect(state.character.trueFront).toBe(true); expect(state.character.followRotation).toBe(true)
+    expect(state.rotation).toEqual(original)
+    x.focus(); await nextTick(); x.value = '120'; x.dispatchEvent(new Event('input')); x.blur(); await nextTick()
+    expect(state.character.trueFront).toBe(false); expect(state.character.followRotation).toBe(false)
+    expect(state.rotation.x + state.sample.pose.rotationX).toBe(120)
+    expect(Number(x.value)).toBe(120)
   })
 })

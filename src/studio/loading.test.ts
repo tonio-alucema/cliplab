@@ -5,12 +5,12 @@ describe('Loading gradient loop', () => {
   const project = defaultProject(), loading = project.expressions.find(e => e.id === 'loading')!
   const angle = (time: number) => sampleExpression(loading, time).gradientRotation!
 
-  it('makes one strongly eased turn, holds exactly half a second, then repeats seamlessly', () => {
+  it('makes a gently eased turn, holds exactly half a second, then repeats seamlessly', () => {
     expect(expressionDuration(loading)).toBe(2.5)
-    expect(angle(0)).toBe(0); expect(angle(.2)).toBeLessThan(1)
+    expect(angle(0)).toBe(0); expect(angle(.2)).toBeGreaterThan(8); expect(angle(.2)).toBeLessThan(10)
     expect(angle(1)).toBeCloseTo(180)
-    expect(angle(1.8)).toBeGreaterThan(359)
-    expect(angle(1.2) - angle(.8)).toBeGreaterThan(200)
+    expect(angle(1.8)).toBeLessThan(352)
+    expect(angle(1.2) - angle(.8)).toBeLessThan(120)
     for (const time of [2, 2.1, 2.25, 2.49999]) expect(angle(time)).toBe(360)
     expect(angle(2.5)).toBe(0)
     expect(Math.cos(angle(2.49999) * Math.PI / 180)).toBeCloseTo(Math.cos(angle(2.5) * Math.PI / 180), 10)
@@ -18,14 +18,15 @@ describe('Loading gradient loop', () => {
     for (const time of [.1, .75, 1.25, 2.25]) expect(angle(time + 25)).toBeCloseTo(angle(time), 8)
   })
 
-  it('moves only the gradient and scales the rotation and hold with sequence timing', () => {
+  it('plays Working throughout the gradient turn and hold, scaling both with sequence timing', () => {
     const definition = definitionOf(project, project.characters[0]!)
+    const working = project.expressions.find(e => e.id === 'working')!
     for (const time of [0, .1, 1, 2, 2.25]) {
       const sample = sampleDefinition(definition, 'loading', time)
       expect(sample.gradientRotation).toBeCloseTo(angle(time), 8)
-      expect(sample).toMatchObject({ bob: 0, breathe: 0, blink: 0 })
-      expect(sample.pose).toEqual(loading.beats[0]!.pose)
+      expect(sample.pose).toEqual(sampleExpression(working, time / 2.5 * expressionDuration(working)).pose)
     }
+    expect(sampleDefinition(definition, 'loading', 2.1).bob).not.toEqual(sampleDefinition(definition, 'loading', 2.4).bob)
     expect(sampleDefinition(definition, 'idle', 1).gradientRotation).toBeUndefined()
     definition.animations.find(a => a.id === 'loading')!.steps[0]!.duration = 5
     expect(sampleDefinition(definition, 'loading', 2).gradientRotation).toBeCloseTo(180)
@@ -42,9 +43,12 @@ describe('Loading gradient loop', () => {
     expression.beats = [expression.beats[1]!, expression.beats[0]!]
     expression.beats[1]!.duration = 4
     const restored = parseProject(definitionOf(edited, edited.characters[0]!, ['loading']))
-    expect(restored.expressions[0]!.beats.map(b => b.gradientAction)).toEqual(['hold', 'rotate'])
-    expect(sampleExpression(restored.expressions[0]!, .25).gradientRotation).toBe(0)
-    expect(sampleExpression(restored.expressions[0]!, 2.5).gradientRotation).toBeCloseTo(180)
+    const restoredLoading = restored.expressions.find(e => e.id === 'loading')!
+    expect(restored.expressions.some(e => e.id === 'working')).toBe(true)
+    expect(restoredLoading.poseExpressionId).toBe('working')
+    expect(restoredLoading.beats.map(b => b.gradientAction)).toEqual(['hold', 'rotate'])
+    expect(sampleExpression(restoredLoading, .25).gradientRotation).toBe(0)
+    expect(sampleExpression(restoredLoading, 2.5).gradientRotation).toBeCloseTo(180)
     const unknown = clone(edited) as any
     unknown.expressions[0].beats[0].gradientAction = 'invalid'
     expect(parseProject(unknown).expressions[0]!.beats[0]!.gradientAction).toBeUndefined()

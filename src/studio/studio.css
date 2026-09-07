@@ -381,6 +381,7 @@ img {
 
 .preview-frame {
   position: relative;
+  container: character-preview / size;
   min-height: 0;
   overflow: hidden;
   background: transparent;
@@ -470,9 +471,23 @@ img {
 .orbit-globe { display:block;width:100%;aspect-ratio:1;height:auto;cursor:grab;touch-action:none;border-radius:4px }
 .orbit-globe:active { cursor:grabbing }
 .orbit-globe:hover { background:#202020 }
-.orbit-readout { display:flex;justify-content:space-between;gap:3px;padding:8px 2px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.2 }
-.orbit-readout span { display:flex;gap:4px;white-space:nowrap }
-.orbit-readout i { color:#999997;font-style:normal;text-transform:uppercase }
+.orbit-readout { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding-top:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-variant-numeric:tabular-nums;line-height:1.2 }
+.orbit-readout label { display:flex;flex-direction:column;gap:4px;min-width:0 }
+.orbit-readout label>span { color:#aeaeae;text-transform:uppercase;text-align:center }
+.orbit-readout input { width:100%;min-width:0;height:28px;padding:3px 0;text-align:center;background:#252525;border:1px solid #ffffff12;border-radius:4px;font-size:11px;appearance:textfield;cursor:text }
+.orbit-readout input::-webkit-inner-spin-button,.orbit-readout input::-webkit-outer-spin-button { appearance:none;margin:0 }
+.orbit-readout input:hover:not(:read-only),.orbit-readout input:focus { border-color:#999;background:#303030 }
+.orbit-readout input:read-only { background:transparent;border-color:transparent;color:#aeaeae;cursor:default }
+
+@container character-preview (max-height: 280px) {
+  .orientation-control { width:186px;padding:0 8px 8px;display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:8px }
+  .orbit-heading { grid-column:1/-1;height:28px }
+  .orbit-globe { width:96px }
+  .orbit-readout { grid-template-columns:1fr;padding-top:0;gap:3px;align-self:center }
+  .orbit-readout label { flex-direction:row;align-items:center;gap:3px }
+  .orbit-readout label>span { width:12px;flex-shrink:0 }
+  .orbit-readout input { height:25px }
+}
 
 .stage-tools {
   position: absolute;
@@ -2026,8 +2041,7 @@ input:checked+.switch-track:after {
   .preview-status { left:16px;top:7px }
   .orientation-control { right:10px;top:43px;width:116px;padding:0 6px 8px }
   .orbit-heading { height:30px;padding-left:3px }
-  .orbit-readout { padding-top:5px;font-size:10px;gap:2px }
-  .orbit-readout span { flex-direction:column;gap:2px }
+  .orbit-readout { padding-top:5px;gap:2px }
   .stage-canvas:not(.actual) { position:absolute;top:78px;height:calc(100% - 124px) }
   .stage-tools { left:12px;right:10px;bottom:14px }
   .stage-pill { font-size:11px;gap:4px;padding:7px }
