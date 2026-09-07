@@ -6,6 +6,7 @@ import Stage from './CharacterStage.vue'
 import { FACE_SETS, expressionFromFace, facePose, type FacePreset } from './face-styles'
 import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, parseProject, sampleDefinition, uid, type Animation, type Character, type Expression, type Pose, type Project } from './model'
 import { demoZip, fileName, jsonBlob, renderMedia, saveBlob, setupInstructions } from './export'
+import type { EyeGazes } from './gaze'
 
 type Tab = 'character' | 'expressions' | 'animations' | 'export'
 type NumberKey = { [K in keyof Pose]: Pose[K] extends number ? K : never }[keyof Pose]
@@ -30,7 +31,7 @@ const playing = ref(!window.matchMedia('(prefers-reduced-motion: reduce)').match
 const time = ref(0), zoom = ref(1)
 const rotation = ref({ x: -5, y: -12, z: -7 })
 const previewSize = ref<number | null>(null)
-const previewCursor = ref({ x: 0, y: 0 })
+const previewCursor = ref<{ x: number; y: number; eyes?: EyeGazes }>({ x: 0, y: 0 })
 const background = 'transparent'
 const previewBackground = ref<'dark' | 'light' | 'transparent'>('dark')
 const previewBackgrounds = ['dark', 'light', 'transparent'] as const

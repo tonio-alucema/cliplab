@@ -3,6 +3,7 @@ import { gifIndexe, indexe, nouvellePalette, recense } from '../ui/anime'
 import { versMp4 } from '../ui/video'
 import { CharacterRenderer } from './renderer'
 import { sampleDefinition, type Definition, type Sample } from './model'
+import type { EyeGazes } from './gaze'
 
 export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob), a = document.createElement('a')
@@ -14,7 +15,7 @@ export function jsonBlob(value: unknown) { return new Blob([JSON.stringify(value
 export interface MediaOptions {
   width: number; height: number; fps: number; duration: number; animationId: string
   format: 'png' | 'gif' | 'mp4' | 'webm'; background: string | null; rotation: { x: number; y: number; z: number }
-  zoom: number; cursor?: { x: number; y: number }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
+  zoom: number; cursor?: { x: number; y: number; eyes?: EyeGazes }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
 }
 function cancelled(signal?: AbortSignal) { if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError') }
 const breathe = () => new Promise<void>(resolve => setTimeout(resolve, 0))
@@ -28,7 +29,7 @@ export async function renderMedia(definition: Definition, options: MediaOptions)
   const frames = Math.max(1, Math.round(options.duration * fps))
   const draw = (i: number) => {
     cancelled(signal)
-    renderer.render(definition.character, format === 'png' && options.sample ? options.sample : sampleDefinition(definition, options.animationId, i * options.duration / frames), { rotation: options.rotation, zoom: options.zoom, cursor: format === 'png' ? options.cursor : undefined }, format === 'png' && definition.character.followCursor ? options.cursor : undefined)
+    renderer.render(definition.character, format === 'png' && options.sample ? options.sample : sampleDefinition(definition, options.animationId, i * options.duration / frames), { rotation: options.rotation, zoom: options.zoom, cursor: format === 'png' ? options.cursor : undefined, eyeGazes: format === 'png' ? options.cursor?.eyes : undefined }, format === 'png' && definition.character.followCursor ? options.cursor : undefined)
   }
   try {
     if (format === 'png') {

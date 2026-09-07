@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { easeGaze, irisOffset, pointerGaze } from './gaze'
+import { easeGaze, easePointer, irisOffset, pointerGaze, pointerLook } from './gaze'
 
 describe('cursor gaze', () => {
+  it('retains precise canvas positions at small sizes and fades tracking without moving the target', () => {
+    const target = pointerLook({ clientX: 118, clientY: 212 }, { left: 100, top: 200, width: 24, height: 24 })
+    expect(target).toEqual({ x: .5, y: 0, weight: 1 })
+    const outside = pointerLook({ clientX: 172, clientY: 212 }, { left: 100, top: 200, width: 24, height: 24 })
+    expect(outside.x).toBe(5)
+    const leaving = easePointer(target, { ...target, weight: 0 }, .05)
+    expect(leaving.x).toBe(target.x); expect(leaving.y).toBe(target.y)
+    expect(leaving.weight).toBeGreaterThan(0); expect(leaving.weight).toBeLessThan(1)
+    expect(easePointer(leaving, { ...target, weight: 0 }, 1).weight).toBe(0)
+  })
   it('uses the actual canvas center and limits far-away pointers to a circular range', () => {
     const bounds = { left: 430, top: 170, width: 24, height: 24 }
     expect(pointerGaze({ clientX: 442, clientY: 182 }, bounds)).toEqual({ x: 0, y: -0 })

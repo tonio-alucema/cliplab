@@ -39,10 +39,13 @@ describe('iris following in exported players', () => {
   it('eases toward the cursor and returns to center while playback is paused', () => {
     player(); pointRight(); tick()
     expect(renderedGaze().x).toBeGreaterThan(0); expect(renderedGaze().x).toBeLessThan(1)
+    expect(render.mock.calls.at(-1)![2].pointerLook.weight).toBeGreaterThan(0)
+    expect(render.mock.calls.at(-1)![2].pointerLook.weight).toBeLessThan(1)
     tick(40); expect(renderedGaze()).toEqual({ x: 1, y: -0 })
     expect(render.mock.calls.at(-1)![1]).toEqual(render.mock.calls[0]![1])
     document.documentElement.dispatchEvent(new PointerEvent('pointerleave')); tick(40)
     expect(renderedGaze()).toEqual({ x: 0, y: 0 })
+    expect(render.mock.calls.at(-1)![2].pointerLook.weight).toBe(0)
   })
 
   it('honors explicit tracking off while keeping manual gaze independent of body following', () => {
@@ -50,8 +53,24 @@ describe('iris following in exported players', () => {
     value.setGaze(-.6, .3); pointRight(); tick(40)
     expect(renderedGaze()).toEqual({ x: -.6, y: .3 })
     expect(render.mock.calls.at(-1)![2].cursor.x).toBe(1)
+    expect(render.mock.calls.at(-1)![2].pointerLook).toBeUndefined()
     document.documentElement.dispatchEvent(new PointerEvent('pointerleave')); tick(40)
     expect(renderedGaze()).toEqual({ x: -.6, y: .3 })
+  })
+
+  it('lets manual gaze take over and recalculates focus after resizing or scrolling', () => {
+    const value = player(); pointRight(); tick(40)
+    expect(render.mock.calls.at(-1)![2].pointerLook).toMatchObject({ x: 4, y: 0, weight: 1 })
+    value.setGaze(-.4, .2); tick(40)
+    expect(renderedGaze()).toEqual({ x: -.4, y: .2 })
+    expect(render.mock.calls.at(-1)![2].pointerLook.weight).toBe(0)
+    pointRight(); tick(40)
+    vi.mocked(value.canvas.getBoundingClientRect).mockReturnValue({ left: 100, top: 100, width: 400, height: 400 } as DOMRect)
+    value.setSize(400); tick(60)
+    expect(render.mock.calls.at(-1)![2].pointerLook).toMatchObject({ x: 1.5, y: .5, weight: 1 })
+    vi.mocked(value.canvas.getBoundingClientRect).mockReturnValue({ left: 200, top: 100, width: 400, height: 400 } as DOMRect)
+    window.dispatchEvent(new Event('scroll')); tick(40)
+    expect(render.mock.calls.at(-1)![2].pointerLook).toMatchObject({ x: 1, y: .5, weight: 1 })
   })
 
   it('clears pending tracking on definition replacement and stops rendering after destroy', () => {

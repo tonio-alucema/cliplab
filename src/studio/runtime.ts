@@ -1,6 +1,6 @@
 import { CharacterRenderer } from './renderer'
 import { animationDuration, definitionOf, parseProject, sampleDefinition, type Definition } from './model'
-import { centeredGaze, clampGaze, easeGaze, pointerGaze } from './gaze'
+import { centeredGaze, clampGaze, easeGaze, easePointer, inactivePointer, pointerGaze, pointerLook } from './gaze'
 export type { Definition, Character, Expression, Animation, Pose } from './model'
 export interface CharacterOptions { animation?: string; size?: number; autoplay?: boolean; followCursor?: boolean; followRotation?: boolean; background?: string | null; respectReducedMotion?: boolean }
 
@@ -19,18 +19,26 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
   let expression: string | undefined
   let playing = options.autoplay !== false, completed = false, visible = true, destroyed = false, elapsed = 0, last = performance.now(), raf = 0
   let gaze = centeredGaze(), cursor = centeredGaze(), gazeTarget = centeredGaze(), cursorTarget = centeredGaze()
+  let focus = inactivePointer(), focusTarget = inactivePointer()
+  let lastPointer: { clientX: number; clientY: number } | undefined
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-  const render = () => renderer.render({ ...definition.character, followRotation: options.followRotation ?? definition.character.followRotation }, sampleDefinition(definition, animation, elapsed, expression), { background: options.background, cursor }, gaze)
-  const resize = () => { width = target.clientWidth || options.size || 120; height = target.clientHeight || options.size || 120; renderer.resize(width, height, Math.min(width, height)); render() }
+  const render = () => renderer.render({ ...definition.character, followRotation: options.followRotation ?? definition.character.followRotation }, sampleDefinition(definition, animation, elapsed, expression), { background: options.background, cursor, pointerLook: (options.followCursor ?? definition.character.followCursor) ? focus : undefined }, gaze)
+  const resize = () => { width = target.clientWidth || options.size || 120; height = target.clientHeight || options.size || 120; renderer.resize(width, height, Math.min(width, height)); if (lastPointer) trackPointer(lastPointer); render() }
   const observer = new ResizeObserver(resize); observer.observe(target)
   const intersection = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? true }); intersection.observe(target)
-  const pointer = (event: PointerEvent) => {
+  function trackPointer(event: { clientX: number; clientY: number }) {
     if (!(options.followCursor ?? definition.character.followCursor) && !(options.followRotation ?? definition.character.followRotation)) return
-    cursorTarget = pointerGaze(event, canvas.getBoundingClientRect())
-    if (options.followCursor ?? definition.character.followCursor) gazeTarget = { ...cursorTarget }
+    const bounds = canvas.getBoundingClientRect()
+    cursorTarget = pointerGaze(event, bounds)
+    if (options.followCursor ?? definition.character.followCursor) {
+      gazeTarget = { ...cursorTarget }; focusTarget = pointerLook(event, bounds)
+      if (!focus.weight) focus = { ...focusTarget, weight: 0 }
+    }
   }
-  const leave = () => { cursorTarget = centeredGaze(); if (options.followCursor ?? definition.character.followCursor) gazeTarget = centeredGaze() }
-  window.addEventListener('pointermove', pointer, { passive: true }); document.documentElement.addEventListener('pointerleave', leave)
+  const pointer = (event: PointerEvent) => { lastPointer = { clientX: event.clientX, clientY: event.clientY }; trackPointer(event) }
+  const scroll = () => { if (lastPointer) trackPointer(lastPointer) }
+  const leave = () => { lastPointer = undefined; cursorTarget = centeredGaze(); focusTarget = { ...focus, weight: 0 }; if (options.followCursor ?? definition.character.followCursor) gazeTarget = centeredGaze() }
+  window.addEventListener('pointermove', pointer, { passive: true }); window.addEventListener('scroll', scroll, { passive: true, capture: true }); document.documentElement.addEventListener('pointerleave', leave)
   function frame(now: number) {
     if (destroyed) return
     const seconds = Math.min((now - last) / 1000, .1)
@@ -38,8 +46,9 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
     let needsRender = false
     if (visible) {
       const nextGaze = easeGaze(gaze, gazeTarget, seconds, reduce), nextCursor = easeGaze(cursor, cursorTarget, seconds, reduce)
-      needsRender = nextGaze.x !== gaze.x || nextGaze.y !== gaze.y || nextCursor.x !== cursor.x || nextCursor.y !== cursor.y
-      gaze = nextGaze; cursor = nextCursor
+      const nextFocus = easePointer(focus, focusTarget, seconds, reduce)
+      needsRender = nextGaze.x !== gaze.x || nextGaze.y !== gaze.y || nextCursor.x !== cursor.x || nextCursor.y !== cursor.y || nextFocus.x !== focus.x || nextFocus.y !== focus.y || nextFocus.weight !== focus.weight
+      gaze = nextGaze; cursor = nextCursor; focus = nextFocus
     }
     if (playing && visible && !reduce) {
       elapsed += seconds
@@ -57,9 +66,9 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
     setAnimation(id: string) { if (!definition.animations.some(a => a.id === id)) throw new Error(`Unknown animation: ${id}`); animation = id; expression = undefined; elapsed = 0; if (completed) playing = true; completed = false; render() },
     setExpression(id: string) { if (!definition.expressions.some(e => e.id === id)) throw new Error(`Unknown expression: ${id}`); expression = id; elapsed = 0; if (completed) playing = true; completed = false; render() },
     seek(seconds: number) { elapsed = Math.max(0, Number.isFinite(seconds) ? seconds : 0); render() },
-    setGaze(x: number, y: number) { gaze = clampGaze({ x, y }); gazeTarget = { ...gaze }; render() },
+    setGaze(x: number, y: number) { gaze = clampGaze({ x, y }); gazeTarget = { ...gaze }; focus = inactivePointer(); focusTarget = inactivePointer(); lastPointer = undefined; render() },
     setSize(size: number) { target.style.width = `${Math.max(1, size)}px`; target.style.height = `${Math.max(1, size)}px`; resize() },
-    setDefinition(value: Definition) { project = parseProject(value); definition = definitionOf(project, project.characters[0]!); animation = definition.animations[0]?.id ?? 'idle'; expression = undefined; elapsed = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); cursor = centeredGaze(); cursorTarget = centeredGaze(); if (completed) playing = true; completed = false; canvas.setAttribute('aria-label', definition.character.name); render() },
-    destroy() { destroyed = true; cancelAnimationFrame(raf); observer.disconnect(); intersection.disconnect(); window.removeEventListener('pointermove', pointer); document.documentElement.removeEventListener('pointerleave', leave); renderer.dispose(); canvas.remove() }
+    setDefinition(value: Definition) { project = parseProject(value); definition = definitionOf(project, project.characters[0]!); animation = definition.animations[0]?.id ?? 'idle'; expression = undefined; elapsed = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); cursor = centeredGaze(); cursorTarget = centeredGaze(); focus = inactivePointer(); focusTarget = inactivePointer(); lastPointer = undefined; if (completed) playing = true; completed = false; canvas.setAttribute('aria-label', definition.character.name); render() },
+    destroy() { destroyed = true; cancelAnimationFrame(raf); observer.disconnect(); intersection.disconnect(); window.removeEventListener('pointermove', pointer); window.removeEventListener('scroll', scroll, true); document.documentElement.removeEventListener('pointerleave', leave); renderer.dispose(); canvas.remove() }
   }
 }

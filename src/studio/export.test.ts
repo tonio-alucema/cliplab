@@ -3,10 +3,21 @@ import { unzipSync, strFromU8 } from 'fflate'
 import ts from 'typescript'
 import { defaultProject, definitionOf } from './model'
 import { demoZip, renderMedia } from './export'
+const { draw } = vi.hoisted(() => ({ draw: vi.fn() }))
+vi.mock('./renderer', () => ({ CharacterRenderer: class { render = draw; dispose() {} } }))
 afterEach(() => vi.unstubAllGlobals())
 describe('export contracts', () => {
   const p = defaultProject(), d = definitionOf(p, p.characters[0]!)
   const options = { width: 256, height: 256, fps: 20, duration: 5, animationId: 'idle', format: 'gif' as const, background: null, rotation: { x: 0, y: 0, z: 0 }, zoom: 1 }
+  it('preserves the exact eye directions in PNG exports with different framing', async () => {
+    const eyes = { left: { x: .91, y: .1 }, right: { x: -.87, y: -.1 } }
+    vi.stubGlobal('document', { createElement: () => ({ toBlob: (callback: (blob: Blob) => void) => callback(new Blob(['png'], { type: 'image/png' })) }) })
+    for (const [width, height, zoom] of [[1080, 1920, .7], [1920, 1080, 1.4]]) {
+      await renderMedia(d, { ...options, width: width!, height: height!, zoom: zoom!, format: 'png', cursor: { x: .5, y: .4, eyes } })
+      expect(draw.mock.calls.at(-1)![2].eyeGazes).toEqual(eyes)
+      expect(draw.mock.calls.at(-1)![2].pointerLook).toBeUndefined()
+    }
+  })
   it('rejects partial or oversized export requests before creating a renderer', async () => {
     await expect(renderMedia(d, { ...options, duration: 61 })).rejects.toThrow('60 seconds')
     await expect(renderMedia(d, { ...options, fps: 24 })).rejects.toThrow('20 fps')

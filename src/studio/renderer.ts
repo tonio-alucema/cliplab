@@ -1,10 +1,11 @@
 import * as THREE from 'three'
 import { BASE_POSE, detailAt, type Character, type Detail, type Pose, type Sample, type Shape } from './model'
-import { irisOffset } from './gaze'
+import { gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 
 export interface RenderOptions {
   width: number; height: number; displaySize?: number; background?: string | null
   cursor?: { x: number; y: number }; rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
+  pointerLook?: PointerLook; eyeGazes?: EyeGazes
 }
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : 1
 export function radiusAt(shape: Shape, y: number): number {
@@ -72,10 +73,43 @@ const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, 
 const fract = (v: number) => ((v % 1) + 1) % 1
 export function effectEnvelope(phase: number) { const t = fract(phase); return smoothstep(0, .18, t) * (1 - smoothstep(.72, 1, t)) }
 export function eyeRadius(pose: Pose, character: Character, detail: Detail, side: number) { return (detail === 'eyes' ? 29 : 27) * pose.eyeSize * (side < 0 ? pose.leftScale : pose.rightScale) * (character.iris ? 1.2 : 1) }
+
+export function projectedEye(character: Character, pose: Pose, blink: number, side: number, matrix: THREE.Matrix4, camera: THREE.Camera) {
+  const radius = eyeRadius(pose, character, 'full', side)
+  const cx = 256 + side * 103 * pose.spacing + (side < 0 ? pose.leftX : pose.rightX)
+  const cy = 197 - (side < 0 ? pose.leftY : pose.rightY)
+  const angle = (pose.eyeTilt * side + (side < 0 ? pose.leftRotation : pose.rightRotation)) * Math.PI / 180
+  const h = Math.max(.12, 1 - blink) * pose.eyeHeight * (pose.eye === 'soft' ? .65 : 1)
+  const shell = character.elevated ? 1 + character.elevation : 1.003
+  const project = (dx: number, dy: number) => {
+    const tx = cx + Math.cos(angle) * dx - Math.sin(angle) * dy * h
+    const ty = cy + faceAspect * (Math.sin(angle) * dx + Math.cos(angle) * dy * h)
+    const x = (tx / 512 - .5) * .76 * pose.faceScale
+    const y = (.5 - ty / 512) * .57 * pose.faceScale + (character.shape === 'capsule' ? -.14 : -.025) + pose.faceY
+    const r = shell * radiusAt(character.shape, y / shell)
+    return new THREE.Vector3(x, y, Math.sqrt(Math.max(.001, r * r - x * x))).applyMatrix4(matrix).project(camera)
+  }
+  const center = project(0, 0)
+  // Central differences follow the tangent of the curved face at this eye.
+  const right = project(radius * .1, 0).sub(project(-radius * .1, 0)).multiplyScalar(5).add(center)
+  const up = project(0, -radius * .1).sub(project(0, radius * .1)).multiplyScalar(5).add(center)
+  return { center, right, up }
+}
+
+export function resolveEyeGazes(character: Character, pose: Pose, blink: number, matrix: THREE.Matrix4, camera: THREE.Camera, gaze: Gaze, pointer?: PointerLook): EyeGazes {
+  const eye = (side: number) => {
+    const base = localGaze({ x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }, pose.eyeTilt * side + (side < 0 ? pose.leftRotation : pose.rightRotation))
+    if (!pointer?.weight) return base
+    const { center, right, up } = projectedEye(character, pose, blink, side, matrix, camera)
+    const look = gazeAtPoint(pointer, center, right, up), weight = Math.max(0, Math.min(1, pointer.weight))
+    return { x: base.x + (look.x - base.x) * weight, y: base.y + (look.y - base.y) * weight }
+  }
+  return { left: eye(-1), right: eye(1) }
+}
 function drop(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath(); ctx.moveTo(x, y - r * 1.5); ctx.bezierCurveTo(x - r * .25, y - r * .8, x - r, y - r * .2, x - r, y + r * .35); ctx.bezierCurveTo(x - r, y + r * 1.65, x + r, y + r * 1.65, x + r, y + r * .35); ctx.bezierCurveTo(x + r, y - r * .2, x + r * .25, y - r * .8, x, y - r * 1.5); ctx.fill()
 }
-export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number } = {}) {
+export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes } = {}) {
   ctx.clearRect(0, 0, 512, 512)
   if (detail === 'body') return
   const ink = character.eyeColor, eyeY = detail === 'eyes' ? 254 : 197, spacing = 103 * pose.spacing
@@ -84,6 +118,7 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   for (const side of [-1, 1]) {
     const r = eyeRadius(pose, character, detail, side)
+    const eyeGaze = side < 0 ? effects.eyeGazes?.left : effects.eyeGazes?.right
     const pupilEyes = pose.eye === 'pupil' && detail === 'full'
     const x = 256 + side * spacing + (pupilEyes ? 0 : gx) + (side < 0 ? pose.leftX : pose.rightX), y = eyeY + (pupilEyes ? 0 : gy) - (side < 0 ? pose.leftY : pose.rightY)
     if (detail === 'full' && pose.blush > 0) {
@@ -117,13 +152,14 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
       else if (pupilEyes) {
         const outer = r * 1.5
         ctx.fillStyle = '#fffef9'; ctx.beginPath(); ctx.arc(0, 0, outer, 0, Math.PI * 2); ctx.fill(); ctx.clip()
-        ctx.fillStyle = ink; ctx.beginPath(); ctx.arc((pose.gazeX + gaze.x) * outer * .52, -(pose.gazeY + gaze.y) * outer * .52, outer * .4, 0, Math.PI * 2); ctx.fill()
+        const look = eyeGaze ?? { x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }
+        ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(look.x * outer * .52, -look.y * outer * .52, outer * .4, 0, Math.PI * 2); ctx.fill()
       }
       else { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill() }
       if (internalGaze && !pupilEyes && pose.eye !== 'half-lidded') {
         // The eye path also clips star/heart shapes and intersects cheek cutouts.
         ctx.clip()
-        const dot = irisOffset(r, { x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }, pose.eyeTilt * side + localRotation, pose.cheeks)
+        const dot = irisOffset(r, eyeGaze ?? { x: pose.gazeX + gaze.x, y: pose.gazeY + gaze.y }, eyeGaze ? 0 : pose.eyeTilt * side + localRotation, pose.cheeks)
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dot.x, dot.y, r * .28, 0, Math.PI * 2); ctx.fill()
       }
     }
@@ -213,6 +249,7 @@ export class CharacterRenderer {
   private shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
   private shape: Shape = 'capsule'
   private lastFaceKey = ''
+  private resolvedEyes: EyeGazes | undefined
   private lastProp = ''
   private disposed = false
   private options: RenderOptions
@@ -282,11 +319,13 @@ export class CharacterRenderer {
     const aspect = this.options.width / this.options.height
     const half = Math.max(height * .72, .72 / aspect) / zoom
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
+    this.camera.updateMatrixWorld(true)
     this.face.visible = detail !== 'body'
     // Pointer directions stay relative to the screen when the character rolls or turns.
     const faceGaze = character.iris ? new THREE.Vector3(gaze.x, gaze.y, 0).applyQuaternion(this.root.quaternion.clone().invert()) : gaze
-    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3)])
-    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
+    this.resolvedEyes = detail === 'full' && (character.iris || pose.eye === 'pupil') ? this.options.eyeGazes ?? resolveEyeGazes(character, pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, this.options.pointerLook) : undefined
+    const key = JSON.stringify([pose, character.eyeColor, character.iris, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
+    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!
@@ -316,6 +355,7 @@ export class CharacterRenderer {
     this.gl.render(this.scene, this.camera)
   }
   orientation() { return this.root.quaternion.clone() }
+  eyeGazes() { return this.resolvedEyes ? { left: { ...this.resolvedEyes.left }, right: { ...this.resolvedEyes.right } } : undefined }
   dispose() {
     if (this.disposed) return
     this.disposed = true

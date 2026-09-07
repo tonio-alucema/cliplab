@@ -35,7 +35,7 @@ Changes autosave to this browser. Undo and redo keep recent edits. Export a **Pr
 
 App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, `followCursor`, and `followRotation`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
 
-Turning on **White eye dots** also enables **Eyes follow cursor**. The dots ease toward the pointer inside the black eye shapes, leaving the face in place. Tracking continues while playback is paused and returns to center when the pointer leaves the window. Turn **Eyes follow cursor** off for a fixed or authored gaze; app integrations can also override it with `followCursor: false` and use `setGaze()` directly.
+Turning on **White eye dots** also enables **Eyes follow cursor**. Each dot independently tracks the pointer from its eye's position, so moving between the eyes creates a crossed-eye look. Tracking accounts for character rotation, eye placement and preview size, eases while playback is paused, and returns to authored gaze when the pointer leaves the window. Turn **Eyes follow cursor** off for a fixed or authored gaze; app integrations can also override it with `followCursor: false` and use `setGaze()` directly. PNG exports preserve the preview's individual eye directions even with different output framing.
 
 ## Implementation
 
