@@ -86,7 +86,11 @@ function restoreSnapshot(value: string) { const priorIds = new Set(project.value
 function undo() { if (JSON.stringify(project.value) !== stable) flush(); const previous = history.value.pop(); if (previous) { future.value.push(stable); restoreSnapshot(previous); notify('Change undone.') } }
 function redo() { const following = future.value.pop(); if (following) { history.value.push(stable); restoreSnapshot(following); notify('Change restored.') } }
 function resetRotation() { rotatePreview({ x: -5, y: -12, z: -7 }) }
-function toggleFront() { character.value.trueFront = !character.value.trueFront; if (character.value.trueFront) character.value.followRotation = false }
+function toggleFront() {
+  rotation.value = { x: 0, y: 0, z: 0 }
+  character.value.trueFront = !character.value.trueFront
+  if (character.value.trueFront) character.value.followRotation = false
+}
 function toggleIris(event: Event) {
   character.value.iris = (event.target as HTMLInputElement).checked
   if (character.value.iris) character.value.followCursor = true
