@@ -15,9 +15,18 @@ describe('compact faces from 24 through 48 CSS pixels', () => {
     }
     for (const size of [12, 16, 23, 23.99, 48.01, 49, 96]) {
       const restored = faceForSize(character, sample, size)
-      expect(restored.sample).toBe(sample); expect(restored.character).toBe(character)
+      expect(restored.sample).toBe(sample); expect(restored.character.iris).toBe(character.iris)
       expect(restored.simpleEyes).toBe(false)
     }
+    const shaded = { ...character, toon: true, candleLight: true, shadow: true }
+    for (const size of [12, 16, 24, 32, 47.99, 48, 96]) {
+      const adapted = faceForSize(shaded, sample, size)
+      expect(adapted.character.toon).toBe(size >= 48)
+      expect(adapted.character.candleLight).toBe(size >= 48)
+      expect(adapted.character.shadow).toBe(size >= 48)
+      for (const key of ['gradient', 'color', 'color2', 'gradientAngle'] as const) expect(adapted.character[key]).toBe(shaded[key])
+    }
+    expect(shaded.toon).toBe(true); expect(shaded.candleLight).toBe(true); expect(shaded.shadow).toBe(true)
     expect(sample.pose.faceScale).toBe(.8); expect(character.iris).toBe(true)
   })
   it('draws black circles instead of pupils, hearts, cheek cuts or happy arcs, including during morphs', () => {

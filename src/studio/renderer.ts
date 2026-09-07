@@ -17,11 +17,12 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
     z: rotation.z + pose.rotationZ
   }
 }
-/** Size adaptation is render-only; resizing restores the authored face and iris. */
+/** Size adaptation is render-only; larger sizes restore the authored appearance. */
 export function faceForSize(character: Character, sample: Sample, size: number) {
   const simpleEyes = size >= 24 && size <= 48
+  const flatFill = size < 48
   return {
-    character: simpleEyes ? { ...character, iris: false } : character,
+    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, candleLight: false, shadow: false } : {}) } : character,
     sample: simpleEyes ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.3 } } : sample,
     simpleEyes
   }
