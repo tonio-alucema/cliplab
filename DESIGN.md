@@ -250,7 +250,7 @@ The interface uses tonal layering, generous outer rounding, and faint ambient sh
 - **Current timeline beat:** slight lift under the dark selection (`0 3px 7px #0000001a`).
 - **Toast:** temporary feedback elevation (`0 10px 30px #00000044`).
 
-**The Crisp Lighting Rule.** Blend character body colors smoothly while keeping toon lighting boundaries hard. The camera-fixed candle mode uses one rounded inset silhouette over a single darker outer shade, following the cap, capsule, or sphere as it rotates; the selectable directional mode uses three normal-based bands. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.
+**The Crisp Lighting Rule.** Blend character body colors smoothly while keeping toon lighting boundaries hard. Toon shading always uses the rounded candle-light treatment: one inset silhouette over a single darker outer shade, following the cap, capsule, or sphere as it rotates. There is no separate candle-light toggle or directional mode. With either eye or body cursor following enabled, the inner silhouette shifts gently toward the cursor in the camera plane, with bounded travel that preserves the darker rim. With tracking off or reduced motion enabled, it rests slightly up-left. The optional ground shadow has a crisp elliptical boundary. Do not transfer this character-lighting constraint into a ban on the interface's soft ambient shadows.
 
 ## Shapes
 

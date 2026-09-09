@@ -53,12 +53,21 @@ describe('portable project definitions', () => {
     for (const character of old.characters) for (const key of ['toon', 'candleLight', 'trueFront', 'lockPosition']) delete character[key]
     for (const expression of old.expressions) for (const beat of expression.beats) for (const key of ['cheeks', 'tears', 'mouthStroke']) delete beat.pose[key]
     const restored = parseProject(old)
-    expect(restored.characters[0]).toMatchObject({ toon: true, candleLight: true, trueFront: false, lockPosition: false })
+    expect(restored.characters[0]).toMatchObject({ toon: true, trueFront: false, lockPosition: false })
     expect(restored.expressions[0]!.beats[0]!.pose).toMatchObject({ cheeks: false, tears: false, mouthStroke: 1 })
-    restored.characters[0]!.toon = restored.characters[0]!.candleLight = false
+    restored.characters[0]!.toon = false
     restored.characters[0]!.trueFront = restored.characters[0]!.lockPosition = true
     restored.expressions[0]!.beats[0]!.pose.tears = true
     expect(parseProject(JSON.parse(JSON.stringify(restored)))).toEqual(restored)
+  })
+  it('migrates old candle-light choices into unified toon shading without restoring the obsolete toggle', () => {
+    for (const toon of [false, true]) for (const candleLight of [false, true]) {
+      const old = defaultProject()
+      Object.assign(old.characters[0]!, { toon, candleLight })
+      const restored = parseProject(old).characters[0]!
+      expect(restored.toon).toBe(toon)
+      expect(restored).not.toHaveProperty('candleLight')
+    }
   })
   it('round-trips the full project and a selected-animation app export', () => {
     const project = defaultProject()

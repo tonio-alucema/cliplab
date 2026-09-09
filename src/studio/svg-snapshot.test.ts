@@ -10,7 +10,7 @@ function fixture() {
   const character = { ...defaultProject().characters[0]!, shape: 'sphere' as const, color: '#12ab89', color2: '#fd7542', gradientAngle: 32, name: '<Milo & friends>', iris: true }
   const sample = { pose: { ...BASE_POSE, eye: 'heart' as const, mouth: 'open' as const, cheeks: true, teeth: true, prop: 'heart' as const }, blink: .1, bob: 0, breathe: 0, gradientRotation: 75, expressionId: 'happy', stepIndex: 0, beatIndex: 0 }
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 30); camera.position.z = 8; camera.updateMatrixWorld(true)
-  const material = new THREE.ShaderMaterial({ uniforms: { colorA: { value: new THREE.Color(character.color) }, colorB: { value: new THREE.Color(character.color2) }, gradientOn: { value: 1 }, toonOn: { value: 1 }, candleLight: { value: 1 }, insetFill: { value: 0 }, angle: { value: 107 * Math.PI / 180 }, bodyHeight: { value: 1 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() } } })
+  const material = new THREE.ShaderMaterial({ uniforms: { colorA: { value: new THREE.Color(character.color) }, colorB: { value: new THREE.Color(character.color2) }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, angle: { value: 107 * Math.PI / 180 }, bodyHeight: { value: 1 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() } } })
   const body = new THREE.Mesh(new THREE.SphereGeometry(.5, 80, 64), material), lightFill = new THREE.Mesh(body.geometry, material.clone())
   lightFill.scale.setScalar(.85); lightFill.material.uniforms.insetFill!.value = 1; lightFill.material.uniforms.fillScale!.value.setScalar(.85)
   const face = new THREE.Mesh(new THREE.PlaneGeometry(.5, .4, 56, 40), new THREE.MeshBasicMaterial()); face.position.z = .51
@@ -64,7 +64,7 @@ describe('vector SVG snapshots', () => {
     }
   })
   it('retains exact planar gradient positions and endpoints', () => {
-    const points = [{ x: 10, y: 15 }, { x: 300, y: 25 }, { x: 20, y: 400 }].map(p => ({ ...p, z: 0, light: 1, t: .2 + p.x * .001 - p.y * .002 }))
+    const points = [{ x: 10, y: 15 }, { x: 300, y: 25 }, { x: 20, y: 400 }].map(p => ({ ...p, z: 0, t: .2 + p.x * .001 - p.y * .002 }))
     const fit = fitGradient([{ points }])
     for (const p of points) expect(fit.t + fit.gx * (p.x - fit.x) + fit.gy * (p.y - fit.y)).toBeCloseTo(p.t, 10)
   })

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { BASE_POSE, detailAt, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
-import { gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
+import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, traitWeight } from './face-morph'
 
 export interface RenderOptions {
@@ -17,12 +17,18 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
     z: rotation.z + pose.rotationZ
   }
 }
+/** One rounded light region; either existing cursor-following toggle activates
+ * a subtle light-source shift. The shared eased cursor keeps motion smooth. */
+export function toonLightOffset(character: Pick<Character, 'followCursor' | 'followRotation'>, cursor: Gaze = { x: 0, y: 0 }, reducedMotion = false): Gaze {
+  const look = !reducedMotion && (character.followCursor || character.followRotation) ? clampGaze(cursor) : { x: 0, y: 0 }
+  return { x: -.015 + look.x * .045, y: .015 + look.y * .045 }
+}
 /** Size adaptation is render-only; larger sizes restore the authored appearance. */
 export function faceForSize(character: Character, sample: Sample, size: number) {
   const simpleEyes = size >= 24 && size <= 48
   const flatFill = size < 48
   return {
-    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, candleLight: false, shadow: false } : {}) } : character,
+    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}) } : character,
     sample: simpleEyes ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.3 } } : sample,
     simpleEyes
   }
@@ -48,10 +54,8 @@ const vertexShader = `
   uniform vec3 fillScale;
   uniform vec3 fillOffset;
   varying vec3 vPosition;
-  varying vec3 vWorldNormal;
   void main() {
     vPosition = position * fillScale + fillOffset;
-    vWorldNormal = normalize(normalMatrix * normal);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
@@ -60,20 +64,16 @@ const fragmentShader = `
   uniform vec3 colorB;
   uniform float gradientOn;
   uniform float toonOn;
-  uniform float candleLight;
   uniform float insetFill;
   uniform float angle;
   uniform float bodyHeight;
   varying vec3 vPosition;
-  varying vec3 vWorldNormal;
   void main() {
     float t = clamp(0.5 + vPosition.y / bodyHeight * cos(angle) + vPosition.x * sin(angle), 0.0, 1.0);
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
-    float light = dot(normalize(vWorldNormal), normalize(vec3(-0.6, 0.85, 1.0)));
-    float shade = light > 0.58 ? 1.0 : (light > 0.08 ? 0.81 : 0.64);
     // The light fill uses an inset copy of the silhouette, with one crisp shade step.
-    float candle = mix(0.8, 1.0, insetFill);
-    gl_FragColor = vec4(color * mix(1.0, mix(shade, candle, candleLight), toonOn), 1.0);
+    float shade = mix(0.8, 1.0, insetFill);
+    gl_FragColor = vec4(color * mix(1.0, shade, toonOn), 1.0);
     #include <colorspace_fragment>
   }
 `
@@ -309,7 +309,7 @@ export class CharacterRenderer {
     this.propCanvas.width = this.propCanvas.height = 256; this.propCtx = this.propCanvas.getContext('2d')!
     this.propTexture = new THREE.CanvasTexture(this.propCanvas); this.propTexture.colorSpace = THREE.SRGBColorSpace
     const material = new THREE.ShaderMaterial({
-      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, candleLight: { value: 0 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
+      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
     })
     this.body = new THREE.Mesh(geometryFor('capsule'), material)
     const fillMaterial = material.clone(); fillMaterial.depthTest = false; fillMaterial.depthWrite = false; fillMaterial.uniforms.insetFill!.value = 1
@@ -342,24 +342,27 @@ export class CharacterRenderer {
     const detail = detailAt(displaySize)
     const u = this.body.material.uniforms
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
-    u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
+    u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height
     const rotation = characterRotation(this.options.reducedMotion ? { ...character, followRotation: false } : character, pose, this.options.rotation, this.options.cursor)
     this.root.rotation.set(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))
-    this.lightFill.visible = character.toon && character.candleLight
+    this.lightFill.visible = character.toon
     const fillScale = this.shape === 'capsule' ? 1 : .85
     this.lightFill.scale.setScalar(fillScale)
     this.root.updateMatrixWorld(true)
-    // Keep the small light offset in the camera plane as the body turns.
-    const lightOffset = new THREE.Vector3(-.035, -.035, 0).applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert())
+    // Shift the inset toward the pointer in the camera plane, not the tilted
+    // body's axes. Bound travel by the narrowest stretch to retain a dark rim.
+    const lightTarget = toonLightOffset(character, this.options.cursor, this.options.reducedMotion)
+    const lightScale = Math.min(this.root.scale.x, this.root.scale.y, this.root.scale.z)
+    const lightOffset = new THREE.Vector3(lightTarget.x * lightScale, lightTarget.y * lightScale, 0).applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert())
       .sub(new THREE.Vector3().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert()))
     this.lightFill.position.copy(lightOffset)
     const fu = this.lightFill.material.uniforms
     for (const name of ['colorA', 'colorB']) (fu[name]!.value as THREE.Color).copy(u[name]!.value as THREE.Color)
-    for (const name of ['gradientOn', 'toonOn', 'candleLight', 'angle', 'bodyHeight']) fu[name]!.value = u[name]!.value
+    for (const name of ['gradientOn', 'toonOn', 'angle', 'bodyHeight']) fu[name]!.value = u[name]!.value
     ;(fu.fillScale!.value as THREE.Vector3).setScalar(fillScale); (fu.fillOffset!.value as THREE.Vector3).copy(lightOffset)
     const zoom = this.options.zoom ?? 1
     const aspect = this.options.width / this.options.height

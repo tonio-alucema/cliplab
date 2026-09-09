@@ -5,7 +5,7 @@ import { SvgCanvas, number as n, xml } from './svg-canvas'
 import { boundaryContours, pathData, type Point, type ProjectPoint } from './svg-path'
 
 type Snapshot = ReturnType<CharacterRenderer['snapshotScene']>
-type Vertex = { x: number; y: number; z: number; t: number; light: number }
+type Vertex = { x: number; y: number; z: number; t: number }
 type Triangle = { points: Vertex[]; indices: number[] }
 const cross = (a: Pick<Vertex, 'x' | 'y'>, b: Pick<Vertex, 'x' | 'y'>, c: Pick<Vertex, 'x' | 'y'>) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 function hull(points: Vertex[]) {
@@ -13,14 +13,14 @@ function hull(points: Vertex[]) {
   const half = (items: Vertex[]) => { const out: Vertex[] = []; for (const p of items) { while (out.length > 1 && cross(out.at(-2)!, out.at(-1)!, p) <= 0) out.pop(); out.push(p) } return out }
   return [...half(sorted).slice(0, -1), ...half([...sorted].reverse()).slice(0, -1)]
 }
-function clip(points: Vertex[], key: 'light' | 'z', threshold: number, above: boolean) {
+function clip(points: Vertex[], threshold: number, above: boolean) {
   const out: Vertex[] = []
   for (let i = 0; i < points.length; i++) {
-    const a = points[i]!, b = points[(i + 1) % points.length]!, insideA = above ? a[key] >= threshold : a[key] <= threshold, insideB = above ? b[key] >= threshold : b[key] <= threshold
+    const a = points[i]!, b = points[(i + 1) % points.length]!, insideA = above ? a.z >= threshold : a.z <= threshold, insideB = above ? b.z >= threshold : b.z <= threshold
     if (insideA) out.push(a)
     if (insideA !== insideB) {
-      const f = (threshold - a[key]) / (b[key] - a[key])
-      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f, t: a.t + (b.t - a.t) * f, light: a.light + (b.light - a.light) * f })
+      const f = (threshold - a.z) / (b.z - a.z)
+      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f, t: a.t + (b.t - a.t) * f })
     }
   }
   return out
@@ -62,21 +62,18 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const { character, sample, camera, options, body, lightFill, face, prop, shadow } = snapshot
   const { width, height } = options
   const defs: string[] = [], contents: string[] = []
-  const project = (p: THREE.Vector3) => { const v = p.clone().project(camera); return { x: (v.x + 1) * width / 2, y: (1 - v.y) * height / 2, z: v.z, t: 0, light: 0 } }
+  const project = (p: THREE.Vector3) => { const v = p.clone().project(camera); return { x: (v.x + 1) * width / 2, y: (1 - v.y) * height / 2, z: v.z, t: 0 } }
   const triangles = (mesh: THREE.Mesh, shading = false): { triangles: Triangle[]; vertices: Vertex[] } => {
-    const geometry = mesh.geometry, position = geometry.getAttribute('position'), normal = geometry.getAttribute('normal'), index = geometry.index
+    const geometry = mesh.geometry, position = geometry.getAttribute('position'), index = geometry.index
     const material = mesh.material as THREE.ShaderMaterial, uniforms = shading ? material.uniforms : undefined
     const angle = uniforms?.angle?.value ?? 0, bodyHeight = uniforms?.bodyHeight?.value ?? 1
     const scale = uniforms?.fillScale?.value as THREE.Vector3 | undefined, offset = uniforms?.fillOffset?.value as THREE.Vector3 | undefined
-    const normalMatrix = new THREE.Matrix3().getNormalMatrix(new THREE.Matrix4().multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld))
-    const light = new THREE.Vector3(-.6, .85, 1).normalize()
     const vertices: Vertex[] = []
     for (let i = 0; i < position.count; i++) {
       const local = new THREE.Vector3().fromBufferAttribute(position, i), v = project(local.clone().applyMatrix4(mesh.matrixWorld))
       if (shading) {
         local.multiply(scale ?? new THREE.Vector3(1, 1, 1)).add(offset ?? new THREE.Vector3())
         v.t = .5 + local.y / bodyHeight * Math.cos(angle) + local.x * Math.sin(angle)
-        v.light = new THREE.Vector3().fromBufferAttribute(normal, i).applyNormalMatrix(normalMatrix).dot(light)
       }
       vertices.push(v)
     }
@@ -92,23 +89,18 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const surface = (mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, label: string) => {
     const data = triangles(mesh, true), u = mesh.material.uniforms
     const colorA = u.colorA!.value as THREE.Color, colorB = (u.colorB!.value as THREE.Color).clone().lerp(colorA, 1 - u.gradientOn!.value)
-    const candle = !!u.candleLight!.value, toon = !!u.toonOn!.value
-    const bands = !toon ? [{ min: -2, max: 2, shade: 1 }] : candle ? [{ min: -2, max: 2, shade: u.insetFill!.value ? 1 : .8 }] : [{ min: -2, max: .08, shade: .64 }, { min: .08, max: .58, shade: .81 }, { min: .58, max: 2, shade: 1 }]
+    const shade = u.toonOn!.value && !u.insetFill!.value ? .8 : 1
     const gradient = fitGradient(data.triangles), { x, y, t, gx, gy } = gradient, length = gx * gx + gy * gy
-    const paths = bands.map((band, index) => {
-      let fill = shadedColor(colorA, band.shade)
-      if (u.gradientOn!.value > 0 && !colorA.equals(colorB)) {
-        if (length < 1e-18) fill = shadedColor(colorB.clone().lerp(colorA, Math.max(0, Math.min(1, t))), band.shade)
-        else {
-          const id = `${label}-gradient-${index}`
-          defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" color-interpolation="linearRGB" x1="${n(x - gx * t / length)}" y1="${n(y - gy * t / length)}" x2="${n(x + gx * (1 - t) / length)}" y2="${n(y + gy * (1 - t) / length)}"><stop stop-color="${shadedColor(colorB, band.shade)}"/><stop offset="1" stop-color="${shadedColor(colorA, band.shade)}"/></linearGradient>`)
-          fill = `url(#${id})`
-        }
+    let fill = shadedColor(colorA, shade)
+    if (u.gradientOn!.value > 0 && !colorA.equals(colorB)) {
+      if (length < 1e-18) fill = shadedColor(colorB.clone().lerp(colorA, Math.max(0, Math.min(1, t))), shade)
+      else {
+        const id = `${label}-gradient`
+        defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" color-interpolation="linearRGB" x1="${n(x - gx * t / length)}" y1="${n(y - gy * t / length)}" x2="${n(x + gx * (1 - t) / length)}" y2="${n(y + gy * (1 - t) / length)}"><stop stop-color="${shadedColor(colorB, shade)}"/><stop offset="1" stop-color="${shadedColor(colorA, shade)}"/></linearGradient>`)
+        fill = `url(#${id})`
       }
-      const d = bands.length === 1 ? outline(data.vertices) : pathData(boundaryContours(data.triangles.map(triangle => clip(clip(triangle.points, 'light', band.min, true), 'light', band.max, false)).filter(p => p.length >= 3)))
-      return `<path fill="${fill}" d="${d}"/>`
-    })
-    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : 'Inner body'}">${paths.join('')}</g>`)
+    }
+    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : 'Inner body'}"><path fill="${fill}" d="${outline(data.vertices)}"/></g>`)
     return data
   }
   if (options.background) contents.push(`<rect width="${width}" height="${height}" fill="${xml(options.background)}"/>`)
@@ -134,7 +126,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
     drawProp(art as unknown as CanvasRenderingContext2D, name, name === 'heart' ? '#ff768c' : name === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase)
     const center = project(prop.getWorldPosition(new THREE.Vector3())), scale = prop.getWorldScale(new THREE.Vector3())
     const w = scale.x * width / (camera.right - camera.left), h = scale.y * height / (camera.top - camera.bottom)
-    const occlusion = pathData(boundaryContours(bodyData.triangles.map(t => clip(t.points, 'z', center.z, false)).filter(p => p.length >= 3)))
+    const occlusion = pathData(boundaryContours(bodyData.triangles.map(t => clip(t.points, center.z, false)).filter(p => p.length >= 3)))
     defs.push(`<mask id="prop-occlusion" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="white"/><path d="${occlusion}" fill="black"/></mask>`)
     transparent.push({ z: center.z, markup: `<g id="supporting-elements" data-name="Supporting elements" mask="url(#prop-occlusion)" opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
   }
