@@ -2,13 +2,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { unzipSync, strFromU8 } from 'fflate'
 import ts from 'typescript'
 import { defaultProject, definitionOf } from './model'
-import { demoZip, renderMedia } from './export'
-const { draw } = vi.hoisted(() => ({ draw: vi.fn() }))
-vi.mock('./renderer', () => ({ CharacterRenderer: class { render = draw; dispose() {} } }))
+import { demoZip, renderMedia, renderSvg } from './export'
+const { draw, serialize, dispose } = vi.hoisted(() => ({ draw: vi.fn(), serialize: vi.fn(() => '<svg xmlns="http://www.w3.org/2000/svg"/>'), dispose: vi.fn() }))
+vi.mock('./renderer', () => ({ CharacterRenderer: class { render = draw; dispose = dispose; snapshotScene() { return { current: true } } } }))
+vi.mock('./svg-snapshot', () => ({ snapshotSvg: serialize }))
 afterEach(() => vi.unstubAllGlobals())
 describe('export contracts', () => {
   const p = defaultProject(), d = definitionOf(p, p.characters[0]!)
   const options = { width: 256, height: 256, fps: 20, duration: 5, animationId: 'idle', format: 'gif' as const, background: null, rotation: { x: 0, y: 0, z: 0 }, zoom: 1 }
+  it('captures SVG from the supplied pose and eye directions and releases the renderer', () => {
+    vi.stubGlobal('document', { createElement: () => ({}) })
+    const sample = { pose: p.expressions[1]!.beats[1]!.pose, blink: .2, bob: .3, breathe: .1, expressionId: 'listening', beatIndex: 1, stepIndex: 0 }
+    const cursor = { x: .2, y: -.5, eyes: { left: { x: .8, y: .1 }, right: { x: -.7, y: .1 } } }
+    const rotation = { x: 12, y: -32, z: 8 }
+    expect(renderSvg(d, { ...options, sample, cursor, rotation })).toContain('<svg')
+    expect(draw.mock.calls.at(-1)![1]).toBe(sample)
+    expect(draw.mock.calls.at(-1)![2]).toMatchObject({ rotation, cursor, eyeGazes: cursor.eyes })
+    expect(serialize).toHaveBeenCalledWith({ current: true }); expect(dispose).toHaveBeenCalled()
+    expect(() => renderSvg(d, { ...options, width: 0 })).toThrow('2048')
+  })
   it('preserves the exact eye directions in PNG exports with different framing', async () => {
     const eyes = { left: { x: .91, y: .1 }, right: { x: -.87, y: -.1 } }
     vi.stubGlobal('document', { createElement: () => ({ toBlob: (callback: (blob: Blob) => void) => callback(new Blob(['png'], { type: 'image/png' })) }) })

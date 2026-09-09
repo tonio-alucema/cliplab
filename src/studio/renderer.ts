@@ -247,7 +247,7 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   ctx.restore()
 }
 
-function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number) {
+export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number) {
   ctx.clearRect(0, 0, 256, 256)
   const count = ['zzz', 'sparkle', 'heart'].includes(prop) ? 3 : 1
   for (let i = 0; i < count; i++) {
@@ -289,6 +289,7 @@ export class CharacterRenderer {
   private lastProp = ''
   private disposed = false
   private options: RenderOptions
+  private captured?: { character: Character; sample: Sample; gaze: Gaze; simpleEyes: boolean }
   constructor(canvas: HTMLCanvasElement, options: RenderOptions) {
     this.canvas = canvas; this.options = options
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: 'low-power' })
@@ -391,6 +392,11 @@ export class CharacterRenderer {
     const bg = this.options.background
     if (bg) this.gl.setClearColor(bg, 1); else this.gl.setClearColor(0x000000, 0)
     this.gl.render(this.scene, this.camera)
+    this.captured = { character, sample, gaze: faceGaze, simpleEyes: appearance.simpleEyes }
+  }
+  snapshotScene() {
+    if (!this.captured) throw new Error('Render the character before taking a snapshot.')
+    return { ...this.captured, options: this.options, camera: this.camera, body: this.body, lightFill: this.lightFill, face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
   }
   orientation() { return this.root.quaternion.clone() }
   eyeGazes() { return this.resolvedEyes ? { left: { ...this.resolvedEyes.left }, right: { ...this.resolvedEyes.right } } : undefined }

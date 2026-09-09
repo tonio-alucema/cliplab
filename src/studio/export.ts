@@ -4,6 +4,7 @@ import { versMp4 } from '../ui/video'
 import { CharacterRenderer } from './renderer'
 import { sampleDefinition, type Definition, type Sample } from './model'
 import type { EyeGazes } from './gaze'
+import { snapshotSvg } from './svg-snapshot'
 
 export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob), a = document.createElement('a')
@@ -16,6 +17,14 @@ export interface MediaOptions {
   width: number; height: number; fps: number; duration: number; animationId: string
   format: 'png' | 'gif' | 'mp4' | 'webm'; background: string | null; rotation: { x: number; y: number; z: number }
   zoom: number; cursor?: { x: number; y: number; eyes?: EyeGazes }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
+}
+export function renderSvg(definition: Definition, options: Pick<MediaOptions, 'width' | 'height' | 'background' | 'rotation' | 'zoom' | 'cursor' | 'sample' | 'animationId'>): string {
+  if (![options.width, options.height].every(v => Number.isInteger(v) && v >= 1 && v <= 2048) || !Number.isFinite(options.zoom) || options.zoom <= 0) throw new Error('Choose whole-number dimensions from 1 to 2048 px.')
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: options.width, height: options.height, pixelRatio: 1, displaySize: Math.min(options.width, options.height), background: options.background })
+  try {
+    renderer.render(definition.character, options.sample ?? sampleDefinition(definition, options.animationId, 0), { rotation: options.rotation, zoom: options.zoom, cursor: options.cursor, eyeGazes: options.cursor?.eyes }, definition.character.followCursor ? options.cursor : undefined)
+    return snapshotSvg(renderer.snapshotScene())
+  } finally { renderer.dispose() }
 }
 function cancelled(signal?: AbortSignal) { if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError') }
 const breathe = () => new Promise<void>(resolve => setTimeout(resolve, 0))

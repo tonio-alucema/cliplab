@@ -31,13 +31,13 @@ Changes autosave to this browser. Undo and redo keep recent edits. Export a **Pr
 ## Export
 
 - **App:** select animations and download a character JSON definition or a complete JavaScript/React package. The ZIP includes the same renderer used in the studio, a working example, type declarations, and integration instructions. JSON alone is configuration and needs the supplied runtime.
-- **Image:** PNG of the current pose, with transparent or solid background, framing, presets, and dimensions up to 2048 px.
+- **Image:** PNG or vector SVG snapshots of the current pose, with transparent or solid background, framing, presets, and dimensions up to 2048 px. Download SVG or copy its markup to the clipboard; snapshots preserve the current camera angle, facial expression, supporting effects, and color/gradient values. SVG is a static vector image.
 - **Animation:** MP4 with an opaque background, WebM with optional transparency, or transparent GIF. Video supports up to 2048 px and 60 seconds. GIF uses 20 fps and at most 512 px. MP4 requires even dimensions. Browser video encoding support varies; encoding errors are shown in the studio.
 - **Project:** the full editable studio, including characters, expressions, and sequences.
 
 App packages expose `createCharacter(container, definition, options)`, returning playback, state-selection, gaze, size, and cleanup methods. The included React component accepts `animation`, `size`, `followCursor`, and `followRotation`. Keep the host square; call `destroy()` when removing a plain JavaScript character. The runtime respects reduced motion and pauses animation work when offscreen.
 
-Turning on **White eye dots** also enables **Eyes follow cursor**. Each dot independently tracks the pointer from its eye's position, so moving between the eyes creates a crossed-eye look. Tracking accounts for character rotation, eye placement and preview size, eases while playback is paused, and returns to authored gaze when the pointer leaves the window. Turn **Eyes follow cursor** off for a fixed or authored gaze; app integrations can also override it with `followCursor: false` and use `setGaze()` directly. PNG exports preserve the preview's individual eye directions even with different output framing.
+Turning on **White eye dots** also enables **Eyes follow cursor**. Each dot independently tracks the pointer from its eye's position, so moving between the eyes creates a crossed-eye look. Tracking accounts for character rotation, eye placement and preview size, eases while playback is paused, and returns to authored gaze when the pointer leaves the window. Turn **Eyes follow cursor** off for a fixed or authored gaze; app integrations can also override it with `followCursor: false` and use `setGaze()` directly. PNG and SVG exports preserve the preview's individual eye directions even with different output framing.
 
 ## Implementation
 
@@ -53,7 +53,7 @@ ClipLab started as a fork of [bloub](https://github.com/jeremy-prt/bloub) by Jé
 
 Face styles are grouped into **Set 1** (simple faces) and **Set 2** (12 emoji reactions). Choose a face to create a three-beat expression, or apply it to a beat in the editor. **Add expression** opens a visual picker. **Delete animation** supports Undo and keeps at least one animation in the project.
 
-Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. The orbit globe uses fine monochrome rings, a crosshair, perimeter ticks, and live X/Y/Z readouts. With **Position** unlocked, click an angle to type a value; playback pauses while editing. Enter or leaving the field applies it, and Escape cancels. Drag the globe or stage to rotate; Shift-drag tilts. Arrow keys rotate, Shift-left/right tilts, and Home or Reset restores the starting angle. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG captures the current pointer pose, while rendered loops use a centered cursor.
+Controls are monochrome, active sequence cards stay dark, and the logo is 40% smaller. The orbit globe uses fine monochrome rings, a crosshair, perimeter ticks, and live X/Y/Z readouts. With **Position** unlocked, click an angle to type a value; playback pauses while editing. Enter or leaving the field applies it, and Escape cancels. Drag the globe or stage to rotate; Shift-drag tilts. Arrow keys rotate, Shift-left/right tilts, and Home or Reset restores the starting angle. **Character follows cursor** rotates the body independently of eye tracking; True front takes precedence. PNG and SVG capture the current pointer pose, while rendered loops use a centered cursor.
 
 Use the three **Background** swatches beside the character tabs to preview on Dark, Light, or a transparency checkerboard. This changes only the preview; choose the asset background separately in Export.
 
