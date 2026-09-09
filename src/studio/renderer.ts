@@ -6,7 +6,7 @@ import { drawMorphBrow, drawMorphEye, drawMorphMouth, traitWeight } from './face
 export interface RenderOptions {
   width: number; height: number; displaySize?: number; background?: string | null
   cursor?: { x: number; y: number }; rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
-  pointerLook?: PointerLook; eyeGazes?: EyeGazes
+  pointerLook?: PointerLook; eyeGazes?: EyeGazes; reducedMotion?: boolean
 }
 /** Cursor pitch owns the vertical look direction, independent of the resting tilt. */
 export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5, y: -12, z: -7 }, cursor: Gaze = { x: 0, y: 0 }) {
@@ -114,6 +114,13 @@ export function projectedEye(character: Character, pose: Pose, blink: number, si
   const right = project(radius * .1, 0).sub(project(-radius * .1, 0)).multiplyScalar(5).add(center)
   const up = project(0, -radius * .1).sub(project(0, radius * .1)).multiplyScalar(5).add(center)
   return { center, right, up }
+}
+
+/** Resting highlights are local to the face, so they remain up-left when tilted. */
+function irisRestGaze(character: Pick<Character, 'iris' | 'followCursor'>, gaze: Gaze, reducedMotion = false): Gaze {
+  if (!character.iris) return gaze
+  if (reducedMotion) return { x: -.22, y: .22 }
+  return character.followCursor ? gaze : { x: gaze.x - .22, y: gaze.y + .22 }
 }
 
 export function resolveEyeGazes(character: Character, pose: Pose, blink: number, matrix: THREE.Matrix4, camera: THREE.Camera, gaze: Gaze, pointer?: PointerLook, layers?: FaceLayer[]): EyeGazes {
@@ -337,7 +344,7 @@ export class CharacterRenderer {
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
     u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0; u.candleLight!.value = character.candleLight ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height
-    const rotation = characterRotation(character, pose, this.options.rotation, this.options.cursor)
+    const rotation = characterRotation(this.options.reducedMotion ? { ...character, followRotation: false } : character, pose, this.options.rotation, this.options.cursor)
     this.root.rotation.set(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
@@ -361,8 +368,12 @@ export class CharacterRenderer {
     this.camera.updateMatrixWorld(true)
     this.face.visible = detail !== 'body'
     // Pointer directions stay relative to the screen when the character rolls or turns.
-    const faceGaze = character.iris ? new THREE.Vector3(gaze.x, gaze.y, 0).applyQuaternion(this.root.quaternion.clone().invert()) : gaze
-    this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? this.options.eyeGazes ?? resolveEyeGazes(character, pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, this.options.pointerLook, sample.faceLayers) : undefined
+    const reduced = !!this.options.reducedMotion
+    const screenGaze = reduced ? { x: 0, y: 0 } : gaze
+    const turnGaze = !reduced && !character.followCursor && character.followRotation && !character.trueFront ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
+    const local = character.iris ? new THREE.Vector3(screenGaze.x + turnGaze.x * .5, screenGaze.y + turnGaze.y * .5, 0).applyQuaternion(this.root.quaternion.clone().invert()) : screenGaze
+    const faceGaze = irisRestGaze(character, local, reduced)
+    this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? (!reduced ? this.options.eyeGazes : undefined) ?? resolveEyeGazes(character, reduced ? { ...pose, gazeX: 0, gazeY: 0 } : pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, !reduced && character.followCursor ? this.options.pointerLook : undefined, sample.faceLayers) : undefined
     const key = JSON.stringify([pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
     if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!

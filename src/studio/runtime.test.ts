@@ -54,6 +54,7 @@ describe('iris following in exported players', () => {
     expect(renderedGaze()).toEqual({ x: -.6, y: .3 })
     expect(render.mock.calls.at(-1)![2].cursor.x).toBe(1)
     expect(render.mock.calls.at(-1)![2].pointerLook).toBeUndefined()
+    expect(render.mock.calls.at(-1)![0].followCursor).toBe(false)
     document.documentElement.dispatchEvent(new PointerEvent('pointerleave')); tick(40)
     expect(renderedGaze()).toEqual({ x: -.6, y: .3 })
   })
@@ -71,6 +72,18 @@ describe('iris following in exported players', () => {
     vi.mocked(value.canvas.getBoundingClientRect).mockReturnValue({ left: 200, top: 100, width: 400, height: 400 } as DOMRect)
     window.dispatchEvent(new Event('scroll')); tick(40)
     expect(render.mock.calls.at(-1)![2].pointerLook).toMatchObject({ x: 1, y: .5, weight: 1 })
+  })
+
+  it('passes reduced-motion preferences to the shared renderer and responds to changes', () => {
+    const media = Object.assign(new EventTarget(), { matches: true })
+    vi.spyOn(window, 'matchMedia').mockReturnValue(media as MediaQueryList)
+    player({ followRotation: true })
+    expect(render.mock.calls.at(-1)![2].reducedMotion).toBe(true)
+    media.matches = false; media.dispatchEvent(new Event('change'))
+    expect(render.mock.calls.at(-1)![2].reducedMotion).toBe(false)
+    media.matches = true
+    player({ respectReducedMotion: false })
+    expect(render.mock.calls.at(-1)![2].reducedMotion).toBe(false)
   })
 
   it('clears pending tracking on definition replacement and stops rendering after destroy', () => {

@@ -16,13 +16,13 @@ export function jsonBlob(value: unknown) { return new Blob([JSON.stringify(value
 export interface MediaOptions {
   width: number; height: number; fps: number; duration: number; animationId: string
   format: 'png' | 'gif' | 'mp4' | 'webm'; background: string | null; rotation: { x: number; y: number; z: number }
-  zoom: number; cursor?: { x: number; y: number; eyes?: EyeGazes }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
+  zoom: number; cursor?: { x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
 }
 export function renderSvg(definition: Definition, options: Pick<MediaOptions, 'width' | 'height' | 'background' | 'rotation' | 'zoom' | 'cursor' | 'sample' | 'animationId'>): string {
   if (![options.width, options.height].every(v => Number.isInteger(v) && v >= 1 && v <= 2048) || !Number.isFinite(options.zoom) || options.zoom <= 0) throw new Error('Choose whole-number dimensions from 1 to 2048 px.')
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: options.width, height: options.height, pixelRatio: 1, displaySize: Math.min(options.width, options.height), background: options.background })
   try {
-    renderer.render(definition.character, options.sample ?? sampleDefinition(definition, options.animationId, 0), { rotation: options.rotation, zoom: options.zoom, cursor: options.cursor, eyeGazes: options.cursor?.eyes }, definition.character.followCursor ? options.cursor : undefined)
+    renderer.render(definition.character, options.sample ?? sampleDefinition(definition, options.animationId, 0), { rotation: options.rotation, zoom: options.zoom, cursor: options.cursor, reducedMotion: options.cursor?.reducedMotion, eyeGazes: options.cursor?.eyes }, definition.character.followCursor ? options.cursor : undefined)
     return snapshotSvg(renderer.snapshotScene())
   } finally { renderer.dispose() }
 }
@@ -38,7 +38,7 @@ export async function renderMedia(definition: Definition, options: MediaOptions)
   const frames = Math.max(1, Math.round(options.duration * fps))
   const draw = (i: number) => {
     cancelled(signal)
-    renderer.render(definition.character, format === 'png' && options.sample ? options.sample : sampleDefinition(definition, options.animationId, i * options.duration / frames), { rotation: options.rotation, zoom: options.zoom, cursor: format === 'png' ? options.cursor : undefined, eyeGazes: format === 'png' ? options.cursor?.eyes : undefined }, format === 'png' && definition.character.followCursor ? options.cursor : undefined)
+    renderer.render(definition.character, format === 'png' && options.sample ? options.sample : sampleDefinition(definition, options.animationId, i * options.duration / frames), { rotation: options.rotation, zoom: options.zoom, cursor: format === 'png' ? options.cursor : undefined, reducedMotion: format === 'png' && options.cursor?.reducedMotion, eyeGazes: format === 'png' ? options.cursor?.eyes : undefined }, format === 'png' && definition.character.followCursor ? options.cursor : undefined)
   }
   try {
     if (format === 'png') {

@@ -2,11 +2,11 @@ import * as THREE from 'three'
 import { drawFace, drawProp, type CharacterRenderer } from './renderer'
 import { detailAt } from './model'
 import { SvgCanvas, number as n, xml } from './svg-canvas'
+import { boundaryContours, pathData, type Point, type ProjectPoint } from './svg-path'
 
 type Snapshot = ReturnType<CharacterRenderer['snapshotScene']>
 type Vertex = { x: number; y: number; z: number; t: number; light: number }
 type Triangle = { points: Vertex[]; indices: number[] }
-const polygon = (p: Pick<Vertex, 'x' | 'y'>[]) => p.map((v, i) => `${i ? 'L' : 'M'}${n(v.x)} ${n(v.y)}`).join('') + 'Z'
 const cross = (a: Pick<Vertex, 'x' | 'y'>, b: Pick<Vertex, 'x' | 'y'>, c: Pick<Vertex, 'x' | 'y'>) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 function hull(points: Vertex[]) {
   const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y)
@@ -25,16 +25,37 @@ function clip(points: Vertex[], key: 'light' | 'z', threshold: number, above: bo
   }
   return out
 }
-/** Affine mapping from an actual UV triangle to its orthographic screen triangle. */
-export function triangleTransform(source: { x: number; y: number }[], target: { x: number; y: number }[]): number[] | undefined {
-  const [s, u, v] = source as [Vertex, Vertex, Vertex], [p, q, r] = target as [Vertex, Vertex, Vertex]
-  const det = cross(s, u, v)
-  if (Math.abs(det) < 1e-12) return
-  const a = ((q.x - p.x) * (v.y - s.y) - (r.x - p.x) * (u.y - s.y)) / det
-  const c = ((r.x - p.x) * (u.x - s.x) - (q.x - p.x) * (v.x - s.x)) / det
-  const b = ((q.y - p.y) * (v.y - s.y) - (r.y - p.y) * (u.y - s.y)) / det
-  const d = ((r.y - p.y) * (u.x - s.x) - (q.y - p.y) * (v.x - s.x)) / det
-  return [a, b, c, d, p.x - a * s.x - c * s.y, p.y - b * s.x - d * s.y]
+/** Best-fit planar gradient, weighted by visible projected area. A curved 3D
+ * surface is not exactly representable by one SVG linear gradient; this keeps
+ * the authored colors and a compact, editable fill at every camera angle. */
+export function fitGradient(triangles: { points: Vertex[] }[]) {
+  let weight = 0, x = 0, y = 0, t = 0
+  const samples: { p: Vertex; w: number }[] = []
+  for (const { points } of triangles) {
+    const w = Math.abs(cross(points[0]!, points[1]!, points[2]!)) / 6
+    for (const p of points) { samples.push({ p, w }); weight += w; x += p.x * w; y += p.y * w; t += p.t * w }
+  }
+  if (!weight) return { x: 0, y: 0, t: .5, gx: 0, gy: 0 }
+  x /= weight; y /= weight; t /= weight
+  let xx = 0, xy = 0, yy = 0, xt = 0, yt = 0
+  for (const { p, w } of samples) { const dx = p.x - x, dy = p.y - y, dt = p.t - t; xx += dx * dx * w; xy += dx * dy * w; yy += dy * dy * w; xt += dx * dt * w; yt += dy * dt * w }
+  const det = xx * yy - xy * xy
+  return { x, y, t, gx: det ? (xt * yy - yt * xy) / det : 0, gy: det ? (yt * xx - xt * xy) / det : 0 }
+}
+/** Warp each facial outline through the same UV mesh as the live renderer.
+ * This emits the artwork once instead of repeating it in every mesh triangle. */
+export function faceProjector(face: Snapshot['face'], project: (point: THREE.Vector3) => Point): ProjectPoint {
+  const { widthSegments: nx, heightSegments: ny } = face.geometry.parameters
+  const position = face.geometry.getAttribute('position')
+  return p => {
+    const u = p.x / 512 * nx, v = p.y / 512 * ny
+    const ix = Math.max(0, Math.min(nx - 1, Math.floor(u))), iy = Math.max(0, Math.min(ny - 1, Math.floor(v))), fx = u - ix, fy = v - iy
+    const a = ix + iy * (nx + 1), b = a + nx + 1, c = b + 1, d = a + 1
+    const indices = fx + fy <= 1 ? [a, d, b] : [c, b, d], weights = fx + fy <= 1 ? [1 - fx - fy, fx, fy] : [fx + fy - 1, 1 - fx, 1 - fy]
+    const value = new THREE.Vector3()
+    indices.forEach((index, i) => value.addScaledVector(new THREE.Vector3().fromBufferAttribute(position, index), weights[i]!))
+    return project(value.applyMatrix4(face.matrixWorld))
+  }
 }
 
 export function snapshotSvg(snapshot: Snapshot): string {
@@ -66,77 +87,59 @@ export function snapshotSvg(snapshot: Snapshot): string {
     }
     return { triangles, vertices }
   }
-  const gradients = new Map<string, string>()
   const shadedColor = (color: THREE.Color, shade: number) => '#' + color.clone().multiplyScalar(shade).getHexString()
+  const outline = (vertices: Vertex[]) => pathData([{ points: hull(vertices), closed: true }])
   const surface = (mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, label: string) => {
     const data = triangles(mesh, true), u = mesh.material.uniforms
     const colorA = u.colorA!.value as THREE.Color, colorB = (u.colorB!.value as THREE.Color).clone().lerp(colorA, 1 - u.gradientOn!.value)
     const candle = !!u.candleLight!.value, toon = !!u.toonOn!.value
     const bands = !toon ? [{ min: -2, max: 2, shade: 1 }] : candle ? [{ min: -2, max: 2, shade: u.insetFill!.value ? 1 : .8 }] : [{ min: -2, max: .08, shade: .64 }, { min: .08, max: .58, shade: .81 }, { min: .58, max: 2, shade: 1 }]
-    const groups = new Map<string, string[]>()
-    for (const triangle of data.triangles) for (const band of bands) {
-      const p = clip(clip(triangle.points, 'light', band.min, true), 'light', band.max, false)
-      if (p.length < 3) continue
+    const gradient = fitGradient(data.triangles), { x, y, t, gx, gy } = gradient, length = gx * gx + gy * gy
+    const paths = bands.map((band, index) => {
       let fill = shadedColor(colorA, band.shade)
       if (u.gradientOn!.value > 0 && !colorA.equals(colorB)) {
-        const [a, b, c] = triangle.points as [Vertex, Vertex, Vertex], det = cross(a, b, c)
-        const gx = ((b.t - a.t) * (c.y - a.y) - (c.t - a.t) * (b.y - a.y)) / det
-        const gy = ((c.t - a.t) * (b.x - a.x) - (b.t - a.t) * (c.x - a.x)) / det, length = gx * gx + gy * gy
-        if (length < 1e-18) fill = shadedColor(colorB.clone().lerp(colorA, Math.max(0, Math.min(1, a.t))), band.shade)
+        if (length < 1e-18) fill = shadedColor(colorB.clone().lerp(colorA, Math.max(0, Math.min(1, t))), band.shade)
         else {
-          const endpoints = [a.x - gx * a.t / length, a.y - gy * a.t / length, a.x + gx * (1 - a.t) / length, a.y + gy * (1 - a.t) / length].map(n)
-          const from = shadedColor(colorB, band.shade), to = shadedColor(colorA, band.shade), key = [...endpoints, from, to].join(':')
-          let id = gradients.get(key)
-          if (!id) { id = `gradient-${gradients.size}`; gradients.set(key, id); defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" color-interpolation="linearRGB" x1="${endpoints[0]}" y1="${endpoints[1]}" x2="${endpoints[2]}" y2="${endpoints[3]}"><stop stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`) }
+          const id = `${label}-gradient-${index}`
+          defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" color-interpolation="linearRGB" x1="${n(x - gx * t / length)}" y1="${n(y - gy * t / length)}" x2="${n(x + gx * (1 - t) / length)}" y2="${n(y + gy * (1 - t) / length)}"><stop stop-color="${shadedColor(colorB, band.shade)}"/><stop offset="1" stop-color="${shadedColor(colorA, band.shade)}"/></linearGradient>`)
           fill = `url(#${id})`
         }
       }
-      const paths = groups.get(fill) ?? []; paths.push(polygon(p)); groups.set(fill, paths)
-    }
-    // Shared triangle edges are crisp; the outer silhouette remains antialiased.
-    defs.push(`<clipPath id="${label}-silhouette"><path d="${polygon(hull(data.vertices))}"/></clipPath>`)
-    contents.push(`<g id="${label}" clip-path="url(#${label}-silhouette)" shape-rendering="crispEdges">${[...groups].map(([fill, paths]) => `<path fill="${fill}" d="${paths.join('')}"/>`).join('')}</g>`)
+      const d = bands.length === 1 ? outline(data.vertices) : pathData(boundaryContours(data.triangles.map(triangle => clip(clip(triangle.points, 'light', band.min, true), 'light', band.max, false)).filter(p => p.length >= 3)))
+      return `<path fill="${fill}" d="${d}"/>`
+    })
+    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : 'Inner body'}">${paths.join('')}</g>`)
     return data
   }
   if (options.background) contents.push(`<rect width="${width}" height="${height}" fill="${xml(options.background)}"/>`)
   if (shadow.visible) {
     const material = shadow.material, data = triangles(shadow)
-    contents.push(`<path id="ground-shadow" d="${polygon(hull(data.vertices))}" fill="#${material.color.getHexString()}" opacity="${n(material.opacity)}"/>`)
+    contents.push(`<g id="ground-shadow" data-name="Shadow"><path d="${outline(data.vertices)}" fill="#${material.color.getHexString()}" opacity="${n(material.opacity)}"/></g>`)
   }
   const bodyData = surface(body, 'body')
   if (lightFill.visible) surface(lightFill, 'candle-light')
   const transparent: { z: number; markup: string }[] = []
   if (face.visible) {
-    const art = new SvgCanvas('face')
+    const art = new SvgCanvas('face', faceProjector(face, project))
     drawFace(art as unknown as CanvasRenderingContext2D, sample.pose, character, sample.blink, detailAt(options.displaySize ?? Math.min(width, height)), snapshot.gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: snapshot.eyeGazes, faceLayers: sample.faceLayers, simpleEyes: snapshot.simpleEyes })
-    defs.push(`<g id="face-art">${art.markup()}</g>`)
-    const uv = face.geometry.getAttribute('uv'), valid = face.geometry.getAttribute('faceValid'), data = triangles(face)
-    const pieces: string[] = []
-    for (const { points, indices } of data.triangles) {
-      if (indices.some(i => valid.getX(i) < .99)) continue
-      const source = indices.map(i => ({ x: uv.getX(i) * 512, y: (1 - uv.getY(i)) * 512 }))
-      if (Math.max(...source.map(p => p.x)) < art.bounds.left || Math.min(...source.map(p => p.x)) > art.bounds.right || Math.max(...source.map(p => p.y)) < art.bounds.top || Math.min(...source.map(p => p.y)) > art.bounds.bottom) continue
-      const transform = triangleTransform(source, points)
-      if (!transform) continue
-      const id = `face-triangle-${pieces.length}`
-      defs.push(`<clipPath id="${id}"><path shape-rendering="crispEdges" d="${polygon(points)}"/></clipPath>`)
-      pieces.push(`<g clip-path="url(#${id})"><use href="#face-art" transform="matrix(${transform.map(n).join(' ')})"/></g>`)
-    }
+    const valid = face.geometry.getAttribute('faceValid'), data = triangles(face)
+    const visible = data.triangles.filter(t => t.indices.every(i => valid.getX(i) >= .99))
+    defs.push(`<clipPath id="face-visible"><path d="${pathData(boundaryContours(visible.map(t => t.points)))}"/></clipPath>`)
     if (!face.geometry.boundingSphere) face.geometry.computeBoundingSphere()
     const center = project(face.geometry.boundingSphere!.center.clone().applyMatrix4(face.matrixWorld))
-    transparent.push({ z: center.z, markup: `<g id="face">${pieces.join('')}</g>` })
+    transparent.push({ z: center.z, markup: `<g clip-path="url(#face-visible)">${art.markup()}</g>` })
   }
   if (prop.visible && prop.material.opacity > 0) {
     const art = new SvgCanvas('prop'), name = sample.pose.prop
     drawProp(art as unknown as CanvasRenderingContext2D, name, name === 'heart' ? '#ff768c' : name === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase)
     const center = project(prop.getWorldPosition(new THREE.Vector3())), scale = prop.getWorldScale(new THREE.Vector3())
     const w = scale.x * width / (camera.right - camera.left), h = scale.y * height / (camera.top - camera.bottom)
-    const occlusion = bodyData.triangles.map(t => clip(t.points, 'z', center.z, false)).filter(p => p.length >= 3).map(polygon).join('')
+    const occlusion = pathData(boundaryContours(bodyData.triangles.map(t => clip(t.points, 'z', center.z, false)).filter(p => p.length >= 3)))
     defs.push(`<mask id="prop-occlusion" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="white"/><path d="${occlusion}" fill="black"/></mask>`)
-    transparent.push({ z: center.z, markup: `<g mask="url(#prop-occlusion)" opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
+    transparent.push({ z: center.z, markup: `<g id="supporting-elements" data-name="Supporting elements" mask="url(#prop-occlusion)" opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
   }
-  contents.push(...transparent.sort((a, b) => b.z - a.z).map(layer => layer.markup))
-  const metadata = { format: 'cliplab-svg-snapshot', character, pose: sample.pose, gradientRotation: sample.gradientRotation ?? 0, effectiveGradientAngle: character.gradientAngle + (sample.gradientRotation ?? 0), rotation: options.rotation, cursor: options.cursor }
+  if (transparent.length) contents.push(`<g id="face" data-name="Facial expression">${transparent.sort((a, b) => b.z - a.z).map(layer => layer.markup).join('')}</g>`)
+  const metadata = { format: 'cliplab-svg-snapshot', gradientProjection: 'planar-fit', character, pose: sample.pose, gradientRotation: sample.gradientRotation ?? 0, effectiveGradientAngle: character.gradientAngle + (sample.gradientRotation ?? 0), rotation: options.rotation, cursor: options.cursor }
   // Multiple downloaded characters can safely be placed inline in the same page.
   const prefix = `cliplab-${crypto.randomUUID()}-`
   const artwork = (`<defs>${defs.join('')}</defs>${contents.join('')}`)

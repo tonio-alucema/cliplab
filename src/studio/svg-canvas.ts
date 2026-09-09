@@ -1,3 +1,4 @@
+import { flatten, pathData, strokeOutline, type ProjectPoint } from './svg-path'
 // A small vector recorder for the Canvas 2D operations used by ClipLab's faces.
 // Paths stay editable; no bitmap or external asset is embedded in the SVG.
 type Matrix = [number, number, number, number, number, number]
@@ -20,7 +21,7 @@ export class SvgCanvas {
   private nodes: string[] = []
   private definitions: string[] = []
   bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity }
-  constructor(private prefix: string) {}
+  constructor(private prefix: string, private project?: ProjectPoint) {}
   private state() { return { matrix: [...this.matrix] as Matrix, clips: [...this.clips], fillStyle: this.fillStyle, strokeStyle: this.strokeStyle, lineWidth: this.lineWidth, globalAlpha: this.globalAlpha, lineCap: this.lineCap, lineJoin: this.lineJoin, font: this.font, textAlign: this.textAlign } }
   save() { this.stack.push(this.state()) }
   restore() { const state = this.stack.pop(); if (state) Object.assign(this, state) }
@@ -82,13 +83,22 @@ export class SvgCanvas {
       this.bounds.left = Math.min(this.bounds.left, c.points[i]! - expansion); this.bounds.right = Math.max(this.bounds.right, c.points[i]! + expansion)
       this.bounds.top = Math.min(this.bounds.top, c.points[i + 1]! - expansion); this.bounds.bottom = Math.max(this.bounds.bottom, c.points[i + 1]! + expansion)
     }
+    if (this.project) {
+      const inv = inverse(this.matrix)
+      const commands = this.path.map(c => ({ op: c.op, points: c.points.flatMap((_, i) => i % 2 ? [] : point(inv, c.points[i]!, c.points[i + 1]!)) }))
+      const contours = flatten(commands)
+      const outlines = stroke ? contours.flatMap(c => strokeOutline(c, this.lineWidth)) : contours.map(c => ({ ...c, closed: true }))
+      const project: ProjectPoint = p => { const [x, y] = point(this.matrix, p.x, p.y); return this.project!({ x: x!, y: y! }) }
+      this.add(`<path d="${pathData(outlines, project)}" opacity="${number(this.globalAlpha)}" fill="${xml(stroke ? this.strokeStyle : this.fillStyle)}" fill-rule="${rule}"/>`)
+      return
+    }
     this.add(`<path d="${this.data(inverse(this.matrix))}" transform="matrix(${this.matrix.map(number).join(' ')})" opacity="${number(this.globalAlpha)}" ${stroke ? `fill="none" stroke="${xml(this.strokeStyle)}" stroke-width="${number(this.lineWidth)}" stroke-linecap="${xml(this.lineCap)}" stroke-linejoin="${xml(this.lineJoin)}"` : `fill="${xml(this.fillStyle)}" fill-rule="${rule}"`}/>`)
   }
   fill(rule = 'nonzero') { this.paint(false, rule) }
   stroke() { this.paint(true) }
   clip(rule = 'nonzero') {
     const id = `${this.prefix}-clip-${this.definitions.length}`
-    this.definitions.push(`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${this.data()}" clip-rule="${rule}"/></clipPath>`); this.clips.push(id)
+    this.definitions.push(`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${this.project ? pathData(flatten(this.path).map(c => ({ ...c, closed: true })), this.project) : this.data()}" clip-rule="${rule}"/></clipPath>`); this.clips.push(id)
   }
   fillText(text: string, x: number, y: number) {
     const size = Number(this.font.match(/([\d.]+)px/)?.[1] ?? 10)

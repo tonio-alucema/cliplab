@@ -6,7 +6,7 @@ import { centeredGaze, easeGaze, easePointer, inactivePointer, pointerGaze, poin
 import type { Character, Sample } from './model'
 import Icon from './StudioIcon.vue'
 const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; playing: boolean }>()
-const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; pause: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes }] }>()
+const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; pause: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }] }>()
 const host = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), globe = ref<HTMLCanvasElement>()
 const angles = ref({ x: 0, y: 0, z: 0 })
 type Axis = 'x' | 'y' | 'z'
@@ -24,13 +24,13 @@ function render() {
   const size = props.previewSize
   const width = size ?? canvas.value.clientWidth, height = size ?? canvas.value.clientHeight
   if (canvas.value.dataset.renderSize !== `${width}:${height}`) { renderer.resize(width, height, size ?? 400); canvas.value.dataset.renderSize = `${width}:${height}` }
-  renderer.render(props.character, props.sample, { displaySize: size ?? 400, rotation: props.rotation, zoom: size ? 1 : props.zoom, cursor: gaze, pointerLook: props.character.followCursor ? pointer : undefined }, props.character.followCursor ? gaze : { x: 0, y: 0 })
+  renderer.render(props.character, props.sample, { reducedMotion: reducedMotion.matches, displaySize: size ?? 400, rotation: props.rotation, zoom: size ? 1 : props.zoom, cursor: gaze, pointerLook: props.character.followCursor ? pointer : undefined }, props.character.followCursor ? gaze : { x: 0, y: 0 })
   const orientation = renderer.orientation()
   if (globe.value) drawOrbit(globe.value, orientation)
   const base = manualRotation(), pose = props.sample.pose
   const degrees = (value: number) => Math.round(((((value + 180) % 360) + 360) % 360 - 180) * 10) / 10
   angles.value = { x: degrees(base.x + pose.rotationX), y: degrees(base.y + pose.rotationY), z: degrees(base.z + pose.rotationZ) }
-  emit('cursor', { ...gaze, eyes: renderer.eyeGazes() })
+  emit('cursor', { ...gaze, reducedMotion: reducedMotion.matches, eyes: renderer.eyeGazes() })
 }
 function setup() {
   if (!canvas.value || !host.value) return
@@ -44,7 +44,7 @@ function setup() {
 }
 function manualRotation() {
   const pose = props.sample.pose
-  const rotation = characterRotation(props.character, pose, props.rotation, gaze)
+  const rotation = characterRotation(reducedMotion.matches ? { ...props.character, followRotation: false } : props.character, pose, props.rotation, gaze)
   return { x: rotation.x - pose.rotationX, y: rotation.y - pose.rotationY, z: rotation.z - pose.rotationZ }
 }
 function editAngle(axis: Axis, event: FocusEvent) {
@@ -118,8 +118,8 @@ watch(() => props.previewSize, () => nextTick(refreshPointer))
 watch(() => [props.character.id, props.character.followCursor, props.character.followRotation], () => {
   cancelAnimationFrame(followFrame); followFrame = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); pointer = inactivePointer(); pointerTarget = inactivePointer(); lastPointer = undefined; render()
 })
-onMounted(() => { setup(); window.addEventListener('pointermove', follow, { passive: true }); window.addEventListener('scroll', refreshPointer, { passive: true, capture: true }); document.documentElement.addEventListener('pointerleave', leave) })
-onBeforeUnmount(() => { cancelAnimationFrame(followFrame); observer?.disconnect(); renderer?.dispose(); window.removeEventListener('pointermove', follow); window.removeEventListener('scroll', refreshPointer, true); document.documentElement.removeEventListener('pointerleave', leave) })
+onMounted(() => { setup(); reducedMotion.addEventListener('change', render); window.addEventListener('pointermove', follow, { passive: true }); window.addEventListener('scroll', refreshPointer, { passive: true, capture: true }); document.documentElement.addEventListener('pointerleave', leave) })
+onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); cancelAnimationFrame(followFrame); observer?.disconnect(); renderer?.dispose(); window.removeEventListener('pointermove', follow); window.removeEventListener('scroll', refreshPointer, true); document.documentElement.removeEventListener('pointerleave', leave) })
 </script>
 <template>
   <div ref="host" class="stage-canvas-wrap" :style="{ background }">

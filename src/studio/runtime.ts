@@ -22,7 +22,9 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
   let focus = inactivePointer(), focusTarget = inactivePointer()
   let lastPointer: { clientX: number; clientY: number } | undefined
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-  const render = () => renderer.render({ ...definition.character, followRotation: options.followRotation ?? definition.character.followRotation }, sampleDefinition(definition, animation, elapsed, expression), { background: options.background, cursor, pointerLook: (options.followCursor ?? definition.character.followCursor) ? focus : undefined }, gaze)
+  const render = () => renderer.render({ ...definition.character, followRotation: options.followRotation ?? definition.character.followRotation, followCursor: options.followCursor ?? definition.character.followCursor }, sampleDefinition(definition, animation, elapsed, expression), { background: options.background, reducedMotion: options.respectReducedMotion !== false && reduced.matches, cursor, pointerLook: (options.followCursor ?? definition.character.followCursor) ? focus : undefined }, gaze)
+  const motionChange = () => render()
+  reduced.addEventListener('change', motionChange)
   const resize = () => { width = target.clientWidth || options.size || 120; height = target.clientHeight || options.size || 120; renderer.resize(width, height, Math.min(width, height)); if (lastPointer) trackPointer(lastPointer); render() }
   const observer = new ResizeObserver(resize); observer.observe(target)
   const intersection = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? true }); intersection.observe(target)
@@ -69,6 +71,6 @@ export function createCharacter(target: HTMLElement, value: Definition, options:
     setGaze(x: number, y: number) { gaze = clampGaze({ x, y }); gazeTarget = { ...gaze }; focus = inactivePointer(); focusTarget = inactivePointer(); lastPointer = undefined; render() },
     setSize(size: number) { target.style.width = `${Math.max(1, size)}px`; target.style.height = `${Math.max(1, size)}px`; resize() },
     setDefinition(value: Definition) { project = parseProject(value); definition = definitionOf(project, project.characters[0]!); animation = definition.animations[0]?.id ?? 'idle'; expression = undefined; elapsed = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); cursor = centeredGaze(); cursorTarget = centeredGaze(); focus = inactivePointer(); focusTarget = inactivePointer(); lastPointer = undefined; if (completed) playing = true; completed = false; canvas.setAttribute('aria-label', definition.character.name); render() },
-    destroy() { destroyed = true; cancelAnimationFrame(raf); observer.disconnect(); intersection.disconnect(); window.removeEventListener('pointermove', pointer); window.removeEventListener('scroll', scroll, true); document.documentElement.removeEventListener('pointerleave', leave); renderer.dispose(); canvas.remove() }
+    destroy() { destroyed = true; cancelAnimationFrame(raf); observer.disconnect(); intersection.disconnect(); reduced.removeEventListener('change', motionChange); window.removeEventListener('pointermove', pointer); window.removeEventListener('scroll', scroll, true); document.documentElement.removeEventListener('pointerleave', leave); renderer.dispose(); canvas.remove() }
   }
 }
