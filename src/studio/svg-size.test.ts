@@ -187,7 +187,7 @@ it('locks the 24px eye positions to a leftward gaze despite cursor and animated 
       renderer.render(character, sample, { displaySize: 24, cursor: { x, y: 1 }, reducedMotion }, { x, y: 1 })
       const state = renderer.snapshotScene()
       expect(state.gaze).toEqual({ x: 0, y: 0 })
-      expect(state.sample.pose).toMatchObject({ gazeX: -1.5, gazeY: 0, leftX: 0, rightY: 0, faceY: BASE_POSE.faceY })
+      expect(state.sample.pose).toMatchObject({ gazeX: -3.5, gazeY: 0, leftX: 0, rightY: 0, spacing: BASE_POSE.spacing * .7, faceY: BASE_POSE.faceY })
     }
     renderer.render(character, sample, { displaySize: 48, reducedMotion: false }, { x: 1, y: 1 })
     expect(renderer.snapshotScene().sample.pose.gazeX).toBe(1)
