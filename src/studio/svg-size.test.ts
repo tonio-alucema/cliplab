@@ -90,3 +90,23 @@ it('uses one rounded lighting region for all three shapes and captures its curso
     }
   } finally { renderer.dispose() }
 })
+
+it('renders sleep marks in the foreground at every body angle and preserves that ordering in SVG', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const character = defaultProject().characters[0]!
+  const sample = { pose: { ...BASE_POSE, prop: 'zzz' as const }, effectPhase: .4, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const y of [-120, 0, 120, 180]) {
+      renderer.render(character, sample, { rotation: { x: 15, y, z: -8 } })
+      const state = renderer.snapshotScene()
+      expect(state.prop.material.depthTest).toBe(false); expect(state.prop.renderOrder).toBe(2)
+      const svg = new DOMParser().parseFromString(snapshotSvg(state), 'image/svg+xml')
+      const prop = svg.querySelector('[id$="-supporting-elements"]')!
+      expect(prop.getAttribute('mask')).toBeNull()
+      expect(prop.parentElement!.lastElementChild).toBe(prop)
+    }
+    renderer.render(character, { ...sample, pose: { ...sample.pose, prop: 'heart' } })
+    expect(renderer.snapshotScene().prop.material.depthTest).toBe(true)
+    expect(renderer.snapshotScene().prop.renderOrder).toBe(0)
+  } finally { renderer.dispose() }
+})

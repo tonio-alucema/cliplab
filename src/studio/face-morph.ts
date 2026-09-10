@@ -151,6 +151,26 @@ export function drawMorphEye(ctx: CanvasRenderingContext2D, pose: Pose, layers: 
   }
   ctx.restore()
 }
+/** Find the lower contour at the drool's right-side attachment point. Using
+ * the rendered outline keeps it attached throughout mouth-shape morphs. */
+export function droolAnchor(outline: Point[], width: number): Point {
+  const x = Math.min(width * .35, Math.max(...outline.map(p => p.x)) * .75)
+  let bottom = -Infinity
+  for (let i = 0; i < outline.length; i++) {
+    const a = outline[i]!, b = outline[(i + 1) % outline.length]!
+    if ((a.x <= x && b.x >= x) || (b.x <= x && a.x >= x)) {
+      const y = Math.abs(b.x - a.x) < 1e-8 ? Math.max(a.y, b.y) : a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x)
+      bottom = Math.max(bottom, y)
+    }
+  }
+  // The round cap overlaps the lip by two units so there is no visible gap.
+  return { x, y: (Number.isFinite(bottom) ? bottom : 0) + 6 }
+}
+export function drawDrool(ctx: CanvasRenderingContext2D, anchor: Point, amount = 1) {
+  ctx.save(); ctx.globalAlpha = amount; ctx.strokeStyle = '#fffef5'; ctx.lineWidth = 16
+  ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(anchor.x + 3, anchor.y + 34 * amount); ctx.stroke()
+  ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.arc(anchor.x + 3, anchor.y + 38 * amount, 8 * amount, 0, TAU); ctx.fill(); ctx.restore()
+}
 export function drawMorphMouth(ctx: CanvasRenderingContext2D, pose: Pose, layers: FaceLayer[], ink: string) {
   const geometry = layers.map(layer => mouthGeometry({ ...pose, ...layer.traits }))
   const outline = blendContours(geometry.map(g => g.outline), layers), opening = blendContours(geometry.map(g => g.opening), layers)
@@ -168,7 +188,7 @@ export function drawMorphMouth(ctx: CanvasRenderingContext2D, pose: Pose, layers
     ctx.save(); ctx.globalAlpha = out; ctx.fillStyle = '#ff526c'; ctx.beginPath(); ctx.moveTo(-w * .6 * out, 5); ctx.lineTo(w * .6 * out, 5); ctx.bezierCurveTo(w * .88 * out, (85 * pose.mouthOpen + 28) * out, -w * .88 * out, (85 * pose.mouthOpen + 28) * out, -w * .6 * out, 5); ctx.fill(); ctx.restore()
   }
   const drool = traitWeight(layers, t => t.drool)
-  if (drool > 0) { ctx.save(); ctx.globalAlpha = drool; ctx.strokeStyle = '#fffef5'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(w * .35, 6); ctx.lineTo(w * .4, 6 + 34 * drool); ctx.stroke(); ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.arc(w * .4, 6 + 38 * drool, 8 * drool, 0, TAU); ctx.fill(); ctx.restore() }
+  if (drool > 0) drawDrool(ctx, droolAnchor(outline, w), drool)
 }
 
 export function drawMorphBrow(ctx: CanvasRenderingContext2D, layers: FaceLayer[], r: number, side: number, ink: string) {

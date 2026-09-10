@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { BASE_POSE, detailAt, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
 import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
-import { drawMorphBrow, drawMorphEye, drawMorphMouth, traitWeight } from './face-morph'
+import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
 
 export interface RenderOptions {
   width: number; height: number; displaySize?: number; background?: string | null
@@ -250,7 +250,11 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
     else { const tilt = pose.mouth === 'grin' ? 24 : 0; ctx.moveTo(-w, -11); ctx.quadraticCurveTo(0, 5, w, -11 - tilt); ctx.bezierCurveTo(w * 1.02, h, -w * 1.02, h, -w, -11) }
     ctx.closePath(); ctx.strokeStyle = ink; ctx.stroke()
   }
-  if (pose.drool) { ctx.strokeStyle = '#fffef5'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(w * .35, 6); ctx.lineTo(w * .4, 40); ctx.stroke(); ctx.fillStyle = '#fffef5'; ctx.beginPath(); ctx.arc(w * .4, 44, 8, 0, Math.PI * 2); ctx.fill() }
+  if (pose.drool) {
+    const anchor = droolAnchor(mouthGeometry(pose).outline, w)
+    if (pose.mouth === 'cry') anchor.y -= 27
+    drawDrool(ctx, anchor)
+  }
   ctx.restore()
 }
 
@@ -260,7 +264,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], colo
   for (let i = 0; i < count; i++) {
     const p = fract((phase ?? .34) + i * .29), ease = p * p
     ctx.save(); ctx.globalAlpha = phase === undefined ? 1 : effectEnvelope(p)
-    ctx.translate(count === 1 ? 128 : 51 + i * 69, count === 1 ? 132 - ease * 26 : 198 - i * 60 - ease * 38)
+    ctx.translate(prop === 'zzz' ? 45 + i * 64 + ease * 36 : count === 1 ? 128 : 51 + i * 69, prop === 'zzz' ? 204 - i * 58 - ease * 54 : count === 1 ? 132 - ease * 26 : 198 - i * 60 - ease * 38)
     const scale = phase === undefined ? 1 : .62 + .38 * smoothstep(0, .38, p)
     ctx.scale(scale, scale); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
     if (prop === 'zzz') { const r = 14 + i * 5; ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, -r); ctx.lineTo(-r, r); ctx.lineTo(r, r); ctx.stroke() }
@@ -395,6 +399,8 @@ export class CharacterRenderer {
     }
     vertices.needsUpdate = true; valid.needsUpdate = true; this.face.geometry.computeBoundingSphere()
     this.prop.visible = detail === 'full' && pose.prop !== 'none'
+    this.prop.material.depthTest = pose.prop !== 'zzz'
+    this.prop.renderOrder = pose.prop === 'zzz' ? 2 : 0
     const propKey = `${pose.prop}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
     if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase); this.propTexture.needsUpdate = true; this.lastProp = propKey }
     const propSize = this.shape === 'capsule' ? .42 : .32

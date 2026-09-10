@@ -126,9 +126,12 @@ export function snapshotSvg(snapshot: Snapshot): string {
     drawProp(art as unknown as CanvasRenderingContext2D, name, name === 'heart' ? '#ff768c' : name === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase)
     const center = project(prop.getWorldPosition(new THREE.Vector3())), scale = prop.getWorldScale(new THREE.Vector3())
     const w = scale.x * width / (camera.right - camera.left), h = scale.y * height / (camera.top - camera.bottom)
-    const occlusion = pathData(boundaryContours(bodyData.triangles.map(t => clip(t.points, center.z, false)).filter(p => p.length >= 3)))
-    defs.push(`<mask id="prop-occlusion" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="white"/><path d="${occlusion}" fill="black"/></mask>`)
-    transparent.push({ z: center.z, markup: `<g id="supporting-elements" data-name="Supporting elements" mask="url(#prop-occlusion)" opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
+    const foreground = !prop.material.depthTest
+    if (!foreground) {
+      const occlusion = pathData(boundaryContours(bodyData.triangles.map(t => clip(t.points, center.z, false)).filter(p => p.length >= 3)))
+      defs.push(`<mask id="prop-occlusion" maskUnits="userSpaceOnUse" x="0" y="0" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="white"/><path d="${occlusion}" fill="black"/></mask>`)
+    }
+    transparent.push({ z: foreground ? -Infinity : center.z, markup: `<g id="supporting-elements" data-name="Supporting elements"${foreground ? '' : ' mask="url(#prop-occlusion)"'} opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
   }
   if (transparent.length) contents.push(`<g id="face" data-name="Facial expression">${transparent.sort((a, b) => b.z - a.z).map(layer => layer.markup).join('')}</g>`)
   const metadata = { format: 'cliplab-svg-snapshot', gradientProjection: 'planar-fit', character, pose: sample.pose, gradientRotation: sample.gradientRotation ?? 0, effectiveGradientAngle: character.gradientAngle + (sample.gradientRotation ?? 0), rotation: options.rotation, cursor: options.cursor }
