@@ -177,3 +177,20 @@ it('keeps rotating bodies inside the 48px and 96px canvas with a clear margin', 
     }
   } finally { renderer.dispose() }
 })
+
+it('locks the 24px eye positions to a leftward gaze despite cursor and animated offsets', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 24, height: 24 })
+  const character = { ...defaultProject().characters[0]!, followCursor: true }
+  const sample = { pose: { ...BASE_POSE, gazeX: 1, gazeY: 1, leftX: 30, rightY: 25, faceY: .1 }, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const x of [-1, 0, 1]) for (const reducedMotion of [false, true]) {
+      renderer.render(character, sample, { displaySize: 24, cursor: { x, y: 1 }, reducedMotion }, { x, y: 1 })
+      const state = renderer.snapshotScene()
+      expect(state.gaze).toEqual({ x: 0, y: 0 })
+      expect(state.sample.pose).toMatchObject({ gazeX: -1.5, gazeY: 0, leftX: 0, rightY: 0, faceY: BASE_POSE.faceY })
+    }
+    renderer.render(character, sample, { displaySize: 48, reducedMotion: false }, { x: 1, y: 1 })
+    expect(renderer.snapshotScene().sample.pose.gazeX).toBe(1)
+    expect(sample.pose.leftX).toBe(30)
+  } finally { renderer.dispose() }
+})
