@@ -154,3 +154,26 @@ it('squares the end-cap bottom at 24px and restores its fillet above the thresho
     }
   } finally { renderer.dispose() }
 })
+
+it('keeps rotating bodies inside the 48px and 96px canvas with a clear margin', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 96, height: 96 })
+  const sample = { pose: { ...BASE_POSE, squash: 1.1 }, blink: 0, bob: 1, breathe: 1, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const shape of ['sphere', 'cap', 'capsule'] as const) for (const size of [48, 96]) {
+      renderer.resize(size, size, size)
+      let previousHalf: number | undefined
+      for (const x of [0, 45, 90]) for (const y of [0, 45, 90]) for (const z of [0, 45, 90]) {
+        renderer.render({ ...defaultProject().characters[0]!, shape, trueFront: false, followRotation: false, lockPosition: false }, sample, { rotation: { x, y, z } })
+        const state = renderer.snapshotScene(), vertices = state.body.geometry.attributes.position!
+        let extent = 0
+        for (let i = 0; i < vertices.count; i++) {
+          const point = new THREE.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(state.body.matrixWorld).project(state.camera)
+          extent = Math.max(extent, Math.abs(point.x), Math.abs(point.y))
+        }
+        expect(extent).toBeLessThanOrEqual(.901)
+        if (previousHalf !== undefined) expect(state.camera.top).toBe(previousHalf)
+        previousHalf = state.camera.top
+      }
+    }
+  } finally { renderer.dispose() }
+})

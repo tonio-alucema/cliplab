@@ -375,7 +375,15 @@ export class CharacterRenderer {
     const aspect = this.options.width / this.options.height
     // Small assets use a tight body fit instead of the companion preview padding.
     const padding = displaySize <= 128 ? .55 : .72
-    const half = Math.max(height * padding, padding / aspect) / zoom
+    let half = Math.max(height * padding, padding / aspect) / zoom
+    if (displaySize === 48 || displaySize === 96) {
+      // A sphere bounds every rotation, avoiding angle-dependent zoom changes.
+      if (!this.body.geometry.boundingSphere) this.body.geometry.computeBoundingSphere()
+      const sphere = this.body.geometry.boundingSphere!
+      const radius = (sphere.radius + sphere.center.length()) * Math.max(1, this.root.scale.x, this.root.scale.y, this.root.scale.z)
+      const safeHalf = (radius + this.root.position.length()) / .9
+      half = Math.max(half, safeHalf, safeHalf / aspect)
+    }
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
     this.camera.updateMatrixWorld(true)
     this.face.visible = detail !== 'body'
