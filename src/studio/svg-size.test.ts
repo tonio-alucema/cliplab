@@ -51,7 +51,7 @@ it('uses one rounded lighting region for all three shapes and captures its curso
   const sample = { pose: { ...BASE_POSE, rotationX: 0, rotationY: 0, rotationZ: 0 }, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
   const innerPath = (text: string) => new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('[id$="-candle-light"] path')!.getAttribute('d')
   try {
-    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const tracking of [{ followCursor: true, followRotation: false }, { followCursor: false, followRotation: true }]) {
+    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const tracking of [{ followCursor: true, followRotation: true }, { followCursor: false, followRotation: true }]) {
       const character = { ...defaultProject().characters[0]!, shape, toon: true, trueFront: false, ...tracking }
       const positions: THREE.Vector3[] = [], paths: (string | null)[] = []
       for (const cursor of [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }]) {
@@ -70,7 +70,7 @@ it('uses one rounded lighting region for all three shapes and captures its curso
       expect(positions.every(p => Math.abs(p.z) < 1e-6 && p.length() < .07)).toBe(true)
       expect(paths[0]).not.toBe(paths[1]); expect(paths[2]).not.toBe(paths[3])
       for (const options of [{ reducedMotion: true }, { reducedMotion: false }]) {
-        const staticCharacter = options.reducedMotion ? character : { ...character, followCursor: false, followRotation: false }
+        const staticCharacter = options.reducedMotion ? character : { ...character, followCursor: true, followRotation: false }
         const offsets: THREE.Vector3[] = []
         for (const cursor of [{ x: -1, y: -1 }, { x: 1, y: 1 }]) {
           renderer.render(staticCharacter, sample, { ...options, cursor })

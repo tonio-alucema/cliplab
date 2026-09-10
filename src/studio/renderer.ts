@@ -17,10 +17,10 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
     z: rotation.z + pose.rotationZ
   }
 }
-/** One rounded light region; either existing cursor-following toggle activates
+/** One rounded light region; the body-following toggle activates
  * a subtle light-source shift. The shared eased cursor keeps motion smooth. */
-export function toonLightOffset(character: Pick<Character, 'followCursor' | 'followRotation'>, cursor: Gaze = { x: 0, y: 0 }, reducedMotion = false): Gaze {
-  const look = !reducedMotion && (character.followCursor || character.followRotation) ? clampGaze(cursor) : { x: 0, y: 0 }
+export function toonLightOffset(character: Pick<Character, 'followRotation'>, cursor: Gaze = { x: 0, y: 0 }, reducedMotion = false): Gaze {
+  const look = !reducedMotion && character.followRotation ? clampGaze(cursor) : { x: 0, y: 0 }
   return { x: -.015 + look.x * .045, y: .015 + look.y * .045 }
 }
 /** Size adaptation is render-only; larger sizes restore the authored appearance. */
