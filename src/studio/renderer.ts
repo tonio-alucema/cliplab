@@ -30,7 +30,7 @@ export function faceForSize(character: Character, sample: Sample, size: number) 
   const flatFill = size < 48
   return {
     character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
-    sample: simpleEyes || frontOnly ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), ...(frontOnly ? { squash: 1 } : {}) } } : sample,
+    sample: simpleEyes || frontOnly ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1), ...(frontOnly ? { squash: 1 } : {}) } } : sample,
     simpleEyes
   }
 }
