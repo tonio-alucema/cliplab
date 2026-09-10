@@ -138,3 +138,19 @@ it('fits every small preset consistently and enforces front-only gradient detail
     expect(original.trueFront).toBe(false); expect(original.toon).toBe(true)
   } finally { renderer.dispose() }
 })
+
+it('squares the end-cap bottom at 24px and restores its fillet above the threshold', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 96, height: 96 })
+  const character = { ...defaultProject().characters[0]!, shape: 'cap' as const }
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const size of [96, 24, 16, 24.01, 12, 48]) {
+      renderer.render(character, sample, { displaySize: size })
+      const state = renderer.snapshotScene(), positions = state.body.geometry.attributes.position!
+      let bottomRadius = 0
+      for (let i = 0; i < positions.count; i++) if (Math.abs(positions.getY(i) + .5) < 1e-5) bottomRadius = Math.max(bottomRadius, Math.hypot(positions.getX(i), positions.getZ(i)))
+      expect(bottomRadius).toBeCloseTo(size <= 24 ? .5 : .43, 5)
+      expect(snapshotSvg(state)).not.toMatch(/NaN|Infinity/)
+    }
+  } finally { renderer.dispose() }
+})

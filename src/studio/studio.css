@@ -2091,3 +2091,16 @@ input:checked+.switch-track:after {
 .stage-tools { justify-content:flex-end }
 @container character-preview (max-height: 380px) { .orbit-actions { margin-top:7px;gap:4px }.orbit-action { min-height:27px;padding:4px 8px } }
 @media(max-width:600px) { .orientation-control { display:block }.orbit-globe { width:80px;margin-inline:auto }.orbit-readout { grid-template-columns:repeat(3,minmax(0,1fr)) }.orbit-readout label { flex-direction:column }.orbit-action { padding:5px;gap:5px;font-size:10px } }
+
+/* Reserve the orbit column so fit and actual-size previews share a clear center. */
+.stage-canvas-wrap { --orbit-space: 200px; }
+.character-viewport { position:absolute;inset:0 var(--orbit-space) 0 0; }
+.actual-size-label { left:calc(50% - 100px); }
+@container character-preview (max-height:380px) {
+  .stage-canvas-wrap { --orbit-space:226px; }
+  .actual-size-label { left:calc(50% - 113px); }
+}
+@media(max-width:600px) {
+  .stage-canvas-wrap { --orbit-space:136px; }
+  .actual-size-label { left:calc(50% - 68px); }
+}

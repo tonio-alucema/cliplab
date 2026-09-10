@@ -42,11 +42,11 @@ export function radiusAt(shape: Shape, y: number): number {
   if (y >= -.43) return .5
   return .43 + Math.sqrt(Math.max(0, .07 ** 2 - (y + .43) ** 2))
 }
-function geometryFor(shape: Shape): THREE.BufferGeometry {
+function geometryFor(shape: Shape, squareBottom = false): THREE.BufferGeometry {
   if (shape === 'sphere') return new THREE.SphereGeometry(.5, 80, 64)
   if (shape === 'capsule') return new THREE.CapsuleGeometry(.5, 1, 24, 80)
-  const points = [new THREE.Vector2(0, -.5), new THREE.Vector2(.43, -.5)]
-  for (let i = 1; i <= 12; i++) { const a = -Math.PI / 2 + i / 12 * Math.PI / 2; points.push(new THREE.Vector2(.43 + .07 * Math.cos(a), -.43 + .07 * Math.sin(a))) }
+  const points = [new THREE.Vector2(0, -.5), new THREE.Vector2(squareBottom ? .5 : .43, -.5)]
+  for (let i = 1; !squareBottom && i <= 12; i++) { const a = -Math.PI / 2 + i / 12 * Math.PI / 2; points.push(new THREE.Vector2(.43 + .07 * Math.cos(a), -.43 + .07 * Math.sin(a))) }
   points.push(new THREE.Vector2(.5, 0))
   for (let i = 1; i <= 32; i++) { const a = i / 32 * Math.PI / 2; points.push(new THREE.Vector2(.5 * Math.cos(a), .5 * Math.sin(a))) }
   return new THREE.LatheGeometry(points, 80)
@@ -296,6 +296,7 @@ export class CharacterRenderer {
   private prop: THREE.Sprite
   private shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
   private shape: Shape = 'capsule'
+  private squareBottom = false
   private lastFaceKey = ''
   private resolvedEyes: EyeGazes | undefined
   private lastProp = ''
@@ -341,7 +342,8 @@ export class CharacterRenderer {
     const displaySize = this.options.displaySize ?? Math.min(this.options.width, this.options.height)
     const appearance = faceForSize(character, sample, displaySize)
     character = appearance.character; sample = appearance.sample
-    if (character.shape !== this.shape) { this.shape = character.shape; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }
+    const squareBottom = character.shape === 'cap' && displaySize <= 24
+    if (character.shape !== this.shape || squareBottom !== this.squareBottom) { this.shape = character.shape; this.squareBottom = squareBottom; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape, squareBottom); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }
     const { pose } = sample
     const height = bodyHeight(this.shape)
     const detail = detailAt(displaySize)

@@ -7,7 +7,7 @@ import type { Character, Sample } from './model'
 import Icon from './StudioIcon.vue'
 const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; playing: boolean }>()
 const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; pause: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }] }>()
-const host = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), globe = ref<HTMLCanvasElement>()
+const host = ref<HTMLElement>(), viewport = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), globe = ref<HTMLCanvasElement>()
 const angles = ref({ x: 0, y: 0, z: 0 })
 type Axis = 'x' | 'y' | 'z'
 const editingAxis = ref<Axis>(), angleDraft = ref('')
@@ -39,7 +39,7 @@ function setup() {
   try {
     renderer?.dispose()
     renderer = new CharacterRenderer(canvas.value, { width: host.value.clientWidth, height: host.value.clientHeight, displaySize: 400 })
-    observer?.disconnect(); observer = new ResizeObserver(() => { refreshPointer(); render() }); observer.observe(host.value)
+    observer?.disconnect(); observer = new ResizeObserver(() => { refreshPointer(); render() }); observer.observe(viewport.value ?? host.value)
     render()
   } catch { error.value = 'The 3D preview needs WebGL 2. Try a browser with hardware acceleration enabled.' }
 }
@@ -125,7 +125,9 @@ onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); can
 </script>
 <template>
   <div ref="host" class="stage-canvas-wrap" :style="{ background }">
+    <div ref="viewport" class="character-viewport">
     <canvas ref="canvas" class="stage-canvas" :class="{ actual: previewSize !== null }" :style="previewSize ? { width: `${previewSize}px`, height: `${previewSize}px` } : {}" tabindex="0" aria-label="3D character preview. Drag or use arrow keys to rotate; hold Shift to roll." @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
+    </div>
     <div class="orientation-control" role="group" aria-label="3D orbit controls">
       <div class="orbit-heading"><span>Orbit</span><button aria-label="Reset orientation" title="Reset orientation · Home" @click="emit('reset')"><Icon name="reset" :size="14" /></button></div>
       <canvas ref="globe" class="orbit-globe" width="288" height="288" tabindex="0" role="slider" aria-label="Character orientation. Drag or use arrow keys to rotate. Shift-drag or Shift-left/right to roll. Home resets." :aria-valuenow="angles.y" :aria-valuetext="`Pitch ${angles.x} degrees, turn ${angles.y} degrees, tilt ${angles.z} degrees`" aria-valuemin="-180" aria-valuemax="180" title="Drag to orbit · Shift to roll" @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
