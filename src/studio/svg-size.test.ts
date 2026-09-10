@@ -110,3 +110,31 @@ it('renders sleep marks in the foreground at every body angle and preserves that
     expect(renderer.snapshotScene().prop.renderOrder).toBe(0)
   } finally { renderer.dispose() }
 })
+
+it('fits every small preset consistently and enforces front-only gradient detail at the boundaries', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 96, height: 96 })
+  const original = { ...defaultProject().characters[0]!, trueFront: false, lockPosition: false, followRotation: true, toon: true, iris: true }
+  const sample = { pose: { ...BASE_POSE, squash: 1.1, rotationX: 20, rotationY: 30, rotationZ: 15 }, blink: 0, bob: 1, breathe: 1, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const size of [12, 16, 24, 48, 96]) {
+      renderer.resize(size, size, size)
+      renderer.render({ ...original, shape }, sample, { rotation: { x: 20, y: 50, z: 30 }, cursor: { x: 1, y: -1 }, zoom: 1.4 })
+      const state = renderer.snapshotScene()
+      expect(state.face.visible).toBe(size > 16)
+      expect(state.lightFill.visible).toBe(size >= 48)
+      if (size <= 24) {
+        expect(renderer.orientation().angleTo(new THREE.Quaternion())).toBeCloseTo(0)
+        expect(state.body.getWorldPosition(new THREE.Vector3()).length()).toBe(0)
+        expect(state.body.getWorldScale(new THREE.Vector3()).toArray()).toEqual([1, 1, 1])
+        const box = new THREE.Box3().setFromObject(state.body)
+        const top = new THREE.Vector3(0, box.max.y, 0).project(state.camera)
+        const bottom = new THREE.Vector3(0, box.min.y, 0).project(state.camera)
+        expect((top.y - bottom.y) / 2).toBeCloseTo(1 / 1.1, 2)
+        const svg = snapshotSvg(state)
+        expect(svg).not.toMatch(/NaN|Infinity/)
+        expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('[id$="-candle-light"]')).toBeNull()
+      }
+    }
+    expect(original.trueFront).toBe(false); expect(original.toon).toBe(true)
+  } finally { renderer.dispose() }
+})

@@ -25,11 +25,12 @@ export function toonLightOffset(character: Pick<Character, 'followRotation'>, cu
 }
 /** Size adaptation is render-only; larger sizes restore the authored appearance. */
 export function faceForSize(character: Character, sample: Sample, size: number) {
-  const simpleEyes = size >= 24 && size <= 48
+  const simpleEyes = size > 16 && size <= 48
+  const frontOnly = size <= 24
   const flatFill = size < 48
   return {
-    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}) } : character,
-    sample: simpleEyes ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.3 } } : sample,
+    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
+    sample: simpleEyes || frontOnly ? { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), ...(frontOnly ? { squash: 1 } : {}) } } : sample,
     simpleEyes
   }
 }
@@ -368,9 +369,11 @@ export class CharacterRenderer {
     for (const name of ['colorA', 'colorB']) (fu[name]!.value as THREE.Color).copy(u[name]!.value as THREE.Color)
     for (const name of ['gradientOn', 'toonOn', 'angle', 'bodyHeight']) fu[name]!.value = u[name]!.value
     ;(fu.fillScale!.value as THREE.Vector3).setScalar(fillScale); (fu.fillOffset!.value as THREE.Vector3).copy(lightOffset)
-    const zoom = this.options.zoom ?? 1
+    const zoom = displaySize <= 128 ? 1 : this.options.zoom ?? 1
     const aspect = this.options.width / this.options.height
-    const half = Math.max(height * .72, .72 / aspect) / zoom
+    // Small assets use a tight body fit instead of the companion preview padding.
+    const padding = displaySize <= 128 ? .55 : .72
+    const half = Math.max(height * padding, padding / aspect) / zoom
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
     this.camera.updateMatrixWorld(true)
     this.face.visible = detail !== 'body'

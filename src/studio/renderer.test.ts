@@ -3,17 +3,17 @@ import * as THREE from 'three'
 import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation, faceForSize } from './renderer'
 import { BASE_POSE, defaultProject, detailAt, faceLayers } from './model'
 import type { EyeGazes } from './gaze'
-describe('compact faces from 24 through 48 CSS pixels', () => {
+describe('compact faces above 16 through 48 CSS pixels', () => {
   const character = { ...defaultProject().characters[0]!, iris: true, eyeColor: '#663399' }
   const sample = { pose: { ...BASE_POSE, faceScale: .8 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
   it('enlarges only the requested sizes, without changing the stored face or accumulating scale', () => {
-    for (const size of [24, 24.01, 32, 48]) {
+    for (const size of [16.01, 23, 24, 24.01, 32, 48]) {
       const adapted = faceForSize(character, sample, size)
       expect(adapted.sample.pose.faceScale).toBeCloseTo(1.04)
       expect(adapted.character.iris).toBe(false); expect(adapted.simpleEyes).toBe(true)
       expect(adapted.character.eyeColor).toBe(character.eyeColor)
     }
-    for (const size of [12, 16, 23, 23.99, 48.01, 49, 96]) {
+    for (const size of [48.01, 49, 96]) {
       const restored = faceForSize(character, sample, size)
       expect(restored.sample).toBe(sample); expect(restored.character.iris).toBe(character.iris)
       expect(restored.simpleEyes).toBe(false)
