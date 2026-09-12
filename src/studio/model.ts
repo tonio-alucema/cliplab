@@ -41,7 +41,7 @@ export const PALETTES = [
   ['#f0ce58', '#fff1a5'], ['#ee98b2', '#ffd2da'], ['#72b6de', '#b9e4f5']
 ]
 
-export function detailAt(size: number): Detail { return size <= 16 ? 'body' : size <= 24 ? 'eyes' : 'full' }
+export function detailAt(size: number): Detail { return size <= 12 ? 'body' : 'full' }
 export function uid(prefix = 'item') { return `${prefix}-${crypto.randomUUID().slice(0, 8)}` }
 export function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
 export const BASE_POSE: Pose = {

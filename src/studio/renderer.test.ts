@@ -47,11 +47,11 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
       }) as CanvasRenderingContext2D
       drawFace(ctx, adapted.sample.pose, adapted.character, 0, detailAt(size), { x: 0, y: 0 }, { simpleEyes: adapted.simpleEyes, faceLayers: morphing ? faceLayers(pose) : undefined })
       expect(circles).toHaveLength(2)
-      expect(circles.every(c => c[2] === (size === 24 ? 29 * 1.2 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
+      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
       expect(scales.filter(s => s[0] === 1 && s[1] === 1)).toHaveLength(2)
       expect(colors).not.toContain('#ffffff'); expect(colors).not.toContain('#fffef9')
-      if (size === 24) { expect(colors).toEqual(['#000000', '#000000']); expect(clips).toBe(0) }
-      else expect(colors).toContain(character.eyeColor)
+      expect(colors.slice(0, 2)).toEqual(['#000000', '#000000'])
+      if (size === 48) expect(colors).toContain(character.eyeColor)
     }
   })
 })

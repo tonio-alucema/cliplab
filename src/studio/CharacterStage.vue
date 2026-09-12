@@ -12,7 +12,7 @@ const angles = ref({ x: 0, y: 0, z: 0 })
 type Axis = 'x' | 'y' | 'z'
 const editingAxis = ref<Axis>(), angleDraft = ref('')
 let angleRotation: { x: number; y: number; z: number } | undefined
-const smallFront = computed(() => props.previewSize !== null && props.previewSize <= 24)
+const smallFront = computed(() => props.previewSize !== null && props.previewSize <= 40)
 const error = ref('')
 let renderer: CharacterRenderer | undefined, observer: ResizeObserver | undefined
 let start: { x: number; y: number; rotation: { x: number; y: number; z: number }; roll: boolean; pointerId: number } | undefined

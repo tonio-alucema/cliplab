@@ -3,8 +3,8 @@ import { BASE_POSE, animationDuration, defaultProject, definitionOf, detailAt, e
 
 describe('responsive character detail', () => {
   it('uses the user-defined boundaries inclusively, independently of rendering resolution', () => {
-    expect(detailAt(12)).toBe('body'); expect(detailAt(15.99)).toBe('body')
-    expect(detailAt(16)).toBe('body'); expect(detailAt(16.01)).toBe('eyes'); expect(detailAt(24)).toBe('eyes')
+    expect(detailAt(12)).toBe('body'); expect(detailAt(12.01)).toBe('full')
+    expect(detailAt(16)).toBe('full'); expect(detailAt(40)).toBe('full'); expect(detailAt(24)).toBe('full')
     expect(detailAt(24.01)).toBe('full'); expect(detailAt(120)).toBe('full')
   })
 })

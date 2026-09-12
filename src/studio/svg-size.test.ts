@@ -120,7 +120,7 @@ it('fits every small preset consistently and enforces front-only gradient detail
       renderer.resize(size, size, size)
       renderer.render({ ...original, shape }, sample, { rotation: { x: 20, y: 50, z: 30 }, cursor: { x: 1, y: -1 }, zoom: 1.4 })
       const state = renderer.snapshotScene()
-      expect(state.face.visible).toBe(size > 16)
+      expect(state.face.visible).toBe(size > 12)
       expect(state.lightFill.visible).toBe(size >= 48)
       if (size <= 24) {
         expect(renderer.orientation().angleTo(new THREE.Quaternion())).toBeCloseTo(0)
