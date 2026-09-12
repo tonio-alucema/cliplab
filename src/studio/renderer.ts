@@ -30,7 +30,7 @@ export function faceForSize(character: Character, sample: Sample, size: number) 
   const flatFill = size < 48
   return {
     character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
-    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 40 ? 1.2 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.2 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.2 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .7, faceY: BASE_POSE.faceY } : {}) } } : sample,
+    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 40 ? 1.44 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .7, faceY: BASE_POSE.faceY } : {}) } } : sample,
     simpleEyes
   }
 }
@@ -217,12 +217,13 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
     }
   }
   if (detail === 'eyes') return
-  const mouthGaze = effects.mouthFollowsEyes ? 1 : .25
+  const mouthX = effects.mouthFollowsEyes ? 256 + gx * (1 - pupilAmount) + (pose.leftX + pose.rightX) / 2 : 256 + gx * .25
+  const mouthY = effects.mouthFollowsEyes ? 275 + gy : 293 + gy * .25
   if (layers) {
-    ctx.save(); ctx.translate(256 + gx * mouthGaze, 293 + gy * .25); ctx.scale(1, faceAspect)
+    ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect)
     drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); return
   }
-  const x = 256 + gx * mouthGaze, y = (pose.mouth === 'cry' ? 329 : 293) + gy * .25
+  const x = mouthX, y = pose.mouth === 'cry' ? 329 + gy * .25 : mouthY
   const broad = ['open', 'grin', 'cry'].includes(pose.mouth), w = (broad ? 124 : pose.mouth === 'oh' ? 51 : 61) * pose.mouthWidth
   const line = 17 * pose.mouthStroke
   ctx.save(); ctx.translate(x, y); ctx.scale(1, faceAspect); ctx.fillStyle = ink; ctx.strokeStyle = ink; ctx.lineWidth = line; ctx.beginPath()
@@ -377,7 +378,7 @@ export class CharacterRenderer {
     // Small assets use a tight body fit instead of the companion preview padding.
     const padding = displaySize <= 128 ? .55 : .72
     let half = Math.max(height * padding, padding / aspect) / zoom
-    if (displaySize > 24 && displaySize <= 128) {
+    if (displaySize > 40 && displaySize <= 128) {
       // A sphere bounds every rotation, avoiding angle-dependent zoom changes.
       if (!this.body.geometry.boundingSphere) this.body.geometry.computeBoundingSphere()
       const sphere = this.body.geometry.boundingSphere!

@@ -10,7 +10,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     for (const size of [16.01, 23, 24, 24.01, 32, 48]) {
       const adapted = faceForSize(character, sample, size)
       expect(adapted.sample.pose.faceScale).toBeCloseTo(1.04)
-      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size <= 40 ? 1.2 : 1))
+      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size <= 40 ? 1.44 : 1))
       expect(adapted.character.iris).toBe(false); expect(adapted.simpleEyes).toBe(true)
       expect(adapted.character.eyeColor).toBe(character.eyeColor)
     }
@@ -28,6 +28,20 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     }
     expect(shaded.toon).toBe(true); expect(shaded.shadow).toBe(true)
     expect(sample.pose.faceScale).toBe(.8); expect(character.iris).toBe(true)
+  })
+  it('centers compact smiles beneath the eye midpoint', () => {
+    for (const size of [16, 20, 24, 32, 40]) {
+      const adapted = faceForSize(character, sample, size)
+      const positions: number[][] = []
+      const ctx = new Proxy({}, {
+        get: (_, key) => key === 'translate' ? (...p: number[]) => positions.push(p) : () => {},
+        set: () => true,
+      }) as CanvasRenderingContext2D
+      drawFace(ctx, adapted.sample.pose, adapted.character, 0, 'full', { x: 0, y: 0 }, { simpleEyes: true, mouthFollowsEyes: true })
+      expect(positions).toHaveLength(3)
+      expect(positions[2]![0]).toBeCloseTo((positions[0]![0]! + positions[1]![0]!) / 2)
+      expect(positions[2]![1]! - positions[0]![1]!).toBe(78)
+    }
   })
   it('draws black circles instead of pupils, hearts, cheek cuts or happy arcs, including during morphs', () => {
     for (const size of [24, 48]) for (const eye of ['pupil', 'heart', 'closed'] as const) for (const morphing of [false, true]) {
@@ -47,7 +61,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
       }) as CanvasRenderingContext2D
       drawFace(ctx, adapted.sample.pose, adapted.character, 0, detailAt(size), { x: 0, y: 0 }, { simpleEyes: adapted.simpleEyes, faceLayers: morphing ? faceLayers(pose) : undefined })
       expect(circles).toHaveLength(2)
-      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 * 1.2 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
+      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 * 1.44 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
       expect(scales.filter(s => s[0] === 1 && s[1] === 1)).toHaveLength(2)
       expect(colors).not.toContain('#ffffff'); expect(colors).not.toContain('#fffef9')
       expect(colors.slice(0, 2)).toEqual(['#000000', '#000000'])
