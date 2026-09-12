@@ -40,7 +40,7 @@ it('uses up-left resting iris, half-rate body gaze, and a fixed reduced-motion g
     expect(rest.left).toEqual({ x: -.22, y: .22 }); expect(rest.right).toEqual(rest.left)
     renderer.render({ ...character, followRotation: true }, sample, { cursor: { x: 1, y: 0 } })
     const turned = renderer.eyeGazes()!
-    expect(turned.left.x - rest.left.x).toBeCloseTo(.5 * Math.cos(28 * Math.PI / 180))
+    expect(turned.left.x - rest.left.x).toBeCloseTo(.575 * Math.cos(28 * Math.PI / 180))
     renderer.render({ ...character, followRotation: true, followCursor: true }, sample, { reducedMotion: true, cursor: { x: -1, y: -1 }, pointerLook: { x: -4, y: -4, weight: 1 } }, { x: -1, y: -1 })
     expect(renderer.eyeGazes()).toEqual(rest)
   } finally { renderer.dispose() }

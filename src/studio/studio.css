@@ -2104,3 +2104,9 @@ input:checked+.switch-track:after {
   .stage-canvas-wrap { --orbit-space:136px; }
   .actual-size-label { left:calc(50% - 68px); }
 }
+
+.size-samples { flex-wrap:wrap;justify-content:flex-end; }
+.orbit-readout input:not(:read-only) { cursor:ew-resize;touch-action:none; }
+
+.character-viewport.actual-viewport { display:grid;place-items:safe center;overflow:auto; }
+.character-viewport.actual-viewport .stage-canvas.actual { position:relative;left:auto;top:auto;transform:none;max-width:none;flex-shrink:0; }

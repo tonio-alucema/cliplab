@@ -152,3 +152,20 @@ describe('restored orbit controls', () => {
     expect(Number(x.value)).toBe(120)
   })
 })
+
+it('scrubs only the pressed value, stops on release, and honors position lock', async () => {
+  const { state, host } = mount()
+  await nextTick()
+  const x = host.querySelector<HTMLInputElement>('[aria-label="Orbit X angle in degrees"]')!
+  x.setPointerCapture = vi.fn()
+  const pointer = async (type: string, clientX: number) => { x.dispatchEvent(new PointerEvent(type, { clientX, pointerId: 7, button: 0 })); await nextTick() }
+  await pointer('pointermove', 100)
+  expect(state.rotation.x).toBe(17)
+  await pointer('pointerdown', 100); await pointer('pointermove', 120)
+  expect(state.rotation.x).toBe(27); expect(state.rotation.y).toBe(23)
+  await pointer('pointerup', 120); await pointer('pointermove', 150)
+  expect(state.rotation.x).toBe(27)
+  state.character.lockPosition = true; await nextTick()
+  await pointer('pointerdown', 100); await pointer('pointermove', 140)
+  expect(state.rotation.x).toBe(27)
+})

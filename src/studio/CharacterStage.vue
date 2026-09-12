@@ -48,6 +48,29 @@ function manualRotation() {
   const rotation = characterRotation(reducedMotion.matches ? { ...props.character, followRotation: false } : props.character, pose, props.rotation, gaze)
   return { x: rotation.x - pose.rotationX, y: rotation.y - pose.rotationY, z: rotation.z - pose.rotationZ }
 }
+let scrub: { axis: Axis; x: number; value: number; rotation: { x: number; y: number; z: number }; pointerId: number; moved: boolean } | undefined
+function startScrub(axis: Axis, event: PointerEvent) {
+  if (event.button !== 0 || smallFront.value || props.character.lockPosition) return
+  emit('pause')
+  scrub = { axis, x: event.clientX, value: angles.value[axis], rotation: manualRotation(), pointerId: event.pointerId, moved: false }
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+function moveScrub(event: PointerEvent) {
+  if (!scrub || scrub.pointerId !== event.pointerId || smallFront.value || props.character.lockPosition) return
+  const delta = event.clientX - scrub.x
+  if (!scrub.moved && Math.abs(delta) < 3) return
+  scrub.moved = true; editingAxis.value = undefined
+  event.preventDefault()
+  const pose = props.sample.pose
+  const poseAngle = scrub.axis === 'x' ? pose.rotationX : scrub.axis === 'y' ? pose.rotationY : pose.rotationZ
+  const value = Math.round(Math.max(-180, Math.min(180, scrub.value + delta * .5)) * 10) / 10
+  emit('rotate', { ...scrub.rotation, [scrub.axis]: value - poseAngle }); leave()
+}
+function endScrub(event: PointerEvent) {
+  if (scrub?.pointerId !== event.pointerId) return
+  if (scrub.moved) { editingAxis.value = undefined; (event.currentTarget as HTMLInputElement).blur() }
+  scrub = undefined
+}
 function editAngle(axis: Axis, event: FocusEvent) {
   if (smallFront.value || props.character.lockPosition) return
   emit('pause')
@@ -125,13 +148,13 @@ onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); can
 </script>
 <template>
   <div ref="host" class="stage-canvas-wrap" :style="{ background }">
-    <div ref="viewport" class="character-viewport">
+    <div ref="viewport" class="character-viewport" :class="{ 'actual-viewport': previewSize !== null }">
     <canvas ref="canvas" class="stage-canvas" :class="{ actual: previewSize !== null }" :style="previewSize ? { width: `${previewSize}px`, height: `${previewSize}px` } : {}" tabindex="0" aria-label="3D character preview. Drag or use arrow keys to rotate; hold Shift to roll." @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
     </div>
     <div class="orientation-control" role="group" aria-label="3D orbit controls">
       <div class="orbit-heading"><span>Orbit</span><button aria-label="Reset orientation" title="Reset orientation · Home" @click="emit('reset')"><Icon name="reset" :size="14" /></button></div>
       <canvas ref="globe" class="orbit-globe" width="288" height="288" tabindex="0" role="slider" aria-label="Character orientation. Drag or use arrow keys to rotate. Shift-drag or Shift-left/right to roll. Home resets." :aria-valuenow="angles.y" :aria-valuetext="`Pitch ${angles.x} degrees, turn ${angles.y} degrees, tilt ${angles.z} degrees`" aria-valuemin="-180" aria-valuemax="180" title="Drag to orbit · Shift to roll" @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
-      <div class="orbit-readout"><label v-for="axis in (['x', 'y', 'z'] as const)" :key="axis"><span>{{ axis }}</span><input type="number" :aria-label="`Orbit ${axis.toUpperCase()} angle in degrees`" :title="character.lockPosition ? 'Unlock Position to edit angles' : 'Enter angle · −180° to 180°'" min="-180" max="180" step="0.1" :readonly="smallFront || character.lockPosition" :value="editingAxis === axis ? angleDraft : angles[axis]" @focus="editAngle(axis, $event)" @input="angleDraft = ($event.target as HTMLInputElement).value" @blur="commitAngle(axis)" @keydown.stop="angleKey(axis, $event)" /></label></div>
+      <div class="orbit-readout"><label v-for="axis in (['x', 'y', 'z'] as const)" :key="axis"><span>{{ axis }}</span><input type="number" :aria-label="`Orbit ${axis.toUpperCase()} angle in degrees`" :title="character.lockPosition ? 'Unlock Position to edit angles' : 'Drag left/right to scrub · Click to type · −180° to 180°'" min="-180" max="180" step="0.1" :readonly="smallFront || character.lockPosition" :value="editingAxis === axis ? angleDraft : angles[axis]" @pointerdown="startScrub(axis, $event)" @pointermove="moveScrub" @pointerup="endScrub" @pointercancel="endScrub" @lostpointercapture="endScrub" @focus="editAngle(axis, $event)" @input="angleDraft = ($event.target as HTMLInputElement).value" @blur="commitAngle(axis)" @keydown.stop="angleKey(axis, $event)" /></label></div>
       <slot name="controls" />
     </div>
     <div v-if="error" class="renderer-error" role="alert"><strong>Preview unavailable</strong><p>{{ error }}</p><button class="button secondary" @click="setup">Retry preview</button></div>

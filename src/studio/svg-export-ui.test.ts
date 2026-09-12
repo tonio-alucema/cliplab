@@ -27,7 +27,7 @@ describe('SVG image export controls', () => {
     const [blob, filename] = saveBlob.mock.calls[0]!
     expect(blob.type).toBe('image/svg+xml;charset=utf-8'); expect(filename).toMatch(/\.svg$/)
     expect(await blob.text()).toBe(renderSvg.mock.results[0]!.value)
-    expect(renderSvg.mock.calls[0]![1]).toMatchObject({ width: 1080, height: 1080, background: null, zoom: 1, rotation: { x: -5, y: -12, z: -7 } })
+    expect(renderSvg.mock.calls[0]![1]).toMatchObject({ width: 1080, height: 1080, background: null, zoom: 1, rotation: { x: -5.9, y: -24.2, z: 0 } })
     expect(renderSvg.mock.calls[0]![1].sample!.pose).toBeDefined()
     host.querySelector<HTMLButtonElement>('[aria-label="Copy SVG to clipboard"]')!.click(); await nextTick()
     expect(writeText).toHaveBeenCalledWith(renderSvg.mock.results[1]!.value)

@@ -9,7 +9,7 @@ export interface RenderOptions {
   pointerLook?: PointerLook; eyeGazes?: EyeGazes; reducedMotion?: boolean
 }
 /** Cursor pitch owns the vertical look direction, independent of the resting tilt. */
-export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5, y: -12, z: -7 }, cursor: Gaze = { x: 0, y: 0 }) {
+export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5.9, y: -24.2, z: 0 }, cursor: Gaze = { x: 0, y: 0 }) {
   if (character.trueFront) return { x: 0, y: 0, z: 0 }
   return {
     x: character.followRotation ? -cursor.y * 16 : rotation.x + pose.rotationX,
@@ -376,7 +376,7 @@ export class CharacterRenderer {
     // Small assets use a tight body fit instead of the companion preview padding.
     const padding = displaySize <= 128 ? .55 : .72
     let half = Math.max(height * padding, padding / aspect) / zoom
-    if (displaySize === 48 || displaySize === 96) {
+    if (displaySize > 24 && displaySize <= 128) {
       // A sphere bounds every rotation, avoiding angle-dependent zoom changes.
       if (!this.body.geometry.boundingSphere) this.body.geometry.computeBoundingSphere()
       const sphere = this.body.geometry.boundingSphere!
@@ -391,7 +391,7 @@ export class CharacterRenderer {
     const reduced = !!this.options.reducedMotion
     const screenGaze = reduced ? { x: 0, y: 0 } : gaze
     const turnGaze = !reduced && !character.followCursor && character.followRotation && !character.trueFront ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
-    const local = character.iris ? new THREE.Vector3(screenGaze.x + turnGaze.x * .5, screenGaze.y + turnGaze.y * .5, 0).applyQuaternion(this.root.quaternion.clone().invert()) : screenGaze
+    const local = character.iris ? new THREE.Vector3(screenGaze.x + turnGaze.x * .575, screenGaze.y + turnGaze.y * .575, 0).applyQuaternion(this.root.quaternion.clone().invert()) : screenGaze
     const faceGaze = displaySize === 24 ? { x: 0, y: 0 } : irisRestGaze(character, local, reduced)
     this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? (!reduced ? this.options.eyeGazes : undefined) ?? resolveEyeGazes(character, reduced ? { ...pose, gazeX: 0, gazeY: 0 } : pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, !reduced && character.followCursor ? this.options.pointerLook : undefined, sample.faceLayers) : undefined
     const key = JSON.stringify([pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])

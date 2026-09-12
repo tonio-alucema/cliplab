@@ -95,7 +95,7 @@ export function defaultExpressions(): Expression[] {
 export function defaultProject(): Project {
   const base: Character = {
     id: 'milo', name: 'Milo', shape: 'capsule', color: '#ff986d', color2: '#ffd092', gradient: true,
-    gradientAngle: 20, toon: true, trueFront: false, lockPosition: false, eyeColor: '#080909', iris: false, elevated: false, elevation: .065,
+    gradientAngle: -24, toon: true, trueFront: false, lockPosition: false, eyeColor: '#080909', iris: false, elevated: false, elevation: .065,
     shadow: true, motion: .45, speed: 1, blink: true, blinkInterval: 4.2, followCursor: false, followRotation: false
   }
   const expressions = defaultExpressions()
@@ -271,7 +271,7 @@ function parsePose(value: unknown): Pose {
 }
 export function parseCharacter(value: unknown): Character {
   const v = obj(value), d = defaultProject().characters[0]!
-  return { ...d, id: str(v.id, uid('character')), name: str(v.name, 'Character'), shape: choice(v.shape, ['capsule', 'cap', 'sphere'], 'capsule'), color: color(v.color, d.color), color2: color(v.color2, d.color2), gradient: boolean(v.gradient, true), gradientAngle: num(v.gradientAngle, 20, -180, 180), toon: boolean(v.toon, d.toon), trueFront: boolean(v.trueFront, false), lockPosition: boolean(v.lockPosition, false), eyeColor: color(v.eyeColor, d.eyeColor), iris: boolean(v.iris, false), elevated: boolean(v.elevated, false), elevation: num(v.elevation, .065, .005, .2), shadow: boolean(v.shadow, true), motion: num(v.motion, .45, 0, 1), speed: num(v.speed, 1, .25, 3), blink: boolean(v.blink, true), blinkInterval: num(v.blinkInterval, 4.2, 1, 12), followCursor: boolean(v.followCursor, false), followRotation: boolean(v.followRotation, false) }
+  return { ...d, id: str(v.id, uid('character')), name: str(v.name, 'Character'), shape: choice(v.shape, ['capsule', 'cap', 'sphere'], 'capsule'), color: color(v.color, d.color), color2: color(v.color2, d.color2), gradient: boolean(v.gradient, true), gradientAngle: num(v.gradientAngle, -24, -180, 180), toon: boolean(v.toon, d.toon), trueFront: boolean(v.trueFront, false), lockPosition: boolean(v.lockPosition, false), eyeColor: color(v.eyeColor, d.eyeColor), iris: boolean(v.iris, false), elevated: boolean(v.elevated, false), elevation: num(v.elevation, .065, .005, .2), shadow: boolean(v.shadow, true), motion: num(v.motion, .45, 0, 1), speed: num(v.speed, 1, .25, 3), blink: boolean(v.blink, true), blinkInterval: num(v.blinkInterval, 4.2, 1, 12), followCursor: boolean(v.followCursor, false), followRotation: boolean(v.followRotation, false) }
 }
 export function parseProject(value: unknown): Project {
   const v = obj(value)

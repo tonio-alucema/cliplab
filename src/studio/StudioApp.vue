@@ -32,7 +32,7 @@ const editing = ref(false), selectedBeat = ref(0), frozenBeat = ref(false)
 const beat = computed(() => expression.value.beats[selectedBeat.value] ?? expression.value.beats[0]!)
 const playing = ref(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
 const time = ref(0), zoom = ref(1)
-const rotation = ref({ x: -5, y: -12, z: -7 })
+const rotation = ref({ x: -5.9, y: -24.2, z: 0 })
 const previewSize = ref<number | null>(null)
 const previewCursor = ref<{ x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }>({ x: 0, y: 0 })
 const background = 'transparent'
@@ -85,7 +85,7 @@ function normalizeSelections() {
 function restoreSnapshot(value: string) { const priorIds = new Set(project.value.animations.map(a => a.id)); restoring = true; project.value = JSON.parse(value) as Project; stable = value; restoring = false; const restored = project.value.animations.filter(a => !priorIds.has(a.id)); if (restored.length === 1) selectedAnimation.value = restored[0]!.id; persist(); normalizeSelections() }
 function undo() { if (JSON.stringify(project.value) !== stable) flush(); const previous = history.value.pop(); if (previous) { future.value.push(stable); restoreSnapshot(previous); notify('Change undone.') } }
 function redo() { const following = future.value.pop(); if (following) { history.value.push(stable); restoreSnapshot(following); notify('Change restored.') } }
-function resetRotation() { rotatePreview({ x: -5, y: -12, z: -7 }) }
+function resetRotation() { rotatePreview({ x: -5.9, y: -24.2, z: 0 }) }
 function resetFront() {
   rotation.value = { x: 0, y: 0, z: 0 }
   character.value.trueFront = true
@@ -304,7 +304,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
         <div class="sequence-card">
         <div class="size-strip">
           <div class="size-copy"><span>Preview size</span><span class="size-copy-sub">Tap to view in context</span></div>
-          <div class="size-samples" aria-label="Preview sizes"><button class="size-preset fit-preset" :class="{ active: previewSize === null }" :aria-pressed="previewSize === null" @click="previewSize = null"><Icon name="expand" :size="15" />Fit</button><button v-for="size in [12, 16, 24, 48, 96]" :key="size" class="size-preset" :class="{ active: previewSize === size }" :aria-label="`Preview at ${size} pixels`" :aria-pressed="previewSize === size" @click="previewSize = size">{{ size }}<span>px</span></button></div>
+          <div class="size-samples" aria-label="Preview sizes"><button class="size-preset fit-preset" :class="{ active: previewSize === null }" :aria-pressed="previewSize === null" @click="previewSize = null"><Icon name="expand" :size="15" />Fit</button><button v-for="size in [12, 16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512]" :key="size" class="size-preset" :class="{ active: previewSize === size }" :aria-label="`Preview at ${size} pixels`" :aria-pressed="previewSize === size" @click="previewSize = size">{{ size }}<span>px</span></button></div>
         </div>
 
         <section class="timeline" aria-label="Animation sequence">
