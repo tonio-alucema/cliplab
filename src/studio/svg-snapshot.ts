@@ -113,7 +113,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const transparent: { z: number; markup: string }[] = []
   if (face.visible) {
     const art = new SvgCanvas('face', faceProjector(face, project))
-    drawFace(art as unknown as CanvasRenderingContext2D, sample.pose, character, sample.blink, detailAt(options.displaySize ?? Math.min(width, height)), snapshot.gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: snapshot.eyeGazes, faceLayers: sample.faceLayers, simpleEyes: snapshot.simpleEyes })
+    drawFace(art as unknown as CanvasRenderingContext2D, sample.pose, character, sample.blink, detailAt(options.displaySize ?? Math.min(width, height)), snapshot.gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: snapshot.eyeGazes, faceLayers: sample.faceLayers, simpleEyes: snapshot.simpleEyes, mouthFollowsEyes: (options.displaySize ?? Math.min(width, height)) >= 16 && (options.displaySize ?? Math.min(width, height)) <= 40 })
     const valid = face.geometry.getAttribute('faceValid'), data = triangles(face)
     const visible = data.triangles.filter(t => t.indices.every(i => valid.getX(i) >= .99))
     defs.push(`<clipPath id="face-visible"><path d="${pathData(boundaryContours(visible.map(t => t.points)))}"/></clipPath>`)

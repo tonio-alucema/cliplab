@@ -10,7 +10,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     for (const size of [16.01, 23, 24, 24.01, 32, 48]) {
       const adapted = faceForSize(character, sample, size)
       expect(adapted.sample.pose.faceScale).toBeCloseTo(1.04)
-      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1))
+      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size <= 40 ? 1.2 : 1))
       expect(adapted.character.iris).toBe(false); expect(adapted.simpleEyes).toBe(true)
       expect(adapted.character.eyeColor).toBe(character.eyeColor)
     }
@@ -47,7 +47,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
       }) as CanvasRenderingContext2D
       drawFace(ctx, adapted.sample.pose, adapted.character, 0, detailAt(size), { x: 0, y: 0 }, { simpleEyes: adapted.simpleEyes, faceLayers: morphing ? faceLayers(pose) : undefined })
       expect(circles).toHaveLength(2)
-      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
+      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 * 1.2 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
       expect(scales.filter(s => s[0] === 1 && s[1] === 1)).toHaveLength(2)
       expect(colors).not.toContain('#ffffff'); expect(colors).not.toContain('#fffef9')
       expect(colors.slice(0, 2)).toEqual(['#000000', '#000000'])
