@@ -73,7 +73,7 @@ const fragmentShader = `
     float t = clamp(0.5 + vPosition.y / bodyHeight * cos(angle) + vPosition.x * sin(angle), 0.0, 1.0);
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
     // The light fill uses an inset copy of the silhouette, with one crisp shade step.
-    float shade = mix(0.84, 1.0, insetFill);
+    float shade = mix(0.82, 1.0, insetFill);
     gl_FragColor = vec4(color * mix(1.0, shade, toonOn), 1.0);
     #include <colorspace_fragment>
   }

@@ -89,7 +89,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const surface = (mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, label: string) => {
     const data = triangles(mesh, true), u = mesh.material.uniforms
     const colorA = u.colorA!.value as THREE.Color, colorB = (u.colorB!.value as THREE.Color).clone().lerp(colorA, 1 - u.gradientOn!.value)
-    const shade = u.toonOn!.value && !u.insetFill!.value ? .84 : 1
+    const shade = u.toonOn!.value && !u.insetFill!.value ? .82 : 1
     const gradient = fitGradient(data.triangles), { x, y, t, gx, gy } = gradient, length = gx * gx + gy * gy
     let fill = shadedColor(colorA, shade)
     if (u.gradientOn!.value > 0 && !colorA.equals(colorB)) {
