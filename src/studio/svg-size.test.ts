@@ -8,7 +8,7 @@ import { snapshotSvg } from './svg-snapshot'
 
 // Keep the complete production scene/meshes/materials; replace only GPU submission.
 vi.mock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
-  outputColorSpace = ''; setPixelRatio() {} setSize() {} setClearColor() {} dispose() {} forceContextLoss() {}
+  outputColorSpace = ''; clearDepth() {} setPixelRatio() {} setSize() {} setClearColor() {} dispose() {} forceContextLoss() {}
   render(scene: THREE.Scene, camera: THREE.Camera) { scene.updateMatrixWorld(true); camera.updateMatrixWorld(true) }
 } }))
 beforeEach(() => { vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => new SvgCanvas('canvas') as unknown as CanvasRenderingContext2D) })
@@ -192,5 +192,23 @@ it('locks the 24px eye positions to a leftward gaze despite cursor and animated 
     renderer.render(character, sample, { displaySize: 48, reducedMotion: false }, { x: 1, y: 1 })
     expect(renderer.snapshotScene().sample.pose.gazeX).toBe(1)
     expect(sample.pose.leftX).toBe(30)
+  } finally { renderer.dispose() }
+})
+
+ it('composites the ground shadow before every character surface regardless of rotation', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 512, height: 512 })
+  const render = vi.spyOn(renderer.gl, 'render')
+  try {
+    for (const shape of ['cap', 'capsule', 'sphere'] as const) for (const toon of [false, true]) {
+      render.mockClear()
+      renderer.render({ ...defaultProject().characters[0]!, shape, toon, shadow: true }, { pose: BASE_POSE, blink: 0, bob: 1, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }, { rotation: { x: 80, y: 140, z: 60 }, background: '#f4f4f4' })
+      const state = renderer.snapshotScene()
+      expect(render).toHaveBeenCalledTimes(2)
+      expect(render.mock.calls[0]![0].children).toContain(state.shadow)
+      expect(render.mock.calls[1]![0].children).not.toContain(state.shadow)
+      expect(state.body.parent!.parent).toBe(render.mock.calls[1]![0])
+      const svg = snapshotSvg(state)
+      expect(svg.indexOf('data-name="Shadow"')).toBeLessThan(svg.indexOf('data-name="Outer body"'))
+    }
   } finally { renderer.dispose() }
 })

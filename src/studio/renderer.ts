@@ -284,6 +284,7 @@ export class CharacterRenderer {
   readonly canvas: HTMLCanvasElement
   readonly gl: THREE.WebGLRenderer
   private scene = new THREE.Scene()
+  private shadowScene = new THREE.Scene()
   private camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 30)
   private root = new THREE.Group()
   private body: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
@@ -330,7 +331,7 @@ export class CharacterRenderer {
     }
     this.prop = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.propTexture, transparent: true, depthWrite: false, toneMapped: false }))
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(.35, 64), new THREE.MeshBasicMaterial({ color: '#809299', transparent: true, opacity: .2, depthWrite: false }))
-    this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root, this.shadow)
+    this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root); this.shadowScene.add(this.shadow)
     this.camera.position.set(0, 0, 8); this.camera.lookAt(0, 0, 0)
     this.resize(options.width, options.height, options.displaySize)
   }
@@ -426,7 +427,14 @@ export class CharacterRenderer {
     this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (this.shape === 'capsule' ? 1 : .95), .12, 1)
     const bg = this.options.background
     if (bg) this.gl.setClearColor(bg, 1); else this.gl.setClearColor(0x000000, 0)
+    // Composite the ground shadow first: body rotation must never bring it
+    // in front of the silhouette or the toon fill, which does not write depth.
+    this.gl.autoClear = true
+    this.gl.render(this.shadowScene, this.camera)
+    this.gl.autoClear = false
+    this.gl.clearDepth()
     this.gl.render(this.scene, this.camera)
+    this.gl.autoClear = true
     this.captured = { character, sample, gaze: faceGaze, simpleEyes: appearance.simpleEyes }
   }
   snapshotScene() {
