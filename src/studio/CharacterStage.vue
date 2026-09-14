@@ -149,7 +149,10 @@ onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); can
 <template>
   <div ref="host" class="stage-canvas-wrap" :style="{ background }">
     <div ref="viewport" class="character-viewport" :class="{ 'actual-viewport': previewSize !== null }">
+    <div class="preview-artwork">
     <canvas ref="canvas" class="stage-canvas" :class="{ actual: previewSize !== null }" :style="previewSize ? { width: `${previewSize}px`, height: `${previewSize}px` } : {}" tabindex="0" aria-label="3D character preview. Drag or use arrow keys to rotate; hold Shift to roll." @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
+    <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size<span v-if="previewSize <= 40"> · front locked</span></span>
+    </div>
     </div>
     <div class="orientation-control" role="group" aria-label="3D orbit controls">
       <div class="orbit-heading"><span>Orbit</span><button aria-label="Reset orientation" title="Reset orientation · Home" @click="emit('reset')"><Icon name="reset" :size="14" /></button></div>

@@ -297,7 +297,6 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
           <div class="stage-tools">
             <div class="stage-tool-actions"><button class="stage-icon" aria-label="Zoom out" :disabled="previewSize !== null || zoom <= .65" @click="zoom = Math.max(.65, zoom - .1)"><Icon name="minus" :size="16" /></button><span class="zoom-label">{{ previewSize ? `${previewSize} px` : `${Math.round(zoom * 100)}%` }}</span><button class="stage-icon" aria-label="Zoom in" :disabled="previewSize !== null || zoom >= 1.4" @click="zoom = Math.min(1.4, zoom + .1)"><Icon name="plus" :size="16" /></button><button class="stage-icon photo-button" aria-label="Export this pose as an image" title="Photo mode" @click="exportTab = 'image'; tab = 'export'; playing = false"><Icon name="camera" /></button></div>
           </div>
-          <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size<span v-if="previewSize <= 40"> · front locked</span></span>
         </div>
         </div>
 
