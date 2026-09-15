@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Icon from './StudioIcon.vue'
 import Thumb from './CharacterThumb.vue'
+import CharacterTabs from './CharacterTabs.vue'
 import Stage from './CharacterStage.vue'
 import { FACE_SETS, expressionFromFace, facePose, type FacePreset } from './face-styles'
 import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, addLoadingAnimation, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, isGradientExpression, parseProject, sampleDefinition, uid, upgradeStudioDefaults, type Animation, type Character, type Expression, type Pose, type Project } from './model'
@@ -169,6 +170,26 @@ function dropAt(index: number) {
 function stepExpression(id: string) { return project.value.expressions.find(e => e.id === id) ?? project.value.expressions[0]! }
 function characterForShape(shape: Character['shape']) { return { ...character.value, shape } }
 function applyPalette(colors: string[]) { character.value.color = colors[0]!; character.value.color2 = colors[1]! }
+function renameCharacter(id: string, name: string) {
+  const c = project.value.characters.find(c => c.id === id)
+  if (!c || !name.trim() || c.name === name.trim()) return
+  flush(); c.name = name.trim(); flush()
+}
+function deleteCharacter(id: string) {
+  const index = project.value.characters.findIndex(c => c.id === id)
+  if (index < 0 || project.value.characters.length <= 1) return
+  flush(); const [removed] = project.value.characters.splice(index, 1)
+  if (selectedCharacter.value === id) selectedCharacter.value = project.value.characters[Math.min(index, project.value.characters.length - 1)]!.id
+  flush(); notify(`${removed!.name} deleted. Use Undo to restore it.`)
+}
+function reorderCharacter(id: string, targetId: string, after: boolean) {
+  if (id === targetId) return
+  const characters = [...project.value.characters], index = characters.findIndex(c => c.id === id)
+  if (index < 0 || !characters.some(c => c.id === targetId)) return
+  const [moved] = characters.splice(index, 1), target = characters.findIndex(c => c.id === targetId)
+  characters.splice(target + (after ? 1 : 0), 0, moved!)
+  flush(); project.value.characters = characters; flush()
+}
 function duplicateCharacter() { const c = clone(character.value); c.id = uid('character'); c.name = `${c.name} copy`; project.value.characters.push(c); selectedCharacter.value = c.id; tab.value = 'character' }
 const numberControls: { key: NumberKey; label: string; min: number; max: number; step: number }[] = [
   { key: 'faceScale', label: 'Face size', min: .6, max: 1.4, step: .01 }, { key: 'faceY', label: 'Face height', min: -.2, max: .2, step: .01 },
@@ -282,7 +303,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
       <section class="workbench" aria-label="Character preview and sequencing">
         <div class="preview-card">
         <div class="character-bar">
-          <div class="character-tabs" aria-label="Characters"><button v-for="c in project.characters" :key="c.id" :class="['character-tab', { active: c.id === character.id }]" :aria-pressed="c.id === character.id" @click="selectedCharacter = c.id"><Thumb :character="c" :size="38" /><span>{{ c.name }}</span></button><button class="icon-button add-character" title="Duplicate character" aria-label="Duplicate character" @click="duplicateCharacter"><Icon name="plus" :size="17" /></button></div>
+          <CharacterTabs :characters="project.characters" :selected="character.id" @select="selectedCharacter = $event" @rename="renameCharacter" @remove="deleteCharacter" @reorder="reorderCharacter" @duplicate="duplicateCharacter" />
           <div class="preview-backgrounds" role="group" aria-label="Preview background"><span>Background</span><button v-for="option in previewBackgrounds" :key="option" :class="['background-choice', option, { selected: previewBackground === option }]" :aria-label="`${option.charAt(0).toUpperCase() + option.slice(1)} preview background`" :title="`${option.charAt(0).toUpperCase() + option.slice(1)} background`" :aria-pressed="previewBackground === option" @click="previewBackground = option"><span aria-hidden="true"></span></button></div>
         </div>
 
