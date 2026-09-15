@@ -82,7 +82,7 @@ it('uses one rounded lighting region for all three shapes and captures its curso
       }
       for (const displaySize of [24, 47, 48, 96]) {
         renderer.render(character, sample, { displaySize })
-        expect(renderer.snapshotScene().lightFill.visible).toBe(displaySize >= 48)
+        expect(renderer.snapshotScene().lightFill.visible).toBe(displaySize >= 40)
       }
       renderer.render({ ...character, toon: false }, sample, { displaySize: 1080 })
       expect(renderer.snapshotScene().lightFill.visible).toBe(false)
@@ -121,8 +121,8 @@ it('fits every small preset consistently and enforces front-only gradient detail
       renderer.render({ ...original, shape }, sample, { rotation: { x: 20, y: 50, z: 30 }, cursor: { x: 1, y: -1 }, zoom: 1.4 })
       const state = renderer.snapshotScene()
       expect(state.face.visible).toBe(size > 12)
-      expect(state.lightFill.visible).toBe(size >= 48)
-      if (size <= 40) {
+      expect(state.lightFill.visible).toBe(size >= 40)
+      if (size <= 32) {
         expect(renderer.orientation().angleTo(new THREE.Quaternion())).toBeCloseTo(0)
         expect(state.body.getWorldPosition(new THREE.Vector3()).length()).toBe(0)
         expect(state.body.getWorldScale(new THREE.Vector3()).toArray()).toEqual([1, 1, 1])
@@ -187,7 +187,7 @@ it('locks the 24px eye positions to a leftward gaze despite cursor and animated 
       renderer.render(character, sample, { displaySize: 24, cursor: { x, y: 1 }, reducedMotion }, { x, y: 1 })
       const state = renderer.snapshotScene()
       expect(state.gaze).toEqual({ x: 0, y: 0 })
-      expect(state.sample.pose).toMatchObject({ gazeX: -4, gazeY: 0, leftX: 0, rightY: 0, spacing: BASE_POSE.spacing * .7, faceY: BASE_POSE.faceY })
+      expect(state.sample.pose).toMatchObject({ gazeX: -4, gazeY: 0, leftX: 0, rightY: 0, spacing: BASE_POSE.spacing * .77, faceY: BASE_POSE.faceY })
     }
     renderer.render(character, sample, { displaySize: 48, reducedMotion: false }, { x: 1, y: 1 })
     expect(renderer.snapshotScene().sample.pose.gazeX).toBe(1)

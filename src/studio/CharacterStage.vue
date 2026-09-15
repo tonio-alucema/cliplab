@@ -12,7 +12,7 @@ const angles = ref({ x: 0, y: 0, z: 0 })
 type Axis = 'x' | 'y' | 'z'
 const editingAxis = ref<Axis>(), angleDraft = ref('')
 let angleRotation: { x: number; y: number; z: number } | undefined
-const smallFront = computed(() => props.previewSize !== null && props.previewSize <= 40)
+const smallFront = computed(() => props.previewSize !== null && props.previewSize <= 32)
 const error = ref('')
 let renderer: CharacterRenderer | undefined, observer: ResizeObserver | undefined
 let start: { x: number; y: number; rotation: { x: number; y: number; z: number }; roll: boolean; pointerId: number } | undefined
@@ -151,7 +151,7 @@ onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); can
     <div ref="viewport" class="character-viewport" :class="{ 'actual-viewport': previewSize !== null }">
     <div class="preview-artwork">
     <canvas ref="canvas" class="stage-canvas" :class="{ actual: previewSize !== null }" :style="previewSize ? { width: `${previewSize}px`, height: `${previewSize}px` } : {}" tabindex="0" aria-label="3D character preview. Drag or use arrow keys to rotate; hold Shift to roll." @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
-    <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size<span v-if="previewSize <= 40"> · front locked</span></span>
+    <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size<span v-if="previewSize <= 32"> · front locked</span></span>
     </div>
     </div>
     <div class="orientation-control" role="group" aria-label="3D orbit controls">

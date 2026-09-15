@@ -10,7 +10,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     for (const size of [16.01, 23, 24, 24.01, 32, 48]) {
       const adapted = faceForSize(character, sample, size)
       expect(adapted.sample.pose.faceScale).toBeCloseTo(1.04)
-      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size <= 40 ? 1.296 : 1))
+      expect(adapted.sample.pose.eyeSize).toBeCloseTo(sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size <= 32 ? 1.1664 : 1))
       expect(adapted.character.iris).toBe(false); expect(adapted.simpleEyes).toBe(true)
       expect(adapted.character.eyeColor).toBe(character.eyeColor)
     }
@@ -22,15 +22,25 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     const shaded = { ...character, toon: true, shadow: true }
     for (const size of [12, 16, 24, 32, 47.99, 48, 96]) {
       const adapted = faceForSize(shaded, sample, size)
-      expect(adapted.character.toon).toBe(size >= 48)
-      expect(adapted.character.shadow).toBe(size >= 48)
+      expect(adapted.character.toon).toBe(size >= 40)
+      expect(adapted.character.shadow).toBe(size >= 40)
       for (const key of ['gradient', 'color', 'color2', 'gradientAngle'] as const) expect(adapted.character[key]).toBe(shaded[key])
     }
     expect(shaded.toon).toBe(true); expect(shaded.shadow).toBe(true)
     expect(sample.pose.faceScale).toBe(.8); expect(character.iris).toBe(true)
   })
+  it('uses the exact 48px appearance and authored motion settings at 40px', () => {
+    const unlocked = { ...character, toon: true, shadow: true, trueFront: false, lockPosition: false, followRotation: true }
+    expect(faceForSize(unlocked, sample, 40)).toEqual(faceForSize(unlocked, sample, 48))
+    for (const size of [16, 20, 24, 32]) {
+      const adapted = faceForSize(unlocked, sample, size)
+      expect(adapted.character.trueFront).toBe(true)
+      expect(adapted.character.lockPosition).toBe(true)
+      expect(adapted.sample.pose.spacing).toBeCloseTo(BASE_POSE.spacing * .77)
+    }
+  })
   it('centers compact smiles beneath the eye midpoint', () => {
-    for (const size of [16, 20, 24, 32, 40]) {
+    for (const size of [16, 20, 24, 32]) {
       const adapted = faceForSize(character, sample, size)
       const positions: number[][] = []
       const ctx = new Proxy({}, {
@@ -61,7 +71,10 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
       }) as CanvasRenderingContext2D
       drawFace(ctx, adapted.sample.pose, adapted.character, 0, detailAt(size), { x: 0, y: 0 }, { simpleEyes: adapted.simpleEyes, faceLayers: morphing ? faceLayers(pose) : undefined })
       expect(circles).toHaveLength(2)
-      expect(circles.every(c => c[2] === (size === 24 ? 27 * 1.2 * 1.296 : 27) && c[3] === 0 && c[4] === Math.PI * 2)).toBe(true)
+      for (const c of circles) {
+        expect(c[2]).toBeCloseTo(size === 24 ? 27 * 1.2 * 1.1664 : 27)
+        expect(c[3]).toBe(0); expect(c[4]).toBe(Math.PI * 2)
+      }
       expect(scales.filter(s => s[0] === 1 && s[1] === 1)).toHaveLength(2)
       expect(colors).not.toContain('#ffffff'); expect(colors).not.toContain('#fffef9')
       expect(colors.slice(0, 2)).toEqual(['#000000', '#000000'])
