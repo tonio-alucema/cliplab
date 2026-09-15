@@ -28,9 +28,10 @@ export function faceForSize(character: Character, sample: Sample, size: number) 
   const simpleEyes = size > 12 && size <= 48
   const frontOnly = size <= 32
   const flatFill = size < 40
+  const smallerSpacedEyes = size === 24 || size === 32
   return {
     character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
-    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77, faceY: BASE_POSE.faceY } : {}) } } : sample,
+    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1) * (smallerSpacedEyes ? .8 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77 * (smallerSpacedEyes ? 1.2 : 1), faceY: BASE_POSE.faceY } : {}) } } : sample,
     simpleEyes
   }
 }
