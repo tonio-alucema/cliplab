@@ -17,10 +17,11 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
     z: rotation.z + pose.rotationZ
   }
 }
-/** One rounded light region; the body-following toggle activates
- * a subtle light-source shift. The shared eased cursor keeps motion smooth. */
-export function toonLightOffset(character: Pick<Character, 'followRotation'>, cursor: Gaze = { x: 0, y: 0 }, reducedMotion = false): Gaze {
-  const look = !reducedMotion && character.followRotation ? clampGaze(cursor) : { x: 0, y: 0 }
+/** Anchor the rounded highlight to the face direction shown by the orbit marker.
+ * Match the former cursor travel at 28° yaw / 16° pitch, with a bounded rim. */
+export function toonLightOffset(orientation: THREE.Quaternion): Gaze {
+  const facing = new THREE.Vector3(0, 0, 1).applyQuaternion(orientation)
+  const look = clampGaze({ x: facing.x / Math.sin(28 * Math.PI / 180), y: facing.y / Math.sin(16 * Math.PI / 180) })
   return { x: -.015 + look.x * .045, y: .015 + look.y * .045 }
 }
 /** Size adaptation is render-only; larger sizes restore the authored appearance. */
@@ -364,9 +365,9 @@ export class CharacterRenderer {
     const fillScale = this.shape === 'capsule' ? 1 : .85
     this.lightFill.scale.setScalar(fillScale)
     this.root.updateMatrixWorld(true)
-    // Shift the inset toward the pointer in the camera plane, not the tilted
+    // Shift the inset toward the face marker in the camera plane, not the tilted
     // body's axes. Bound travel by the narrowest stretch to retain a dark rim.
-    const lightTarget = toonLightOffset(character, this.options.cursor, this.options.reducedMotion)
+    const lightTarget = toonLightOffset(this.root.quaternion)
     const lightScale = Math.min(this.root.scale.x, this.root.scale.y, this.root.scale.z)
     const lightOffset = new THREE.Vector3(lightTarget.x * lightScale, lightTarget.y * lightScale, 0).applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert())
       .sub(new THREE.Vector3().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert()))

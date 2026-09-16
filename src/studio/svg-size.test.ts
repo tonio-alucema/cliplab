@@ -46,7 +46,7 @@ it('uses up-left resting iris, half-rate body gaze, and a fixed reduced-motion g
   } finally { renderer.dispose() }
 })
 
-it('uses one rounded lighting region for all three shapes and captures its cursor offset in SVG', () => {
+it('uses one rounded lighting region for all three shapes and captures its face-anchored offset in SVG', () => {
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 1080, height: 1080 })
   const sample = { pose: { ...BASE_POSE, rotationX: 0, rotationY: 0, rotationZ: 0 }, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
   const innerPath = (text: string) => new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('[id$="-candle-light"] path')!.getAttribute('d')
@@ -55,7 +55,7 @@ it('uses one rounded lighting region for all three shapes and captures its curso
       const character = { ...defaultProject().characters[0]!, shape, toon: true, trueFront: false, ...tracking }
       const positions: THREE.Vector3[] = [], paths: (string | null)[] = []
       for (const cursor of [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }]) {
-        renderer.render(character, sample, { cursor, rotation: { x: 15, y: 25, z: 60 } })
+        renderer.render(character, sample, { cursor, rotation: { x: 0, y: 0, z: 60 } })
         const state = renderer.snapshotScene()
         expect(state.lightFill.visible).toBe(true)
         expect(state.body.material.fragmentShader).not.toContain('vWorldNormal')
@@ -77,7 +77,6 @@ it('uses one rounded lighting region for all three shapes and captures its curso
           const state = renderer.snapshotScene()
           offsets.push(state.lightFill.getWorldPosition(new THREE.Vector3()).sub(state.body.getWorldPosition(new THREE.Vector3())))
         }
-        expect(offsets[0]!.x).toBeCloseTo(-.015); expect(offsets[0]!.y).toBeCloseTo(.015)
         expect(offsets[0]!.distanceTo(offsets[1]!)).toBeLessThan(1e-6)
       }
       for (const displaySize of [24, 47, 48, 96]) {
@@ -87,6 +86,41 @@ it('uses one rounded lighting region for all three shapes and captures its curso
       renderer.render({ ...character, toon: false }, sample, { displaySize: 1080 })
       expect(renderer.snapshotScene().lightFill.visible).toBe(false)
       expect(renderer.snapshotScene().body.material.uniforms.toonOn!.value).toBe(0)
+    }
+  } finally { renderer.dispose() }
+})
+
+it('anchors toon lighting to the rendered face for manual, animated, cursor and reduced-motion views', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  const offset = () => {
+    const { lightFill, body } = renderer.snapshotScene()
+    return lightFill.getWorldPosition(new THREE.Vector3()).sub(body.getWorldPosition(new THREE.Vector3()))
+  }
+  try {
+    for (const shape of ['sphere', 'capsule', 'cap'] as const) {
+      const character = { ...defaultProject().characters[0]!, shape, toon: true, trueFront: false, followRotation: false }
+      const front = { x: 0, y: 0, z: 0 }
+      const positions: THREE.Vector3[] = []
+      for (const rotation of [{ x: 0, y: -28, z: 0 }, { x: 0, y: 28, z: 0 }, { x: 16, y: 0, z: 0 }, { x: -16, y: 0, z: 0 }]) {
+        renderer.render(character, sample, { rotation, cursor: { x: 0, y: 0 }, reducedMotion: false })
+        const manual = offset(); positions.push(manual)
+        renderer.render(character, { ...sample, pose: { ...BASE_POSE, rotationX: rotation.x, rotationY: rotation.y } }, { rotation: front })
+        expect(offset().distanceTo(manual)).toBeLessThan(1e-6)
+        renderer.render(character, sample, { rotation, reducedMotion: true, cursor: { x: 1, y: 1 } })
+        expect(offset().distanceTo(manual)).toBeLessThan(1e-6)
+        renderer.render({ ...character, followRotation: true }, sample, { rotation: front, reducedMotion: false, cursor: { x: rotation.y / 28, y: -rotation.x / 16 } })
+        expect(offset().distanceTo(manual)).toBeLessThan(1e-6)
+      }
+      expect(positions[1]!.x - positions[0]!.x).toBeCloseTo(.09)
+      expect(positions[3]!.y - positions[2]!.y).toBeCloseTo(.09)
+      renderer.render({ ...character, trueFront: true, followRotation: true }, sample, { rotation: { x: 40, y: 60, z: 30 }, cursor: { x: 1, y: 1 } })
+      expect(offset().distanceTo(new THREE.Vector3(-.015, .015, 0))).toBeLessThan(1e-6)
+      for (const y of [-180, -90, 90, 180]) {
+        renderer.render(character, sample, { rotation: { x: 45, y, z: 90 } })
+        expect(offset().length()).toBeLessThan(.07)
+        expect(offset().z).toBeCloseTo(0)
+      }
     }
   } finally { renderer.dispose() }
 })
