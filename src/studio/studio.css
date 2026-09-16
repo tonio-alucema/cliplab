@@ -380,6 +380,7 @@ img {
 }
 
 .preview-frame {
+  min-width: 0;
   position: relative;
   container: character-preview / size;
   display:grid;
@@ -1823,6 +1824,7 @@ input:checked+.switch-track:after {
 }
 
 .preview-card {
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
   display: grid;
   grid-template-rows: 59px minmax(0,1fr);
@@ -2093,6 +2095,18 @@ input:checked+.switch-track:after {
 @media(max-width:600px) { .orientation-control { display:block }.orbit-globe { width:80px;margin-inline:auto }.orbit-readout { grid-template-columns:repeat(3,minmax(0,1fr)) }.orbit-readout label { flex-direction:column }.orbit-action { padding:5px;gap:5px;font-size:10px } }
 
 /* Orbit and artwork occupy independent columns above the toolbar. */
+@container character-preview (max-height:380px) and (min-width:480px) {
+  .stage-canvas-wrap { grid-template-columns:minmax(0,1fr) 210px; }
+  .orientation-control { display:grid;grid-template-columns:96px minmax(0,1fr);gap:0 8px;padding:0 8px 8px; }
+  .orbit-heading { grid-column:1/-1;height:28px; }
+  .orbit-globe { width:96px; }
+  .orbit-readout { grid-template-columns:1fr;padding-top:0;gap:3px;align-self:center; }
+  .orbit-readout label { flex-direction:row;align-items:center;gap:3px; }
+  .orbit-readout label>span { width:12px;flex-shrink:0; }
+  .orbit-readout input { height:25px; }
+  .orbit-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .orbit-action { gap:5px;padding-inline:5px;font-size:10px; }
+}
 .character-viewport { position:relative;min-width:0;min-height:0;overflow:hidden; }
 .stage-tools .stage-tool-actions { margin-left:auto;flex-shrink:0; }
 .stage-tools .preview-status { flex-shrink:0;max-width:100%; }
