@@ -1225,6 +1225,7 @@ select.text-field {
 }
 
 .palette-swatch {
+  position: relative;
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -1245,6 +1246,18 @@ select.text-field {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #ffffff1f;
+}
+
+.palette-saved-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #222;
+  border-radius: 50%;
+  background: #f1f1f1;
+  pointer-events: none;
 }
 
 .palette-swatch[aria-pressed="true"] {

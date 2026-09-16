@@ -1,5 +1,5 @@
 // Color pairs from https://cliptoon-color-library.vercel.app/.
-export const CLIPTOON_PALETTES = [
+export const CLIPTOON_PALETTES: { name: string; colors: [string, string]; savedCharacter?: boolean }[] = [
   { name: 'Bubblegum sky', colors: ['#8bd4ff', '#ff51bf'] },
   { name: 'Pink lemonade', colors: ['#ff26a8', '#fff78a'] },
   { name: 'Orchid peach', colors: ['#e771ff', '#ffd87c'] },
@@ -18,4 +18,7 @@ export const CLIPTOON_PALETTES = [
   { name: 'Cherry pop', colors: ['#ff69db', '#d51c46'] },
   { name: 'Turquoise cherry', colors: ['#37f0db', '#ff4f64'] },
   { name: 'Ultraviolet tide', colors: ['#7516cf', '#00e8d1'] },
-] satisfies { name: string; colors: [string, string] }[]
+  { name: 'Pilly', colors: ['#d3f76e', '#00c291'], savedCharacter: true },
+  { name: 'Cappy', colors: ['#ff42ba', '#ffd561'], savedCharacter: true },
+  { name: 'Bubbly', colors: ['#0f57ff', '#4deaff'], savedCharacter: true },
+]
