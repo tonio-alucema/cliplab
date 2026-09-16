@@ -58,3 +58,10 @@ it('reorders only internal drags, using the target side without changing selecti
   expect(events.select).not.toHaveBeenCalled()
   expect(host.querySelector('.dragging')).toBeNull()
 })
+
+it('keeps the Add button outside the horizontally scrolling character list', () => {
+  const { host } = mount()
+  expect(host.querySelector('.character-tabs .add-character')).toBeNull()
+  expect(host.querySelector('.character-add-dock .add-character')).not.toBeNull()
+  expect(host.querySelectorAll('.character-tabs .saved-character')).toHaveLength(characters.length)
+})

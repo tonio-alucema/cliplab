@@ -59,13 +59,17 @@ function menuKey(event: KeyboardEvent) {
 }
 </script>
 <template>
+  <div class="character-strip">
   <div class="character-tabs" aria-label="Characters">
     <div v-for="c in characters" :key="c.id" class="saved-character" :class="{ active: c.id === selected, dragging: dragging === c.id, 'drop-before': over === c.id && !after, 'drop-after': over === c.id && after }" :draggable="renaming !== c.id" @dragstart="start(c, $event)" @dragover="hover(c, $event)" @drop="drop(c, $event)" @dragend="end">
       <input v-if="renaming === c.id" v-model="draft" class="character-name-input" aria-label="Character name" maxlength="80" @keydown.enter.prevent="finishRename(true)" @keydown.esc.prevent="finishRename(false)" @blur="finishRename(true)" />
       <button v-else class="character-tab" :aria-pressed="c.id === selected" title="Drag to reorder" @click="emit('select', c.id)"><Thumb :character="c" :size="38" /><span>{{ c.name }}</span></button>
       <button class="character-options" :aria-label="`Options for ${c.name}`" aria-haspopup="menu" :aria-expanded="menu === c.id" @click="open(c, $event)"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="13" cy="8" r="1.2"/></svg></button>
     </div>
+  </div>
+  <div class="character-add-dock">
     <button class="icon-button add-character" title="Duplicate character" aria-label="Duplicate character" @click="emit('duplicate')"><Icon name="plus" :size="17" /></button>
+  </div>
   </div>
   <Teleport to="body">
     <div v-if="menu" class="character-menu-backdrop" @pointerdown.self="close" @keydown.esc="close">
@@ -79,6 +83,12 @@ function menuKey(event: KeyboardEvent) {
   </Teleport>
 </template>
 <style scoped>
+.character-strip { position:relative;width:100%;min-width:0; }
+.character-tabs { width:100%;padding-right:56px;scroll-padding-inline:8px 56px; }
+.character-add-dock { position:absolute;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;width:44px;background:#1e1e1e; }
+.character-add-dock::before { content:'';position:absolute;right:100%;top:0;bottom:0;width:28px;background:linear-gradient(to right,transparent,#1e1e1e);pointer-events:none; }
+.character-add-dock .add-character { margin:0; }
+
 .saved-character { display:flex;align-items:center;flex-shrink:0;border:1px solid transparent;border-radius:20px; }
 .saved-character.active { background:#ffffff09;border-color:#ffffff18; }
 .saved-character.dragging { opacity:.4; }

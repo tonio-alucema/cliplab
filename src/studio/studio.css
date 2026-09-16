@@ -327,7 +327,7 @@ img {
   justify-content: space-between;
   padding: 0 23px;
   gap: 10px;
-  background: transparent;
+  background: #1e1e1e;
 }
 
 .character-tabs {
@@ -382,6 +382,8 @@ img {
 .preview-frame {
   position: relative;
   container: character-preview / size;
+  display:grid;
+  grid-template-rows:minmax(0,1fr) auto;
   min-height: 0;
   overflow: hidden;
   background: transparent;
@@ -398,8 +400,13 @@ img {
 }
 
 .stage-canvas-wrap {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height:0;
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(116px,20cqw,160px);
+  gap:12px;
+  padding:12px;
   background: transparent;
 }
 
@@ -416,9 +423,8 @@ img {
 }
 
 .preview-status {
-  position: absolute;
-  top: 10px;
-  left: 26px;
+  position: static;
+  min-width:0;
   display: flex;
   gap: 9px;
   align-items: center;
@@ -453,10 +459,14 @@ img {
 
 /* A monochrome orientation instrument stays legible on every preview background. */
 .orientation-control {
-  position: absolute;
-  right: 20px;
-  top: 9px;
-  width: 160px;
+  position: relative;
+  right:auto;
+  top:auto;
+  width:100%;
+  min-height:0;
+  max-height:100%;
+  overflow:auto;
+  align-self:start;
   padding: 0 8px 10px;
   background: #191919;
   color: #d0cfca;
@@ -479,21 +489,14 @@ img {
 .orbit-readout input:hover:not(:read-only),.orbit-readout input:focus { border-color:#999;background:#303030 }
 .orbit-readout input:read-only { background:transparent;border-color:transparent;color:#aeaeae;cursor:default }
 
-@container character-preview (max-height: 380px) {
-  .orientation-control { width:186px;padding:0 8px 8px;display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:8px }
-  .orbit-heading { grid-column:1/-1;height:28px }
-  .orbit-globe { width:96px }
-  .orbit-readout { grid-template-columns:1fr;padding-top:0;gap:3px;align-self:center }
-  .orbit-readout label { flex-direction:row;align-items:center;gap:3px }
-  .orbit-readout label>span { width:12px;flex-shrink:0 }
-  .orbit-readout input { height:25px }
-}
+
 
 .stage-tools {
-  position: absolute;
-  bottom: 16px;
-  left: 24px;
-  right: 22px;
+  position: relative;
+  padding:10px 16px;
+  flex-wrap:wrap;
+  background:#1e1e1e;
+  border-top:1px solid #ffffff0a;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -614,8 +617,8 @@ img {
 
 .light .stage-tools,.checker .stage-tools {
   background: #222222;
-  outline: 5px solid #222222;
-  border-radius: 16px;
+  outline:none;
+  border-radius:0;
 }
 
 .light .actual-size-label,.checker .actual-size-label {
@@ -1993,7 +1996,7 @@ input:checked+.switch-track:after {
   .header-description,.save-state,.character-count { display:none }
   .inspector-scroll { padding:21px 19px }
   .inspector-tabs { padding-left:10px;padding-right:10px }
-  .stage-tools { left:15px;right:13px;gap:6px }
+  .stage-tools { gap:6px }
   .stage-pill { padding:7px 8px;gap:5px }
   .view-controls { gap:3px }
   .stage-tool-actions { gap:0 }
@@ -2035,12 +2038,12 @@ input:checked+.switch-track:after {
   .preview-card { grid-template-rows:55px minmax(0,1fr) }
   .character-bar { padding:0 10px }
   .character-tab { padding-right:9px;font-size:12px }
-  .preview-status { left:16px;top:7px }
-  .orientation-control { right:10px;top:43px;width:116px;padding:0 6px 8px }
+  .preview-status { gap:5px;padding:5px 7px }
+  .orientation-control { padding:0 6px 8px }
   .orbit-heading { height:30px;padding-left:3px }
   .orbit-readout { padding-top:5px;gap:2px }
-  .stage-canvas:not(.actual) { position:absolute;top:78px;height:calc(100% - 124px) }
-  .stage-tools { left:12px;right:10px;bottom:14px }
+
+  .stage-tools { padding:8px 10px }
   .stage-pill { font-size:11px;gap:4px;padding:7px }
   .stage-icon { width:25px }
   .zoom-label { min-width:36px;font-size:10px }
@@ -2085,18 +2088,18 @@ input:checked+.switch-track:after {
 .orbit-action svg { flex-shrink:0 }
 .orbit-action:hover { background:#333;color:#fff;border-color:#ffffff38 }
 .orbit-action.active { background:#393939;color:#fff;border-color:#ffffff55 }
-.stage-tools { justify-content:flex-end }
+.stage-tools { justify-content:space-between }
 @container character-preview (max-height: 380px) { .orbit-actions { margin-top:7px;gap:4px }.orbit-action { min-height:27px;padding:4px 8px } }
 @media(max-width:600px) { .orientation-control { display:block }.orbit-globe { width:80px;margin-inline:auto }.orbit-readout { grid-template-columns:repeat(3,minmax(0,1fr)) }.orbit-readout label { flex-direction:column }.orbit-action { padding:5px;gap:5px;font-size:10px } }
 
-/* Reserve the orbit column so fit and actual-size previews share a clear center. */
-.stage-canvas-wrap { --orbit-space: 200px; }
-.character-viewport { position:absolute;inset:0 var(--orbit-space) 0 0; }
-@container character-preview (max-height:380px) {
-  .stage-canvas-wrap { --orbit-space:226px; }
-}
-@media(max-width:600px) {
-  .stage-canvas-wrap { --orbit-space:136px; }
+/* Orbit and artwork occupy independent columns above the toolbar. */
+.character-viewport { position:relative;min-width:0;min-height:0;overflow:hidden; }
+.stage-tools .stage-tool-actions { margin-left:auto;flex-shrink:0; }
+.stage-tools .preview-status { flex-shrink:0;max-width:100%; }
+.stage-tools .preview-status > span:nth-child(2) { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px; }
+@container character-preview (max-width:480px) {
+  .stage-canvas-wrap { gap:8px;padding:8px; }
+  .stage-tools .preview-backgrounds > span { display:none; }
 }
 
 .size-samples { flex-wrap:wrap;justify-content:flex-end; }

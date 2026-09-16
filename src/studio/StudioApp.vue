@@ -304,7 +304,6 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
         <div class="preview-card">
         <div class="character-bar">
           <CharacterTabs :characters="project.characters" :selected="character.id" @select="selectedCharacter = $event" @rename="renameCharacter" @remove="deleteCharacter" @reorder="reorderCharacter" @duplicate="duplicateCharacter" />
-          <div class="preview-backgrounds" role="group" aria-label="Preview background"><span>Background</span><button v-for="option in previewBackgrounds" :key="option" :class="['background-choice', option, { selected: previewBackground === option }]" :aria-label="`${option.charAt(0).toUpperCase() + option.slice(1)} preview background`" :title="`${option.charAt(0).toUpperCase() + option.slice(1)} background`" :aria-pressed="previewBackground === option" @click="previewBackground = option"><span aria-hidden="true"></span></button></div>
         </div>
 
         <div class="preview-frame" :class="{ light: previewBackground === 'light', checker: previewBackground === 'transparent' }">
@@ -314,8 +313,9 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
               <button class="orbit-action" :class="{ active: character.followCursor }" title="Eyes follow cursor" aria-label="Eyes follow" :aria-pressed="character.followCursor" @click="character.followCursor = !character.followCursor"><Icon name="eye" :size="16" /><span>Eyes follow</span></button><button class="orbit-action" :disabled="previewSize !== null && previewSize <= 32" :class="{ active: character.followRotation && (previewSize === null || previewSize > 32) }" title="Character turns toward cursor" aria-label="Body follows" :aria-pressed="character.followRotation" @click="toggleRotationFollowing"><Icon name="cursor" :size="16" /><span>Body follows</span></button>
             </div>
 </template></Stage>
+          <div class="stage-tools" role="group" aria-label="Preview toolbar">
           <div class="preview-status"><span :class="['status-light', { playing }]" /><span>{{ currentLabel }}</span><span class="status-divider">/</span><span class="status-action">{{ playing ? 'Playing' : 'Paused' }}</span></div>
-          <div class="stage-tools">
+          <div class="preview-backgrounds" role="group" aria-label="Preview background"><span>Background</span><button v-for="option in previewBackgrounds" :key="option" :class="['background-choice', option, { selected: previewBackground === option }]" :aria-label="`${option.charAt(0).toUpperCase() + option.slice(1)} preview background`" :title="`${option.charAt(0).toUpperCase() + option.slice(1)} background`" :aria-pressed="previewBackground === option" @click="previewBackground = option"><span aria-hidden="true"></span></button></div>
             <div class="stage-tool-actions"><button class="stage-icon" aria-label="Zoom out" :disabled="previewSize !== null || zoom <= .65" @click="zoom = Math.max(.65, zoom - .1)"><Icon name="minus" :size="16" /></button><span class="zoom-label">{{ previewSize ? `${previewSize} px` : `${Math.round(zoom * 100)}%` }}</span><button class="stage-icon" aria-label="Zoom in" :disabled="previewSize !== null || zoom >= 1.4" @click="zoom = Math.min(1.4, zoom + .1)"><Icon name="plus" :size="16" /></button><button class="stage-icon photo-button" aria-label="Export this pose as an image" title="Photo mode" @click="exportTab = 'image'; tab = 'export'; playing = false"><Icon name="camera" /></button></div>
           </div>
         </div>
