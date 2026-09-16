@@ -1219,11 +1219,13 @@ select.text-field {
 
 .palette-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 15px 0 3px;
 }
 
 .palette-swatch {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -1236,6 +1238,17 @@ select.text-field {
 
 .palette-swatch:hover {
   outline: 2px solid #c6c6c6;
+  outline-offset: 3px;
+}
+
+.palette-library {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff1f;
+}
+
+.palette-swatch[aria-pressed="true"] {
+  outline: 1px solid #ddd;
   outline-offset: 3px;
 }
 

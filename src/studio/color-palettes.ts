@@ -1,0 +1,21 @@
+// Color pairs from https://cliptoon-color-library.vercel.app/.
+export const CLIPTOON_PALETTES = [
+  { name: 'Bubblegum sky', colors: ['#8bd4ff', '#ff51bf'] },
+  { name: 'Pink lemonade', colors: ['#ff26a8', '#fff78a'] },
+  { name: 'Orchid peach', colors: ['#e771ff', '#ffd87c'] },
+  { name: 'Coral mint', colors: ['#beffe8', '#ff797b'] },
+  { name: 'Lime lagoon', colors: ['#b4ffa4', '#26dfff'] },
+  { name: 'Arctic blue', colors: ['#97fff3', '#0084ff'] },
+  { name: 'Solar flare', colors: ['#ecca5c', '#fe3c3f'] },
+  { name: 'Violet ember', colors: ['#ff5c43', '#6262ff'] },
+  { name: 'Deep tide', colors: ['#003d60', '#32fffc'] },
+  { name: 'Coral current', colors: ['#26e2ff', '#ff6666'] },
+  { name: 'Muted dream', colors: ['#a6aaad', '#44464a'] },
+  { name: 'Golden hour', colors: ['#ffcd4f', '#fde5ba'] },
+  { name: 'Tangerine cobalt', colors: ['#ffad32', '#4169ff'] },
+  { name: 'Electric grove', colors: ['#b4ff32', '#008d58'] },
+  { name: 'Flamingo jade', colors: ['#ff4f9a', '#36edaa'] },
+  { name: 'Cherry pop', colors: ['#ff69db', '#d51c46'] },
+  { name: 'Turquoise cherry', colors: ['#37f0db', '#ff4f64'] },
+  { name: 'Ultraviolet tide', colors: ['#7516cf', '#00e8d1'] },
+] satisfies { name: string; colors: [string, string] }[]
