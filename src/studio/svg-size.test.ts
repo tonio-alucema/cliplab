@@ -15,12 +15,12 @@ vi.mock('three', async original => ({ ...await original<typeof import('three')>(
 } }))
 beforeEach(() => { vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => new SvgCanvas('canvas') as unknown as CanvasRenderingContext2D) })
 afterEach(() => vi.restoreAllMocks())
-it('exports 16-A at exactly 16px with unchanged body geometry and a larger face', () => {
+it('exports the enlarged standard 16px face with unchanged body geometry', () => {
   const project = defaultProject(), character = { ...project.characters[0]!, shape: 'cap' as const }
   const definition = definitionOf(project, character)
   const options = { width: 16, height: 16, background: null, rotation: { x: 20, y: 30, z: 10 }, zoom: 1, animationId: 'idle' }
-  const standard = new DOMParser().parseFromString(renderSvg(definition, options), 'image/svg+xml')
-  const alternate = new DOMParser().parseFromString(renderSvg(definition, { ...options, sizeVariant: '16-A' }), 'image/svg+xml')
+  const standard = new DOMParser().parseFromString(renderSvg(definition, { ...options, sample: { pose: { ...BASE_POSE, faceScale: BASE_POSE.faceScale / 1.2 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 } }), 'image/svg+xml')
+  const alternate = new DOMParser().parseFromString(renderSvg(definition, options), 'image/svg+xml')
   expect(alternate.documentElement.getAttribute('width')).toBe('16')
   expect(alternate.documentElement.getAttribute('height')).toBe('16')
   expect(alternate.querySelector('[id$="-body"] path')!.getAttribute('d')).toBe(standard.querySelector('[id$="-body"] path')!.getAttribute('d'))

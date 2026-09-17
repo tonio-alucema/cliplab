@@ -5,7 +5,7 @@ import { drawOrbit } from './orbit'
 import { centeredGaze, easeGaze, easePointer, inactivePointer, pointerGaze, pointerLook, type EyeGazes } from './gaze'
 import type { Character, Sample } from './model'
 import Icon from './StudioIcon.vue'
-const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; sizeVariant?: '16-A'; playing: boolean }>()
+const props = defineProps<{ character: Character; sample: Sample; rotation: { x: number; y: number; z: number }; zoom: number; background: string; previewSize: number | null; playing: boolean }>()
 const emit = defineEmits<{ rotate: [value: { x: number; y: number; z: number }]; reset: []; pause: []; cursor: [value: { x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }] }>()
 const host = ref<HTMLElement>(), viewport = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), globe = ref<HTMLCanvasElement>()
 const angles = ref({ x: 0, y: 0, z: 0 })
@@ -25,7 +25,7 @@ function render() {
   const size = props.previewSize
   const width = size ?? canvas.value.clientWidth, height = size ?? canvas.value.clientHeight
   if (canvas.value.dataset.renderSize !== `${width}:${height}`) { renderer.resize(width, height, size ?? 400); canvas.value.dataset.renderSize = `${width}:${height}` }
-  renderer.render(props.character, props.sample, { reducedMotion: reducedMotion.matches, displaySize: size ?? 400, sizeVariant: props.sizeVariant, rotation: props.rotation, zoom: size ? 1 : props.zoom, cursor: gaze, pointerLook: props.character.followCursor ? pointer : undefined }, props.character.followCursor ? gaze : { x: 0, y: 0 })
+  renderer.render(props.character, props.sample, { reducedMotion: reducedMotion.matches, displaySize: size ?? 400, rotation: props.rotation, zoom: size ? 1 : props.zoom, cursor: gaze, pointerLook: props.character.followCursor ? pointer : undefined }, props.character.followCursor ? gaze : { x: 0, y: 0 })
   const orientation = renderer.orientation()
   if (globe.value) drawOrbit(globe.value, orientation)
   const base = manualRotation(), pose = props.sample.pose
@@ -138,7 +138,7 @@ function keyboard(event: KeyboardEvent) {
   else if (event.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) emit('rotate', { ...rotation, z: rotation.z + (event.key === 'ArrowLeft' ? delta : -delta) })
   else emit('rotate', { ...rotation, x: Math.max(-180, Math.min(180, rotation.x + (event.key === 'ArrowUp' ? -delta : event.key === 'ArrowDown' ? delta : 0))), y: rotation.y + (event.key === 'ArrowLeft' ? -delta : event.key === 'ArrowRight' ? delta : 0) })
 }
-watch(() => [props.character, props.sample, props.rotation, props.zoom, props.previewSize, props.sizeVariant], render, { deep: true, flush: 'post' })
+watch(() => [props.character, props.sample, props.rotation, props.zoom, props.previewSize], render, { deep: true, flush: 'post' })
 watch(() => props.previewSize, () => nextTick(refreshPointer))
 watch(() => [props.character.id, props.character.followCursor, props.character.followRotation], () => {
   cancelAnimationFrame(followFrame); followFrame = 0; gaze = centeredGaze(); gazeTarget = centeredGaze(); pointer = inactivePointer(); pointerTarget = inactivePointer(); lastPointer = undefined; render()
@@ -151,7 +151,7 @@ onBeforeUnmount(() => { reducedMotion.removeEventListener('change', render); can
     <div ref="viewport" class="character-viewport" :class="{ 'actual-viewport': previewSize !== null }">
     <div class="preview-artwork">
     <canvas ref="canvas" class="stage-canvas" :class="{ actual: previewSize !== null }" :style="previewSize ? { width: `${previewSize}px`, height: `${previewSize}px` } : {}" tabindex="0" aria-label="3D character preview. Drag or use arrow keys to rotate; hold Shift to roll." @keydown="keyboard" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @lostpointercapture="up" />
-    <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px{{ sizeVariant === '16-A' ? ' · 16-A · face +20%' : '' }} · actual size<span v-if="previewSize <= 32"> · front locked</span></span>
+    <span v-if="previewSize" class="actual-size-label">{{ previewSize }} × {{ previewSize }} px · actual size<span v-if="previewSize <= 32"> · front locked</span></span>
     </div>
     </div>
     <div class="orientation-control" role="group" aria-label="3D orbit controls">

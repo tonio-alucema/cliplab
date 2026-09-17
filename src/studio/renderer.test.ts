@@ -6,17 +6,13 @@ import type { EyeGazes } from './gaze'
 describe('compact faces above 16 through 48 CSS pixels', () => {
   const character = { ...defaultProject().characters[0]!, iris: true, eyeColor: '#663399' }
   const sample = { pose: { ...BASE_POSE, faceScale: .8 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
-  it('offers a 16-A variant with a proportionally larger face and the same 16px body rules', () => {
-    const standard = faceForSize(character, sample, 16)
-    const alternate = faceForSize(character, sample, 16, '16-A')
-    expect(alternate.sample.pose.faceScale).toBeCloseTo(standard.sample.pose.faceScale * 1.2)
-    expect({ ...alternate.sample.pose, faceScale: standard.sample.pose.faceScale }).toEqual(standard.sample.pose)
-    expect(alternate.character).toEqual(standard.character)
-    expect(alternate.character.trueFront).toBe(true)
-    expect(alternate.character.iris).toBe(false)
-    expect(alternate.character.toon).toBe(false)
-    expect(faceForSize(character, sample, 16)).toEqual(standard)
-    expect(faceForSize(character, sample, 24, '16-A')).toEqual(faceForSize(character, sample, 24))
+  it('uses the enlarged face as the only 16px appearance without accumulating scale', () => {
+    const result = faceForSize(character, sample, 16)
+    expect(result.sample.pose.faceScale).toBeCloseTo(sample.pose.faceScale * 1.3 * 1.2)
+    expect(result.character.trueFront).toBe(true)
+    expect(result.character.iris).toBe(false)
+    expect(result.character.toon).toBe(false)
+    expect(faceForSize(character, sample, 16)).toEqual(result)
     expect(sample.pose.faceScale).toBe(.8)
   })
   it('enlarges only the requested sizes, without changing the stored face or accumulating scale', () => {
@@ -235,11 +231,11 @@ describe('illustrative face and supporting motion', () => {
 
 
 it('moves only the requested compact mouths down exactly one output pixel', () => {
-  for (const size of [16, 20, 24, 32, 40, 48]) for (const variant of [undefined, '16-A'] as const) {
+  for (const size of [16, 20, 24, 32, 40, 48]) {
     for (const faceScale of [.75, 1.2]) for (const viewHeight of [1.1, 2.2]) {
-      const offset = compactMouthOffset(size, variant, faceScale, viewHeight, size)
+      const offset = compactMouthOffset(size, faceScale, viewHeight, size)
       const projectedPixels = offset / 512 * .57 * faceScale / viewHeight * size
-      expect(projectedPixels).toBeCloseTo((size === 16 && variant === '16-A') || (size > 16 && size < 32) ? 1 : 0)
+      expect(projectedPixels).toBeCloseTo(size >= 16 && size < 32 ? 1 : 0)
     }
   }
 })
