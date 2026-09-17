@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation, faceForSize } from './renderer'
+import { bodyHeight, radiusAt, eyeRadius, effectEnvelope, drawFace, projectedEye, resolveEyeGazes, characterRotation, faceForSize, compactMouthOffset } from './renderer'
 import { BASE_POSE, defaultProject, detailAt, faceLayers } from './model'
 import type { EyeGazes } from './gaze'
 describe('compact faces above 16 through 48 CSS pixels', () => {
@@ -231,4 +231,15 @@ describe('illustrative face and supporting motion', () => {
     expect(effectEnvelope(.99999)).toBeLessThan(.000001)
     expect(effectEnvelope(.09)).toBeCloseTo(.5)
   })
+})
+
+
+it('moves only the requested compact mouths down exactly one output pixel', () => {
+  for (const size of [16, 20, 24, 32, 40, 48]) for (const variant of [undefined, '16-A'] as const) {
+    for (const faceScale of [.75, 1.2]) for (const viewHeight of [1.1, 2.2]) {
+      const offset = compactMouthOffset(size, variant, faceScale, viewHeight, size)
+      const projectedPixels = offset / 512 * .57 * faceScale / viewHeight * size
+      expect(projectedPixels).toBeCloseTo((size === 16 && variant === '16-A') || (size > 16 && size <= 32) ? 1 : 0)
+    }
+  }
 })

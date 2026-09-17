@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { drawFace, drawProp, type CharacterRenderer } from './renderer'
+import { compactMouthOffset, drawFace, drawProp, type CharacterRenderer } from './renderer'
 import { detailAt } from './model'
 import { SvgCanvas, number as n, xml } from './svg-canvas'
 import { boundaryContours, pathData, type Point, type ProjectPoint } from './svg-path'
@@ -113,7 +113,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const transparent: { z: number; markup: string }[] = []
   if (face.visible) {
     const art = new SvgCanvas('face', faceProjector(face, project))
-    drawFace(art as unknown as CanvasRenderingContext2D, sample.pose, character, sample.blink, detailAt(options.displaySize ?? Math.min(width, height)), snapshot.gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: snapshot.eyeGazes, faceLayers: sample.faceLayers, simpleEyes: snapshot.simpleEyes, mouthFollowsEyes: (options.displaySize ?? Math.min(width, height)) >= 16 && (options.displaySize ?? Math.min(width, height)) <= 32 })
+    drawFace(art as unknown as CanvasRenderingContext2D, sample.pose, character, sample.blink, detailAt(options.displaySize ?? Math.min(width, height)), snapshot.gaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: snapshot.eyeGazes, faceLayers: sample.faceLayers, simpleEyes: snapshot.simpleEyes, mouthOffset: compactMouthOffset(options.displaySize ?? Math.min(width, height), options.sizeVariant, sample.pose.faceScale, camera.top - camera.bottom, options.displaySize ?? Math.min(width, height)), mouthFollowsEyes: (options.displaySize ?? Math.min(width, height)) >= 16 && (options.displaySize ?? Math.min(width, height)) <= 32 })
     const valid = face.geometry.getAttribute('faceValid'), data = triangles(face)
     const visible = data.triangles.filter(t => t.indices.every(i => valid.getX(i) >= .99))
     defs.push(`<clipPath id="face-visible"><path d="${pathData(boundaryContours(visible.map(t => t.points)))}"/></clipPath>`)

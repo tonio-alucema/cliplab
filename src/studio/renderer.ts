@@ -140,7 +140,10 @@ export function resolveEyeGazes(character: Character, pose: Pose, blink: number,
 function drop(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath(); ctx.moveTo(x, y - r * 1.5); ctx.bezierCurveTo(x - r * .25, y - r * .8, x - r, y - r * .2, x - r, y + r * .35); ctx.bezierCurveTo(x - r, y + r * 1.65, x + r, y + r * 1.65, x + r, y + r * .35); ctx.bezierCurveTo(x + r, y - r * .2, x + r * .25, y - r * .8, x, y - r * 1.5); ctx.fill()
 }
-export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes; faceLayers?: FaceLayer[]; simpleEyes?: boolean; mouthFollowsEyes?: boolean } = {}) {
+export function compactMouthOffset(size: number, variant: RenderOptions['sizeVariant'], faceScale: number, viewHeight: number, outputHeight: number) {
+  return ((size === 16 && variant === '16-A') || (size > 16 && size <= 32)) ? 512 * viewHeight / outputHeight / (.57 * faceScale) : 0
+}
+export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes; faceLayers?: FaceLayer[]; simpleEyes?: boolean; mouthFollowsEyes?: boolean; mouthOffset?: number } = {}) {
   ctx.clearRect(0, 0, 512, 512)
   if (detail === 'body') return
   const ink = character.eyeColor, eyeY = detail === 'eyes' ? 254 : 197, spacing = 103 * pose.spacing
@@ -221,7 +224,7 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   }
   if (detail === 'eyes') return
   const mouthX = effects.mouthFollowsEyes ? 256 + gx * (1 - pupilAmount) + (pose.leftX + pose.rightX) / 2 : 256 + gx * .25
-  const mouthY = effects.mouthFollowsEyes ? 275 + gy : 293 + gy * .25
+  const mouthY = (effects.mouthFollowsEyes ? 275 + gy : 293 + gy * .25) + (effects.mouthOffset ?? 0)
   if (layers) {
     ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect)
     drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); return
@@ -400,8 +403,9 @@ export class CharacterRenderer {
     const local = character.iris ? new THREE.Vector3(screenGaze.x + turnGaze.x * .575, screenGaze.y + turnGaze.y * .575, 0).applyQuaternion(this.root.quaternion.clone().invert()) : screenGaze
     const faceGaze = displaySize <= 32 ? { x: 0, y: 0 } : irisRestGaze(character, local, reduced)
     this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? (!reduced ? this.options.eyeGazes : undefined) ?? resolveEyeGazes(character, reduced ? { ...pose, gazeX: 0, gazeY: 0 } : pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, !reduced && character.followCursor ? this.options.pointerLook : undefined, sample.faceLayers) : undefined
-    const key = JSON.stringify([pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
-    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes, mouthFollowsEyes: displaySize >= 16 && displaySize <= 32 }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
+    const mouthOffset = compactMouthOffset(displaySize, this.options.sizeVariant, pose.faceScale, half * 2, displaySize)
+    const key = JSON.stringify([mouthOffset, pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
+    if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes, mouthOffset, mouthFollowsEyes: displaySize >= 16 && displaySize <= 32 }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!

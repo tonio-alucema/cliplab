@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BASE_POSE, animationDuration, defaultProject, definitionOf, detailAt, expressionDuration, mixPose, parseProject, sampleDefinition, sampleExpression } from './model'
+import { BASE_POSE, animationDuration, defaultProject, definitionOf, detailAt, expressionDuration, mixPose, parseProject, sampleDefinition, sampleExpression, removeExpression } from './model'
 
 describe('responsive character detail', () => {
   it('uses the user-defined boundaries inclusively, independently of rendering resolution', () => {
@@ -114,5 +114,40 @@ describe('supporting expression details', () => {
       expect(end.propAmount).toBeCloseTo(start.propAmount!, 9)
       expect(end.tearAmount).toBeCloseTo(start.tearAmount!, 9)
     }
+  })
+})
+
+
+describe('gradient beat rotation controls', () => {
+  it('keeps turn counts through save/import and accumulates them across holds and beats', () => {
+    const project = defaultProject(), loading = project.expressions.find(e => e.id === 'loading')!
+    loading.beats[0]!.gradientTurns = 3
+    const restored = parseProject(JSON.parse(JSON.stringify(project))).expressions.find(e => e.id === 'loading')!
+    expect(restored.beats[0]!.gradientTurns).toBe(3)
+    expect(sampleExpression(restored, 1).gradientRotation).toBeCloseTo(540)
+    expect(sampleExpression(restored, 2.25).gradientRotation).toBe(1080)
+    restored.beats.push({ ...restored.beats[0]!, id: 'second-turn', gradientTurns: 2 })
+    expect(sampleExpression(restored, 3.5).gradientRotation).toBeCloseTo(1440)
+    const end = sampleExpression(restored, 4.5 - 1e-6).gradientRotation!
+    expect(Math.cos(end * Math.PI / 180)).toBeCloseTo(1)
+  })
+  it('defaults old beats to one turn and constrains invalid imported values', () => {
+    const project = defaultProject(), loading = project.expressions.find(e => e.id === 'loading')!
+    expect(sampleExpression(loading, 1).gradientRotation).toBeCloseTo(180)
+    loading.beats[0]!.gradientTurns = 99
+    expect(parseProject(project).expressions.find(e => e.id === 'loading')!.beats[0]!.gradientTurns).toBe(8)
+  })
+})
+describe('expression deletion', () => {
+  it('cleans animation and linked face references without creating an invalid project', () => {
+    const project = defaultProject()
+    expect(removeExpression(project, 'working')).toBe(true)
+    expect(project.expressions.find(e => e.id === 'loading')!.poseExpressionId).toBeUndefined()
+    expect(project.animations.every(a => a.steps.length && a.steps.every(s => s.expressionId !== 'working'))).toBe(true)
+    expect(() => parseProject(project)).not.toThrow()
+    expect(removeExpression(project, 'missing')).toBe(false)
+    while (project.expressions.length > 1) removeExpression(project, project.expressions[0]!.id)
+    expect(removeExpression(project, project.expressions[0]!.id)).toBe(false)
+    expect(() => parseProject(project)).not.toThrow()
   })
 })

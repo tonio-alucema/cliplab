@@ -2150,3 +2150,5 @@ input:checked+.switch-track:after {
 
 .preview-artwork { display:contents; }
 .actual-viewport .preview-artwork { display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px; }
+
+.expression-select { display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer; }
