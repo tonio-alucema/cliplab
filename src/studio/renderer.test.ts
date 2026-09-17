@@ -35,7 +35,7 @@ describe('compact faces above 16 through 48 CSS pixels', () => {
     const shaded = { ...character, toon: true, shadow: true }
     for (const size of [12, 16, 24, 32, 47.99, 48, 96]) {
       const adapted = faceForSize(shaded, sample, size)
-      expect(adapted.character.toon).toBe(size >= 40)
+      expect(adapted.character.toon).toBe(size === 32 || size >= 40)
       expect(adapted.character.shadow).toBe(size >= 40)
       for (const key of ['gradient', 'color', 'color2', 'gradientAngle'] as const) expect(adapted.character[key]).toBe(shaded[key])
     }
@@ -239,7 +239,30 @@ it('moves only the requested compact mouths down exactly one output pixel', () =
     for (const faceScale of [.75, 1.2]) for (const viewHeight of [1.1, 2.2]) {
       const offset = compactMouthOffset(size, variant, faceScale, viewHeight, size)
       const projectedPixels = offset / 512 * .57 * faceScale / viewHeight * size
-      expect(projectedPixels).toBeCloseTo((size === 16 && variant === '16-A') || (size > 16 && size <= 32) ? 1 : 0)
+      expect(projectedPixels).toBeCloseTo((size === 16 && variant === '16-A') || (size > 16 && size < 32) ? 1 : 0)
     }
   }
+})
+
+
+it('keeps toon optional at 32px with a frozen body and an up-left face', () => {
+  const sample = { pose: { ...BASE_POSE, squash: 1.2 }, blink: 0, bob: 1, breathe: 1, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
+  for (const toon of [true, false]) {
+    const c = { ...defaultProject().characters[0]!, toon, followRotation: true }
+    const result = faceForSize(c, sample, 32)
+    expect(result.character.toon).toBe(toon)
+    expect(result.character.trueFront).toBe(true)
+    expect(result.character.lockPosition).toBe(true)
+    expect(result.character.followRotation).toBe(false)
+    expect(result.sample.pose.squash).toBe(1)
+    expect(result.sample.pose.faceY).toBeGreaterThan(BASE_POSE.faceY)
+    expect(result.sample.pose.gazeX).toBeLessThan(0)
+    expect(faceForSize(c, sample, 24).character.toon).toBe(false)
+  }
+})
+it('centers body following on front regardless of prior orbit or beat rotations', () => {
+  const c = { trueFront: false, followRotation: true }
+  const p = { rotationX: 20, rotationY: 35, rotationZ: -12 }
+  expect(characterRotation(c, p, { x: 30, y: -80, z: 60 })).toEqual({ x: -0, y: 0, z: 0 })
+  expect(characterRotation(c, p, undefined, { x: 1, y: -1 })).toEqual({ x: 16, y: 28, z: 0 })
 })

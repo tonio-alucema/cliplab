@@ -5,7 +5,7 @@ export const POSE_SECTIONS = {
   Eyes: ['eye', 'cheeks', 'faceScale', 'faceY', 'eyeSize', 'eyeHeight', 'spacing', 'eyeTilt', 'leftScale', 'rightScale', 'gazeX', 'gazeY'],
   'Eye placement & rotation': ['leftX', 'rightX', 'leftY', 'rightY', 'leftRotation', 'rightRotation'],
   Mouth: ['mouth', 'mouthStroke', 'mouthWidth', 'mouthOpen', 'tongue', 'teeth', 'drool', 'tears'],
-  'Brows & blush': ['brows', 'blush'],
+  'Brows & blush': ['brows', 'browStroke', 'browLength', 'blush'],
 } as const satisfies Record<string, readonly (keyof Pose)[]>
 export type BeatSection = keyof typeof POSE_SECTIONS | 'Gradient loop'
 export interface BeatValues { section: BeatSection; pose: Partial<Pose>; gradientAction?: Beat['gradientAction']; gradientTurns?: number }

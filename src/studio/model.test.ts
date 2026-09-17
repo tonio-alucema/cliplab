@@ -151,3 +151,17 @@ describe('expression deletion', () => {
     expect(() => parseProject(project)).not.toThrow()
   })
 })
+
+
+it('preserves brow proportions through save/import and interpolates them between beats', () => {
+  const project = defaultProject(), expression = project.expressions[0]!
+  expression.beats[0]!.pose.browStroke = 1.5; expression.beats[0]!.pose.browLength = 1.8
+  const saved = parseProject(JSON.parse(JSON.stringify(project)))
+  expect(saved.expressions[0]!.beats[0]!.pose.browStroke).toBe(1.5)
+  expect(saved.expressions[0]!.beats[0]!.pose.browLength).toBe(1.8)
+  const middle = mixPose(BASE_POSE, expression.beats[0]!.pose, .5)
+  expect(middle.browStroke).toBe(1.25); expect(middle.browLength).toBe(1.4)
+  const legacy = JSON.parse(JSON.stringify(project))
+  delete legacy.expressions[0].beats[0].pose.browStroke; delete legacy.expressions[0].beats[0].pose.browLength
+  expect(parseProject(legacy).expressions[0]!.beats[0]!.pose.browLength).toBe(1)
+})

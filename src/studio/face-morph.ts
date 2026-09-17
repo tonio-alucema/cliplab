@@ -191,14 +191,14 @@ export function drawMorphMouth(ctx: CanvasRenderingContext2D, pose: Pose, layers
   if (drool > 0) drawDrool(ctx, droolAnchor(outline, w), drool)
 }
 
-export function drawMorphBrow(ctx: CanvasRenderingContext2D, layers: FaceLayer[], r: number, side: number, ink: string) {
+export function drawMorphBrow(ctx: CanvasRenderingContext2D, layers: FaceLayer[], r: number, side: number, ink: string, stroke = 1, length = 1) {
   if (!layers.some(layer => layer.traits.brows !== 'none')) return
   const shapes = layers.map(({ traits }) => {
     if (traits.brows === 'none') return contour([pt(0, 0)])
     const path = traits.brows === 'raised' ? arc(0, 10, r * .85, r * .85, Math.PI * 1.15, Math.PI * 1.85)
       : traits.brows === 'worried' ? quad(pt(side * r, 2), pt(-side * r * .1, 10), pt(-side * r * .75, -16))
         : [pt(side * r, -10), pt(-side * r * .75, 8)]
-    return contour(ribbon(path, 12))
+    return contour(ribbon(path.map(point => ({ ...point, x: point.x * length })), 12 * stroke))
   })
   ctx.fillStyle = ink; trace(ctx, blendContours(shapes, layers)); ctx.fill()
 }

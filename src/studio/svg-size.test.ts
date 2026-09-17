@@ -95,7 +95,7 @@ it('uses one rounded lighting region for all three shapes and captures its face-
       }
       for (const displaySize of [24, 47, 48, 96]) {
         renderer.render(character, sample, { displaySize })
-        expect(renderer.snapshotScene().lightFill.visible).toBe(displaySize >= 40)
+        expect(renderer.snapshotScene().lightFill.visible).toBe(displaySize === 32 || displaySize >= 40)
       }
       renderer.render({ ...character, toon: false }, sample, { displaySize: 1080 })
       expect(renderer.snapshotScene().lightFill.visible).toBe(false)
@@ -169,7 +169,7 @@ it('fits every small preset consistently and enforces front-only gradient detail
       renderer.render({ ...original, shape }, sample, { rotation: { x: 20, y: 50, z: 30 }, cursor: { x: 1, y: -1 }, zoom: 1.4 })
       const state = renderer.snapshotScene()
       expect(state.face.visible).toBe(size > 12)
-      expect(state.lightFill.visible).toBe(size >= 40)
+      expect(state.lightFill.visible).toBe(size === 32 || size >= 40)
       if (size <= 32) {
         expect(renderer.orientation().angleTo(new THREE.Quaternion())).toBeCloseTo(0)
         expect(state.body.getWorldPosition(new THREE.Vector3()).length()).toBe(0)
@@ -180,7 +180,7 @@ it('fits every small preset consistently and enforces front-only gradient detail
         expect((top.y - bottom.y) / 2).toBeCloseTo(1 / 1.1, 2)
         const svg = snapshotSvg(state)
         expect(svg).not.toMatch(/NaN|Infinity/)
-        expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('[id$="-candle-light"]')).toBeNull()
+        expect(!!new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('[id$="-candle-light"]')).toBe(size === 32)
       }
     }
     expect(original.trueFront).toBe(false); expect(original.toon).toBe(true)

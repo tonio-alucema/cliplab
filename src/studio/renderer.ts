@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { BASE_POSE, detailAt, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
+import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
 import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
 
@@ -13,8 +13,8 @@ export function characterRotation(character: Pick<Character, 'trueFront' | 'foll
   if (character.trueFront) return { x: 0, y: 0, z: 0 }
   return {
     x: character.followRotation ? -cursor.y * 16 : rotation.x + pose.rotationX,
-    y: rotation.y + pose.rotationY + (character.followRotation ? cursor.x * 28 : 0),
-    z: rotation.z + pose.rotationZ
+    y: character.followRotation ? cursor.x * 28 : rotation.y + pose.rotationY,
+    z: character.followRotation ? 0 : rotation.z + pose.rotationZ
   }
 }
 /** Anchor the rounded highlight to the face direction shown by the orbit marker.
@@ -28,12 +28,12 @@ export function toonLightOffset(orientation: THREE.Quaternion): Gaze {
 export function faceForSize(character: Character, sample: Sample, size: number, sizeVariant?: '16-A') {
   const simpleEyes = size > 12 && size <= 48
   const frontOnly = size <= 32
-  const flatFill = size < 40
+  const flatFill = size < 40 && size !== 32
   const smallerSpacedEyes = size === 24 || size === 32
   if (size === 16 && sizeVariant === '16-A') sample = { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.2 } }
   return {
-    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
-    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1) * (smallerSpacedEyes ? .8 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77 * (smallerSpacedEyes ? 1.2 : 1), faceY: BASE_POSE.faceY } : {}) } } : sample,
+    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false } : {}), ...(size < 40 ? { shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
+    sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1) * (smallerSpacedEyes ? .8 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77 * (smallerSpacedEyes ? 1.2 : 1), faceY: BASE_POSE.faceY + (size === 32 ? .025 * bodyHeight(character.shape) : 0) } : {}) } } : sample,
     simpleEyes
   }
 }
@@ -141,7 +141,7 @@ function drop(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath(); ctx.moveTo(x, y - r * 1.5); ctx.bezierCurveTo(x - r * .25, y - r * .8, x - r, y - r * .2, x - r, y + r * .35); ctx.bezierCurveTo(x - r, y + r * 1.65, x + r, y + r * 1.65, x + r, y + r * .35); ctx.bezierCurveTo(x + r, y - r * .2, x + r * .25, y - r * .8, x, y - r * 1.5); ctx.fill()
 }
 export function compactMouthOffset(size: number, variant: RenderOptions['sizeVariant'], faceScale: number, viewHeight: number, outputHeight: number) {
-  return ((size === 16 && variant === '16-A') || (size > 16 && size <= 32)) ? 512 * viewHeight / outputHeight / (.57 * faceScale) : 0
+  return ((size === 16 && variant === '16-A') || (size > 16 && size < 32)) ? 512 * viewHeight / outputHeight / (.57 * faceScale) : 0
 }
 export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: Character, blink: number, detail: Detail, gaze: { x: number; y: number }, effects: { phase?: number; tearAmount?: number; eyeGazes?: EyeGazes; faceLayers?: FaceLayer[]; simpleEyes?: boolean; mouthFollowsEyes?: boolean; mouthOffset?: number } = {}) {
   ctx.clearRect(0, 0, 512, 512)
@@ -207,15 +207,9 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
       }
     }
     ctx.restore()
-    if (detail === 'full' && layers) {
+    if (detail === 'full' && (layers || pose.brows !== 'none')) {
       ctx.save(); ctx.translate(x, y - r * (1.45 + .35 * pupilAmount)); ctx.scale(1, faceAspect)
-      drawMorphBrow(ctx, layers, r, side, ink); ctx.restore()
-    } else if (detail === 'full' && pose.brows !== 'none') {
-      ctx.save(); ctx.translate(x, y - (pupilEyes ? r * 1.8 : r * 1.45)); ctx.scale(1, faceAspect); ctx.strokeStyle = ink; ctx.lineWidth = 12; ctx.beginPath()
-      if (pose.brows === 'raised') { ctx.arc(0, 10, r * .85, Math.PI * 1.15, Math.PI * 1.85) }
-      else if (pose.brows === 'worried') { ctx.moveTo(side * r, 2); ctx.quadraticCurveTo(-side * r * .1, 10, -side * r * .75, -16) }
-      else { ctx.moveTo(side * r, -10); ctx.lineTo(-side * r * .75, 8) }
-      ctx.stroke(); ctx.restore()
+      drawMorphBrow(ctx, layers ?? faceLayers(pose), r, side, ink, pose.browStroke ?? 1, pose.browLength ?? 1); ctx.restore()
     }
     if (pose.tears && detail === 'full') {
       const phase = fract((effects.phase ?? .35) + (side < 0 ? .46 : 0)), alpha = effectEnvelope(phase) * (effects.tearAmount ?? 1)

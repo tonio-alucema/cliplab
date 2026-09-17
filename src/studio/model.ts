@@ -6,7 +6,7 @@ export type Detail = 'body' | 'eyes' | 'full'
 
 export interface Pose {
   eye: Eye; mouth: Mouth; prop: Prop
-  faceSet: 'set-1' | 'set-2'; brows: 'none' | 'raised' | 'worried' | 'angry'; blush: number
+  faceSet: 'set-1' | 'set-2'; brows: 'none' | 'raised' | 'worried' | 'angry'; browStroke: number; browLength: number; blush: number
   eyeSize: number; eyeHeight: number; spacing: number; eyeTilt: number
   leftScale: number; rightScale: number; gazeX: number; gazeY: number
   leftX: number; rightX: number; leftY: number; rightY: number; leftRotation: number; rightRotation: number
@@ -57,7 +57,7 @@ export function detailAt(size: number): Detail { return size <= 12 ? 'body' : 'f
 export function uid(prefix = 'item') { return `${prefix}-${crypto.randomUUID().slice(0, 8)}` }
 export function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
 export const BASE_POSE: Pose = {
-  eye: 'dot', mouth: 'smile', prop: 'none', faceSet: 'set-1', brows: 'none', blush: 0, eyeSize: 1, eyeHeight: 1, spacing: 1, eyeTilt: 0,
+  eye: 'dot', mouth: 'smile', prop: 'none', faceSet: 'set-1', brows: 'none', browStroke: 1, browLength: 1, blush: 0, eyeSize: 1, eyeHeight: 1, spacing: 1, eyeTilt: 0,
   leftScale: 1, rightScale: 1, gazeX: 0, gazeY: 0, mouthWidth: 1, mouthOpen: .5,
   leftX: 0, rightX: 0, leftY: 0, rightY: 0, leftRotation: 0, rightRotation: 0,
   faceScale: .75, faceY: 0, rotationX: 0, rotationY: 0, rotationZ: 0, squash: 1,
@@ -278,7 +278,7 @@ function choice<T extends string>(v: unknown, options: T[], fallback: T) { retur
 function boolean(v: unknown, fallback: boolean) { return typeof v === 'boolean' ? v : fallback }
 function parsePose(value: unknown): Pose {
   const v = obj(value), pose = { ...BASE_POSE }
-  const ranges: Record<string, [number, number]> = { blush: [0, 1], mouthStroke: [.5, 2.2], leftX: [-60, 60], rightX: [-60, 60], leftY: [-60, 60], rightY: [-60, 60], leftRotation: [-90, 90], rightRotation: [-90, 90], eyeSize: [.35, 2], eyeHeight: [.15, 2], spacing: [.5, 1.6], eyeTilt: [-45, 45], leftScale: [.3, 1.8], rightScale: [.3, 1.8], gazeX: [-1, 1], gazeY: [-1, 1], mouthWidth: [.3, 1.7], mouthOpen: [.1, 1], faceScale: [.6, 1.4], faceY: [-.3, .3], rotationX: [-180, 180], rotationY: [-180, 180], rotationZ: [-180, 180], squash: [.8, 1.2] }
+  const ranges: Record<string, [number, number]> = { browStroke: [.3, 2.5], browLength: [.5, 2], blush: [0, 1], mouthStroke: [.5, 2.2], leftX: [-60, 60], rightX: [-60, 60], leftY: [-60, 60], rightY: [-60, 60], leftRotation: [-90, 90], rightRotation: [-90, 90], eyeSize: [.35, 2], eyeHeight: [.15, 2], spacing: [.5, 1.6], eyeTilt: [-45, 45], leftScale: [.3, 1.8], rightScale: [.3, 1.8], gazeX: [-1, 1], gazeY: [-1, 1], mouthWidth: [.3, 1.7], mouthOpen: [.1, 1], faceScale: [.6, 1.4], faceY: [-.3, .3], rotationX: [-180, 180], rotationY: [-180, 180], rotationZ: [-180, 180], squash: [.8, 1.2] }
   for (const key of numericKeys) { const [lo, hi] = ranges[key]!; (pose as unknown as Record<string, unknown>)[key] = num(v[key], BASE_POSE[key] as number, lo, hi) }
   return { ...pose, faceSet: choice(v.faceSet, ['set-1', 'set-2'], 'set-1'), brows: choice(v.brows, ['none', 'raised', 'worried', 'angry'], 'none'), eye: choice(v.eye, EYES, 'dot'), mouth: choice(v.mouth, MOUTHS, 'smile'), prop: choice(v.prop, PROPS, 'none'), tongue: boolean(v.tongue, false), teeth: boolean(v.teeth, false), drool: boolean(v.drool, false), cheeks: boolean(v.cheeks, false), tears: boolean(v.tears, false) }
 }

@@ -89,11 +89,11 @@ describe('restored orbit controls', () => {
     tick(); await nextTick()
     await point('pointerdown', 50, 50)
     expect(state.character.followRotation).toBe(false)
-    expect(state.rotation.y).toBeCloseTo(51)
+    expect(state.rotation.y).toBeCloseTo(8)
     tick(); await nextTick()
-    expect(state.rotation.y).toBeCloseTo(51)
+    expect(state.rotation.y).toBeCloseTo(8)
     await point('pointermove', 60, 50)
-    expect(state.rotation.y).toBeCloseTo(55)
+    expect(state.rotation.y).toBeCloseTo(12)
   })
 
   it('accepts explicit visible angles, pauses playback, and leaves authored poses unchanged', async () => {
