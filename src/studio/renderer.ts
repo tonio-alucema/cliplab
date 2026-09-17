@@ -4,7 +4,7 @@ import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
 
 export interface RenderOptions {
-  width: number; height: number; displaySize?: number; background?: string | null
+  width: number; height: number; displaySize?: number; sizeVariant?: '16-A'; background?: string | null
   cursor?: { x: number; y: number }; rotation?: { x: number; y: number; z: number }; zoom?: number; pixelRatio?: number
   pointerLook?: PointerLook; eyeGazes?: EyeGazes; reducedMotion?: boolean
 }
@@ -25,11 +25,12 @@ export function toonLightOffset(orientation: THREE.Quaternion): Gaze {
   return { x: -.015 + look.x * .045, y: .015 + look.y * .045 }
 }
 /** Size adaptation is render-only; larger sizes restore the authored appearance. */
-export function faceForSize(character: Character, sample: Sample, size: number) {
+export function faceForSize(character: Character, sample: Sample, size: number, sizeVariant?: '16-A') {
   const simpleEyes = size > 12 && size <= 48
   const frontOnly = size <= 32
   const flatFill = size < 40
   const smallerSpacedEyes = size === 24 || size === 32
+  if (size === 16 && sizeVariant === '16-A') sample = { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.2 } }
   return {
     character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
     sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1) * (smallerSpacedEyes ? .8 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77 * (smallerSpacedEyes ? 1.2 : 1), faceY: BASE_POSE.faceY } : {}) } } : sample,
@@ -345,7 +346,7 @@ export class CharacterRenderer {
     if (this.disposed) return
     this.options = { ...this.options, ...options }
     const displaySize = this.options.displaySize ?? Math.min(this.options.width, this.options.height)
-    const appearance = faceForSize(character, sample, displaySize)
+    const appearance = faceForSize(character, sample, displaySize, this.options.sizeVariant)
     character = appearance.character; sample = appearance.sample
     const squareBottom = character.shape === 'cap' && displaySize <= 24
     if (character.shape !== this.shape || squareBottom !== this.squareBottom) { this.shape = character.shape; this.squareBottom = squareBottom; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape, squareBottom); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }

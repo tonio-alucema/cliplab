@@ -6,6 +6,19 @@ import type { EyeGazes } from './gaze'
 describe('compact faces above 16 through 48 CSS pixels', () => {
   const character = { ...defaultProject().characters[0]!, iris: true, eyeColor: '#663399' }
   const sample = { pose: { ...BASE_POSE, faceScale: .8 }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
+  it('offers a 16-A variant with a proportionally larger face and the same 16px body rules', () => {
+    const standard = faceForSize(character, sample, 16)
+    const alternate = faceForSize(character, sample, 16, '16-A')
+    expect(alternate.sample.pose.faceScale).toBeCloseTo(standard.sample.pose.faceScale * 1.2)
+    expect({ ...alternate.sample.pose, faceScale: standard.sample.pose.faceScale }).toEqual(standard.sample.pose)
+    expect(alternate.character).toEqual(standard.character)
+    expect(alternate.character.trueFront).toBe(true)
+    expect(alternate.character.iris).toBe(false)
+    expect(alternate.character.toon).toBe(false)
+    expect(faceForSize(character, sample, 16)).toEqual(standard)
+    expect(faceForSize(character, sample, 24, '16-A')).toEqual(faceForSize(character, sample, 24))
+    expect(sample.pose.faceScale).toBe(.8)
+  })
   it('enlarges only the requested sizes, without changing the stored face or accumulating scale', () => {
     for (const size of [16.01, 23, 24, 24.01, 32, 48]) {
       const adapted = faceForSize(character, sample, size)

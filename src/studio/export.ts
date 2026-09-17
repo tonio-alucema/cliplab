@@ -14,13 +14,13 @@ export function saveBlob(blob: Blob, name: string) {
 export const fileName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'character'
 export function jsonBlob(value: unknown) { return new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }) }
 export interface MediaOptions {
-  width: number; height: number; fps: number; duration: number; animationId: string
+  width: number; height: number; fps: number; duration: number; animationId: string; sizeVariant?: '16-A'
   format: 'png' | 'gif' | 'mp4' | 'webm'; background: string | null; rotation: { x: number; y: number; z: number }
   zoom: number; cursor?: { x: number; y: number; eyes?: EyeGazes; reducedMotion?: boolean }; sample?: Sample; signal?: AbortSignal; onProgress?: (progress: number) => void
 }
-export function renderSvg(definition: Definition, options: Pick<MediaOptions, 'width' | 'height' | 'background' | 'rotation' | 'zoom' | 'cursor' | 'sample' | 'animationId'>): string {
+export function renderSvg(definition: Definition, options: Pick<MediaOptions, 'width' | 'height' | 'sizeVariant' | 'background' | 'rotation' | 'zoom' | 'cursor' | 'sample' | 'animationId'>): string {
   if (![options.width, options.height].every(v => Number.isInteger(v) && v >= 1 && v <= 2048) || !Number.isFinite(options.zoom) || options.zoom <= 0) throw new Error('Choose whole-number dimensions from 1 to 2048 px.')
-  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: options.width, height: options.height, pixelRatio: 1, displaySize: Math.min(options.width, options.height), background: options.background })
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: options.width, height: options.height, pixelRatio: 1, sizeVariant: options.sizeVariant, displaySize: Math.min(options.width, options.height), background: options.background })
   try {
     renderer.render(definition.character, options.sample ?? sampleDefinition(definition, options.animationId, 0), { rotation: options.rotation, zoom: options.zoom, cursor: options.cursor, reducedMotion: options.cursor?.reducedMotion, eyeGazes: options.cursor?.eyes }, definition.character.followCursor ? options.cursor : undefined)
     return snapshotSvg(renderer.snapshotScene())
@@ -34,7 +34,7 @@ export async function renderMedia(definition: Definition, options: MediaOptions)
   if (format === 'mp4' && (width % 2 || height % 2)) throw new Error('MP4 dimensions must be even numbers.')
   if (format === 'gif' && (width > 512 || height > 512 || fps !== 20)) throw new Error('GIF exports use 20 fps and support up to 512 px. Use video for larger assets or other frame rates.')
   const canvas = document.createElement('canvas')
-  const renderer = new CharacterRenderer(canvas, { width, height, pixelRatio: 1, displaySize: Math.min(width, height), background: format === 'mp4' ? options.background ?? '#f2f4f7' : options.background })
+  const renderer = new CharacterRenderer(canvas, { width, height, pixelRatio: 1, sizeVariant: options.sizeVariant, displaySize: Math.min(width, height), background: format === 'mp4' ? options.background ?? '#f2f4f7' : options.background })
   const frames = Math.max(1, Math.round(options.duration * fps))
   const draw = (i: number) => {
     cancelled(signal)

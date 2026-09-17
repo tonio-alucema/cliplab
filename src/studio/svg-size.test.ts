@@ -5,6 +5,8 @@ import { CharacterRenderer } from './renderer'
 import { BASE_POSE, defaultProject, faceLayers } from './model'
 import { SvgCanvas } from './svg-canvas'
 import { snapshotSvg } from './svg-snapshot'
+import { renderSvg } from './export'
+import { definitionOf } from './model'
 
 // Keep the complete production scene/meshes/materials; replace only GPU submission.
 vi.mock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
@@ -13,6 +15,18 @@ vi.mock('three', async original => ({ ...await original<typeof import('three')>(
 } }))
 beforeEach(() => { vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => new SvgCanvas('canvas') as unknown as CanvasRenderingContext2D) })
 afterEach(() => vi.restoreAllMocks())
+it('exports 16-A at exactly 16px with unchanged body geometry and a larger face', () => {
+  const project = defaultProject(), character = { ...project.characters[0]!, shape: 'cap' as const }
+  const definition = definitionOf(project, character)
+  const options = { width: 16, height: 16, background: null, rotation: { x: 20, y: 30, z: 10 }, zoom: 1, animationId: 'idle' }
+  const standard = new DOMParser().parseFromString(renderSvg(definition, options), 'image/svg+xml')
+  const alternate = new DOMParser().parseFromString(renderSvg(definition, { ...options, sizeVariant: '16-A' }), 'image/svg+xml')
+  expect(alternate.documentElement.getAttribute('width')).toBe('16')
+  expect(alternate.documentElement.getAttribute('height')).toBe('16')
+  expect(alternate.querySelector('[id$="-body"] path')!.getAttribute('d')).toBe(standard.querySelector('[id$="-body"] path')!.getAttribute('d'))
+  expect(alternate.querySelector('[id$="-candle-light"]')).toBeNull()
+  expect(alternate.querySelector('[id$="-face"]')!.innerHTML).not.toBe(standard.querySelector('[id$="-face"]')!.innerHTML)
+})
 it('exports production meshes with four semantic groups and no per-triangle SVG layers', () => {
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 1080, height: 1080 })
   try {
