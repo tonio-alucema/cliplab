@@ -14,3 +14,6 @@ tasks/
 
 # sondes de taille (docs/size.md), regenerables par `pnpm size`
 dist-size
+
+# Generated standalone runtime release packages
+dist-runtime/

@@ -3,6 +3,7 @@ import { unzipSync, strFromU8 } from 'fflate'
 import ts from 'typescript'
 import { defaultProject, definitionOf } from './model'
 import { demoZip, renderMedia, renderSvg } from './export'
+import { RUNTIME_VERSION } from './runtime-version'
 const { draw, serialize, dispose } = vi.hoisted(() => ({ draw: vi.fn(), serialize: vi.fn(() => '<svg xmlns="http://www.w3.org/2000/svg"/>'), dispose: vi.fn() }))
 vi.mock('./renderer', () => ({ CharacterRenderer: class { render = draw; dispose = dispose; snapshotScene() { return { current: true } } } }))
 vi.mock('./svg-snapshot', () => ({ snapshotSvg: serialize }))
@@ -43,6 +44,12 @@ describe('export contracts', () => {
     expect(strFromU8(zipped['cliplab.js']!)).toContain('createCharacter')
     expect(JSON.parse(strFromU8(zipped['character.json']!))).toEqual(d)
     expect(strFromU8(zipped['index.html']!)).toContain("from './cliplab.js'")
+    const guide = strFromU8(zipped['README.md']!)
+    expect(guide).toContain(`ClipLab ${RUNTIME_VERSION}`)
+    expect(guide).toContain('16–32 px')
+    expect(guide).toContain('docs/agent-integration.md')
+    expect(guide).not.toContain('only eyes from 16 to 24 px')
+    expect(strFromU8(zipped['cliplab.d.ts']!)).toContain('RUNTIME_VERSION')
   })
   it('escapes imported animation identifiers in generated React code', async () => {
     vi.stubGlobal('window', { location: { origin: 'http://localhost' } })

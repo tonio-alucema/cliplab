@@ -1,3 +1,4 @@
+export { RUNTIME_VERSION } from './runtime-version'
 import { CharacterRenderer } from './renderer'
 import { animationDuration, definitionOf, parseProject, sampleDefinition, type Definition } from './model'
 import { centeredGaze, clampGaze, easeGaze, easePointer, inactivePointer, pointerGaze, pointerLook } from './gaze'

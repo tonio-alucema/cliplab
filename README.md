@@ -28,6 +28,12 @@ Faces start at 75% of their previous size. Adjust **Face size** per beat. The de
 
 Changes autosave to this browser. Undo and redo keep recent edits. Export a **Project** file to back up all characters and sequences or move them to another browser; import validates the file before replacing the current project. Local browser storage is not cloud synchronization.
 
+## Agent integration
+
+Use the [agent integration guide](docs/agent-integration.md) for Paperclip or another host app. Download the versioned runtime ZIP from [GitHub Releases](https://github.com/tonio-alucema/cliplab/releases/latest), then pair it with your exported `.character.json`. The ZIP includes the bundled player, generated TypeScript types, version/commit metadata, SHA-256 checksums, and licenses. Build it locally with `pnpm runtime:package`.
+
+Studio edits are browser-local data. Publishing source does not upload custom expressions; export your authored animation JSON and commit it in the consuming app.
+
 ## Export
 
 - **App:** select animations and download a character JSON definition or a complete JavaScript/React package. The ZIP includes the same renderer used in the studio, a working example, type declarations, and integration instructions. JSON alone is configuration and needs the supplied runtime.

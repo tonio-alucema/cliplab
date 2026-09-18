@@ -1,7 +1,7 @@
 {
   "name": "cliplab",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "A 3D character studio with illustrative toon shading, editable expressions, looping sequences, and app or media exports.",
   "license": "MIT",
@@ -29,7 +29,8 @@
     "board": "vite build --ssr tools/board.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/board.js",
     "clearance": "vite build --ssr tools/clearance.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/clearance.js",
     "og": "vite build --ssr tools/og.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/og.js",
-    "favicon": "vite build --ssr tools/favicon.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/favicon.js"
+    "favicon": "vite build --ssr tools/favicon.ts --outDir dist-size/bin --logLevel warn && node dist-size/bin/favicon.js",
+    "runtime:package": "node tools/package-studio-runtime.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",
@@ -50,6 +51,6 @@
     "vue-tsc": "^3.3.9"
   },
   "contributors": [
-    "Jérémy Perret (bloub, https://github.com/jeremy-prt/bloub)"
+    "J\u00e9r\u00e9my Perret (bloub, https://github.com/jeremy-prt/bloub)"
   ]
 }
