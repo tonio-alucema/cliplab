@@ -2160,3 +2160,18 @@ input:checked+.switch-track:after {
 .prop-tile-symbol { display:grid;place-items:center;width:24px;flex-shrink:0;font-size:21px;line-height:1; }
 .prop-tile svg { margin-left:auto;flex-shrink:0; }
 .particle-controls { padding-top:6px; }
+
+/* Beat reuse and favorites */
+.sequence-beat { position: relative; }
+.beat-main.beat-with-menu { padding-right: 34px; }
+.inspector-tabs button.favorites-tab { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 10px; border: 1px solid #ffffff12; margin-left: 3px; }
+.favorites-empty { display: grid; justify-items: center; gap: 12px; padding: 50px 24px; text-align: center; color: #999; }
+.favorites-empty h2 { color: #ddd; font-size: 15px; font-weight: 500; }
+.favorites-empty p { font-size: 13px; line-height: 1.6; }
+.favorite-destination { margin-bottom: 20px; }
+.favorite-beats { display: grid; gap: 10px; }
+.favorite-beat { position: relative; padding: 12px; border: 1px solid #ffffff13; border-radius: 13px; background: #ffffff03; }
+.favorite-beat-summary { display: flex; gap: 10px; align-items: center; padding-right: 26px; }
+.favorite-beat-summary strong { display: block; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.favorite-beat-summary span { display: block; margin-top: 5px; color: #999; font-size: 11px; }
+.favorite-insert { width: 100%; margin-top: 10px; }

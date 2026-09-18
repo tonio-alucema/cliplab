@@ -4,17 +4,19 @@ import Icon from './StudioIcon.vue'
 import Thumb from './CharacterThumb.vue'
 import CharacterTabs from './CharacterTabs.vue'
 import ExpressionMenu from './ExpressionMenu.vue'
+import BeatMenu from './BeatMenu.vue'
+import { copyBeat, insertBeatAfter, favoriteBeat, MAX_BEATS } from './beat-library'
 import { particleCount } from './particles'
 import BeatSectionMenu from './BeatSectionMenu.vue'
 import { copyBeatValues, pasteBeatValues, type BeatSection, type BeatValues } from './beat-values'
 import Stage from './CharacterStage.vue'
 import { FACE_SETS, expressionFromFace, facePose, type FacePreset } from './face-styles'
-import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, addLoadingAnimation, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, gradientTurns, removeExpression, isGradientExpression, parseProject, sampleDefinition, uid, upgradeStudioDefaults, type Animation, type Character, type Expression, type Pose, type Project } from './model'
+import { BASE_POSE, EYES, MOUTHS, PALETTES, PROPS, SHAPES, addLoadingAnimation, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, gradientTurns, removeExpression, isGradientExpression, parseProject, sampleDefinition, uid, upgradeStudioDefaults, type Animation, type Beat, type Character, type Expression, type Pose, type Project } from './model'
 import { CLIPTOON_PALETTES } from './color-palettes'
 import { demoZip, fileName, jsonBlob, renderMedia, renderSvg, saveBlob, setupInstructions } from './export'
 import type { EyeGazes } from './gaze'
 
-type Tab = 'character' | 'expressions' | 'animations' | 'export'
+type Tab = 'character' | 'expressions' | 'animations' | 'export' | 'favorites'
 type NumberKey = { [K in keyof Pose]: Pose[K] extends number ? K : never }[keyof Pose]
 const STORAGE = 'cliplab.studio.v1'
 let loadError = ''
@@ -32,10 +34,38 @@ const animation = computed(() => project.value.animations.find(a => a.id === sel
 const definition = computed(() => definitionOf(project.value, character.value))
 const tab = ref<Tab>('expressions')
 const inspectorScroll = ref<HTMLElement>()
-const tabs: { id: Tab; label: string; icon: string }[] = [{ id: 'character', label: 'Character', icon: 'body' }, { id: 'expressions', label: 'Expressions', icon: 'face' }, { id: 'animations', label: 'Animations', icon: 'animation' }, { id: 'export', label: 'Export', icon: 'download' }]
+const tabs: { id: Tab; label: string; icon: string }[] = [{ id: 'character', label: 'Clips', icon: 'body' }, { id: 'expressions', label: 'Expressions', icon: 'face' }, { id: 'animations', label: 'Animations', icon: 'animation' }, { id: 'export', label: 'Export', icon: 'download' }]
 const mode = ref<'expression' | 'animation'>('expression')
 const editing = ref(false), selectedBeat = ref(0), frozenBeat = ref(false)
 const beat = computed(() => expression.value.beats[selectedBeat.value] ?? expression.value.beats[0]!)
+const beatClipboard = ref<Beat>()
+const favorites = computed(() => project.value.favoriteBeats ?? [])
+function copyTimelineBeat(value: Beat) {
+  beatClipboard.value = copyBeat(value)
+  notify(`${value.name} copied. Paste it after any beat in an expression.`)
+}
+async function pasteTimelineBeat(index: number, source: Beat | undefined = beatClipboard.value) {
+  if (!source) return
+  flush()
+  const inserted = insertBeatAfter(expression.value, index, source)
+  if (inserted === null) { notify('An expression supports up to 32 beats.'); return }
+  mode.value = 'expression'; pickBeat(inserted); flush()
+  notify(`${source.name} inserted into ${expression.value.name}. Undo is available.`)
+  await nextTick()
+  document.querySelectorAll('.sequence-track .sequence-beat')[inserted]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+function isFavorite(value: Beat) { return favorites.value.some(f => f.sourceBeatId === value.id) }
+function removeFavorite(id: string) {
+  flush(); project.value.favoriteBeats = favorites.value.filter(f => f.id !== id); flush()
+  notify('Removed from favorites. Undo is available.')
+}
+function toggleFavorite(value: Beat) {
+  const existing = favorites.value.find(f => f.sourceBeatId === value.id)
+  if (existing) { removeFavorite(existing.id); return }
+  flush()
+  if (favoriteBeat(project.value, value)) { flush(); notify(`${value.name} saved to favorites.`) }
+  else notify('Your favorites library is full. Remove a beat to save another.')
+}
 // Keep a separate studio clipboard for each section while switching beats/expressions.
 const sectionClipboard = ref<Partial<Record<BeatSection, BeatValues>>>({})
 function copySection(section: BeatSection) {
@@ -134,7 +164,7 @@ function updatePose(key: NumberKey, event: Event) {
 }
 function togglePlay() { if (!playing.value && time.value >= duration.value - .001) time.value = 0; frozenBeat.value = false; playing.value = !playing.value }
 function seek(event: Event) { time.value = Number((event.target as HTMLInputElement).value); frozenBeat.value = false; playing.value = false }
-function addBeat() { if (expression.value.beats.length >= 4) return; const item = clone(beat.value); item.id = uid('beat'); item.name = `Beat ${expression.value.beats.length + 1}`; expression.value.beats.push(item); pickBeat(expression.value.beats.length - 1) }
+function addBeat() { if (expression.value.beats.length >= MAX_BEATS) return; const item = clone(beat.value); item.id = uid('beat'); item.name = `Beat ${expression.value.beats.length + 1}`; expression.value.beats.push(item); pickBeat(expression.value.beats.length - 1) }
 function removeBeat(index: number) { if (expression.value.beats.length < 2) return; expression.value.beats.splice(index, 1); pickBeat(Math.min(selectedBeat.value, expression.value.beats.length - 1)) }
 function duplicateExpression(value: Expression = expression.value) { flush(); const e = clone(value); e.id = uid('expression'); e.name = `${e.name} copy`; e.beats.forEach(b => { b.id = uid('beat') }); project.value.expressions.push(e); editExpression(e) }
 function newExpression() { const e: Expression = { id: uid('expression'), name: 'New expression', description: '', beats: [1, 2].map(n => ({ id: uid('beat'), name: n === 1 ? 'Begin' : 'Return', duration: 1.5, pose: clone(BASE_POSE) })) }; project.value.expressions.push(e); editExpression(e) }
@@ -370,10 +400,11 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
           <div class="scrubber"><input aria-label="Playback position" type="range" min="0" :max="duration" step="0.01" :value="time" @input="seek" /><div class="time-ticks"><span>0s</span><span>{{ (duration / 4).toFixed(1) }}</span><span>{{ (duration / 2).toFixed(1) }}</span><span>{{ (duration * .75).toFixed(1) }}</span><span>{{ duration.toFixed(1) }}s</span></div></div>
           <div class="sequence-track" v-if="mode === 'expression'">
             <div v-for="(item, index) in expression.beats" :key="item.id" :class="['sequence-beat', { active: sample.beatIndex === index }]" draggable="true" @dragstart="dragIndex = index" @dragover.prevent @drop.prevent="dropAt(index)">
-              <button class="beat-main" @click="pickBeat(index)" @dblclick="editExpression(expression, index)" title="Double-click to edit this beat"><Thumb :character="character" :pose="poseSource ? previewPose(expression) : item.pose" :size="52" /><span><strong>{{ item.name }}</strong><small>Beat {{ index + 1 }}</small></span></button>
+              <button class="beat-main beat-with-menu" @click="pickBeat(index)" @dblclick="editExpression(expression, index)" title="Double-click to edit this beat"><Thumb :character="character" :pose="poseSource ? previewPose(expression) : item.pose" :size="52" /><span><strong>{{ item.name }}</strong><small>Beat {{ index + 1 }}</small></span></button>
+              <BeatMenu :name="item.name" :can-paste="!!beatClipboard && expression.beats.length < MAX_BEATS" :favorite="isFavorite(item)" @copy="copyTimelineBeat(item)" @paste="pasteTimelineBeat(index)" @favorite="toggleFavorite(item)" />
               <div class="beat-controls"><label><input :aria-label="`${item.name} duration`" type="number" min="0.2" max="15" step="0.1" v-model.number="item.duration" @change="item.duration = Math.min(15, Math.max(.2, Number(item.duration) || 1))" /><span>s</span></label><button class="mini-icon" :disabled="index === 0" aria-label="Move beat earlier" @click="moveItem(index, -1)"><Icon name="left" :size="12" /></button><button class="mini-icon" :disabled="index === expression.beats.length - 1" aria-label="Move beat later" @click="moveItem(index, 1)"><Icon name="right" :size="12" /></button><button class="mini-icon remove-beat" :disabled="expression.beats.length === 1" aria-label="Remove beat" @click="removeBeat(index)"><Icon name="close" :size="12" /></button></div>
             </div>
-            <button class="add-beat" :disabled="expression.beats.length >= 4" @click="addBeat"><Icon name="plus" :size="18" /><span>Add beat</span></button>
+            <button class="add-beat" :disabled="expression.beats.length >= MAX_BEATS" @click="addBeat"><Icon name="plus" :size="18" /><span>Add beat</span></button>
           </div>
           <div class="sequence-track" v-else>
             <div v-for="(item, index) in animation.steps" :key="item.id" :class="['sequence-beat', { active: sample.stepIndex === index }]" draggable="true" @dragstart="dragIndex = index" @dragover.prevent @drop.prevent="dropAt(index)">
@@ -387,7 +418,7 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
       </section>
 
       <aside class="inspector" aria-label="Character controls">
-        <nav class="inspector-tabs" aria-label="Studio tools"><button v-for="item in tabs" :key="item.id" :class="{ active: tab === item.id }" :aria-current="tab === item.id ? 'page' : undefined" @click="tab = item.id"><Icon :name="item.icon" :size="19" /><span>{{ item.label }}</span></button></nav>
+        <nav class="inspector-tabs" aria-label="Studio tools"><button v-for="item in tabs" :key="item.id" :class="{ active: tab === item.id }" :aria-current="tab === item.id ? 'page' : undefined" @click="tab = item.id"><Icon :name="item.icon" :size="19" /><span>{{ item.label }}</span></button><button class="favorites-tab" :class="{ active: tab === 'favorites' }" :aria-current="tab === 'favorites' ? 'page' : undefined" aria-label="Favorites" title="Favorite beats" @click="tab = 'favorites'"><Icon name="heart" :size="19" /></button></nav>
         <div ref="inspectorScroll" class="inspector-scroll">
           <template v-if="tab === 'character'">
             <div class="panel-heading"><div><h1>{{ character.name }}</h1><p>One simple shape. Your character.</p></div><button class="icon-button" title="Duplicate character" aria-label="Duplicate this character" @click="duplicateCharacter"><Icon name="copy" /></button></div>
@@ -397,6 +428,15 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
             <div class="control-section"><div class="section-heading"><h2>Body color</h2><label class="switch-label">Gradient<input type="checkbox" v-model="character.gradient" role="switch" /><span class="switch-track"></span></label></div><div class="color-fields"><label class="color-field"><input aria-label="Primary body color" type="color" v-model="character.color" /><span>{{ character.color }}</span></label><label v-if="character.gradient" class="color-field"><input aria-label="Second body color" type="color" v-model="character.color2" /><span>{{ character.color2 }}</span></label></div><div class="palette-row"><button v-for="(colors, i) in PALETTES" :key="i" class="palette-swatch" :style="{ background: `linear-gradient(145deg, ${colors[0]}, ${colors[1]})` }" :aria-label="`Apply palette ${i + 1}`" @click="applyPalette(colors)"><Icon v-if="character.color === colors[0]" name="check" :size="14" /></button></div><div class="palette-row palette-library" role="group" aria-label="Cliptoon color combinations"><button v-for="palette in CLIPTOON_PALETTES" :key="palette.name" class="palette-swatch" :style="{ background: `linear-gradient(145deg, ${palette.colors[0]}, ${palette.colors[1]})` }" :title="`${palette.name} · ${palette.colors[0]} / ${palette.colors[1]}`" :aria-label="`Apply ${palette.name} palette`" :aria-pressed="character.gradient && character.color === palette.colors[0] && character.color2 === palette.colors[1]" @click="applyPalette(palette.colors); character.gradient = true"><Icon v-if="character.gradient && character.color === palette.colors[0] && character.color2 === palette.colors[1]" name="check" :size="14" /><span v-if="palette.savedCharacter" class="palette-saved-dot" aria-hidden="true"></span></button></div><label v-if="character.gradient" class="range-control"><span>Gradient direction<output>{{ character.gradientAngle }}°</output></span><input aria-label="Gradient direction" type="range" min="-180" max="180" step="1" v-model.number="character.gradientAngle" /></label><label class="toggle-row"><span><strong>Toon shading</strong><small>One rounded shade; highlight follows the face’s direction</small></span><input type="checkbox" v-model="character.toon" role="switch" /><span class="switch-track"></span></label></div>
             <div class="control-section"><div class="section-heading"><h2>Face & surface</h2></div><label class="color-field ink-field"><span>Face color</span><input aria-label="Face color" type="color" v-model="character.eyeColor" /><span>{{ character.eyeColor }}</span></label><label class="toggle-row"><span><strong>White eye dots</strong><small>White dots that follow your cursor</small></span><input type="checkbox" :checked="character.iris" @change="toggleIris" role="switch" /><span class="switch-track"></span></label><label class="toggle-row"><span><strong>Elevate the face</strong><small>Lift the features above the body</small></span><input type="checkbox" v-model="character.elevated" role="switch" /><span class="switch-track"></span></label><label v-if="character.elevated" class="range-control"><span>Separation<output>{{ Math.round(character.elevation * 100) }}%</output></span><input aria-label="Face separation" type="range" min="0.005" max="0.15" step="0.005" v-model.number="character.elevation" /></label><label class="toggle-row"><span>Ground shadow</span><input type="checkbox" v-model="character.shadow" role="switch" /><span class="switch-track"></span></label></div>
             <div class="control-section detail-guide"><h2>Responsive detail</h2><p><strong>40 px and above</strong>Full face and expression details</p><p><strong>16–32 px</strong>Eyes and smile · front locked · no shading</p><p><strong>12 px and below</strong>Gradient and shape only · front locked</p></div>
+          </template>
+
+          <template v-if="tab === 'favorites'">
+            <div class="panel-heading"><div><h1>Favorite beats</h1><p>Your saved gestures, ready to reuse.</p></div><span class="count-badge">{{ favorites.length }}</span></div>
+            <div v-if="!favorites.length" class="favorites-empty"><Icon name="heart" :size="28" /><h2>Keep your best beats here</h2><p>Open a beat’s three-dot menu in the timeline and choose Add to favorites.</p></div>
+            <template v-else>
+              <div class="favorite-destination"><label class="field-label" for="favorite-expression">Insert into expression</label><select id="favorite-expression" class="text-field" :value="expression.id" @change="selectExpression(stepExpression(($event.target as HTMLSelectElement).value))"><option v-for="e in project.expressions" :key="e.id" :value="e.id">{{ e.name }}</option></select><p class="panel-hint">Insert after “{{ beat.name }}”. Select another timeline beat to change the insertion point.</p></div>
+              <div class="favorite-beats"><article v-for="favorite in favorites" :key="favorite.id" class="favorite-beat"><div class="favorite-beat-summary"><Thumb :character="character" :pose="favorite.beat.pose" :size="64" /><div><strong>{{ favorite.beat.name }}</strong><span>{{ favorite.beat.duration }}s<template v-if="favorite.beat.gradientAction"> · Gradient {{ favorite.beat.gradientAction }}</template></span></div></div><BeatMenu :name="favorite.beat.name" :can-paste="false" favorite library @copy="copyTimelineBeat(favorite.beat)" @favorite="removeFavorite(favorite.id)" /><button class="button quiet favorite-insert" :aria-label="`Insert ${favorite.beat.name} after ${beat.name}`" :disabled="expression.beats.length >= MAX_BEATS" @click="pasteTimelineBeat(selectedBeat, favorite.beat)"><Icon name="plus" :size="14" />Insert beat</button></article></div>
+            </template>
           </template>
 
           <template v-if="tab === 'expressions' && !editing">

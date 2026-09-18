@@ -15,6 +15,7 @@ export interface Pose {
   tongue: boolean; teeth: boolean; drool: boolean; cheeks: boolean; tears: boolean; mouthStroke: number
 }
 export interface Beat { id: string; name: string; duration: number; pose: Pose; gradientAction?: 'rotate' | 'hold'; gradientTurns?: number }
+export interface FavoriteBeat { id: string; sourceBeatId: string; beat: Beat }
 export interface Expression { id: string; name: string; description: string; beats: Beat[]; poseExpressionId?: string }
 export interface Step { id: string; expressionId: string; duration: number }
 export interface Animation { id: string; name: string; steps: Step[]; loop: boolean }
@@ -25,7 +26,7 @@ export interface Character {
   motion: number; speed: number; blink: boolean; blinkInterval: number; followCursor: boolean; followRotation: boolean
 }
 export interface Definition { version: 1; character: Character; expressions: Expression[]; animations: Animation[] }
-export interface Project { version: 1; name: string; characters: Character[]; expressions: Expression[]; animations: Animation[]; defaultsRevision?: number }
+export interface Project { version: 1; name: string; characters: Character[]; expressions: Expression[]; animations: Animation[]; defaultsRevision?: number; favoriteBeats?: FavoriteBeat[] }
 /** Remove references too, keeping every animation playable and the project importable. */
 export function removeExpression(project: Project, id: string) {
   if (project.expressions.length <= 1 || !project.expressions.some(e => e.id === id)) return false
@@ -286,6 +287,10 @@ export function parseCharacter(value: unknown): Character {
   const v = obj(value), d = defaultProject().characters[0]!
   return { ...d, id: str(v.id, uid('character')), name: str(v.name, 'Character'), shape: choice(v.shape, ['capsule', 'cap', 'sphere'], 'capsule'), color: color(v.color, d.color), color2: color(v.color2, d.color2), gradient: boolean(v.gradient, true), gradientAngle: num(v.gradientAngle, -24, -180, 180), toon: boolean(v.toon, d.toon), trueFront: boolean(v.trueFront, false), lockPosition: boolean(v.lockPosition, false), eyeColor: color(v.eyeColor, d.eyeColor), iris: boolean(v.iris, false), elevated: boolean(v.elevated, false), elevation: num(v.elevation, .065, .005, .2), shadow: boolean(v.shadow, true), motion: num(v.motion, .45, 0, 1), speed: num(v.speed, 1, .25, 3), blink: boolean(v.blink, true), blinkInterval: num(v.blinkInterval, 4.2, 1, 12), followCursor: boolean(v.followCursor, false), followRotation: boolean(v.followRotation, false) }
 }
+function parseBeat(item: unknown, index: number): Beat {
+  const b = obj(item)
+  return { id: str(b.id, `beat-${index}`), name: str(b.name, `Beat ${index + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose), ...(b.gradientAction === 'rotate' || b.gradientAction === 'hold' ? { gradientAction: b.gradientAction, ...(b.gradientTurns !== undefined ? { gradientTurns: Math.round(num(b.gradientTurns, 1, 1, 8)) } : {}) } : {}) }
+}
 export function parseProject(value: unknown): Project {
   const v = obj(value)
   if (v.version !== 1 || !Array.isArray(v.expressions) || !Array.isArray(v.animations)) throw new Error('Choose a ClipLab version 1 project or character definition.')
@@ -294,7 +299,7 @@ export function parseProject(value: unknown): Project {
   const expressions = v.expressions.map((item, index): Expression => {
     const e = obj(item)
     if (!Array.isArray(e.beats) || !e.beats.length || e.beats.length > 32) throw new Error('Each expression needs 1–32 beats.')
-    return { id: str(e.id, `expression-${index}`), name: str(e.name, 'Expression'), description: str(e.description, '', 160), ...(typeof e.poseExpressionId === 'string' && e.poseExpressionId ? { poseExpressionId: e.poseExpressionId } : {}), beats: e.beats.map((item, i) => { const b = obj(item); return { id: str(b.id, `beat-${i}`), name: str(b.name, `Beat ${i + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose), ...(b.gradientAction === 'rotate' || b.gradientAction === 'hold' ? { gradientAction: b.gradientAction, ...(b.gradientTurns !== undefined ? { gradientTurns: Math.round(num(b.gradientTurns, 1, 1, 8)) } : {}) } : {}) } }) }
+    return { id: str(e.id, `expression-${index}`), name: str(e.name, 'Expression'), description: str(e.description, '', 160), ...(typeof e.poseExpressionId === 'string' && e.poseExpressionId ? { poseExpressionId: e.poseExpressionId } : {}), beats: e.beats.map(parseBeat) }
   })
   if (new Set(expressions.map(e => e.id)).size !== expressions.length) throw new Error('Expression names in the file must have unique IDs.')
   for (const expression of expressions) {
@@ -314,7 +319,7 @@ export function parseProject(value: unknown): Project {
   })
   const characters = charactersRaw.map(parseCharacter)
   if (new Set(characters.map(c => c.id)).size !== characters.length || new Set(animations.map(a => a.id)).size !== animations.length) throw new Error('Characters and animations need unique IDs.')
-  return { version: 1, name: str(v.name, 'My character studio'), characters, expressions, animations, ...(typeof v.defaultsRevision === 'number' ? { defaultsRevision: num(v.defaultsRevision, 2, 0, 1000) } : {}) }
+  return { version: 1, name: str(v.name, 'My character studio'), characters, expressions, animations, ...(Array.isArray(v.favoriteBeats) ? { favoriteBeats: v.favoriteBeats.slice(0, 200).map((item, i) => { const f = obj(item); return { id: str(f.id, `favorite-${i}`), sourceBeatId: str(f.sourceBeatId, ''), beat: parseBeat(f.beat, i) } }) } : {}), ...(typeof v.defaultsRevision === 'number' ? { defaultsRevision: num(v.defaultsRevision, 2, 0, 1000) } : {}) }
 }
 
 /** Upgrade only untouched studio defaults, once; portable definitions stay literal. */
