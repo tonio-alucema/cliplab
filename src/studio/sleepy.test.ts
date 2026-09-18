@@ -2,6 +2,8 @@ import { expect, it } from 'vitest'
 import { droolAnchor, mouthGeometry, blendContours } from './face-morph'
 import { BASE_POSE, faceLayers } from './model'
 import { drawProp } from './renderer'
+import { SvgCanvas } from './svg-canvas'
+import { particleLayout } from './particles'
 it('anchors drool at the lower-right lip as the sleepy mouth opens and morphs', () => {
   const sleep = { ...BASE_POSE, mouth: 'sleep' as const, drool: true }, oh = { ...sleep, mouth: 'oh' as const, mouthOpen: .25, mouthWidth: .65 }
   const open = mouthGeometry(oh), anchor = droolAnchor(open.outline, open.width)
@@ -21,9 +23,14 @@ it('anchors drool at the lower-right lip as the sleepy mouth opens and morphs', 
 })
 it('drifts the sleep marks outward and upward while retaining their eased loop', () => {
   const positions = (phase: number) => {
-    const result: number[][] = []
-    const ctx = new Proxy({}, { get: (_, key) => key === 'translate' ? (...p: number[]) => result.push(p) : () => {}, set: () => true }) as CanvasRenderingContext2D
-    drawProp(ctx, 'zzz', '#ffd362', phase); return result
+    const ctx = new SvgCanvas('sleep-marks')
+    drawProp(ctx as unknown as CanvasRenderingContext2D, 'zzz', '#ffd362', phase)
+    // Inspect painted glyph positions, accounting for the padded particle canvas.
+    const paddingScale = 256 / particleLayout('zzz').extent
+    return [...ctx.markup().matchAll(/transform="matrix\(([^)]+)\)"/g)].map(match => {
+      const matrix = match[1]!.split(' ').map(Number)
+      return [matrix[4]! / paddingScale, matrix[5]! / paddingScale]
+    })
   }
   const early = positions(.05)[0]!, later = positions(.5)[0]!
   expect(later[0]! - early[0]!).toBeGreaterThan(8)
