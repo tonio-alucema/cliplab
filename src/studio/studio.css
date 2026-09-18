@@ -2152,3 +2152,11 @@ input:checked+.switch-track:after {
 .actual-viewport .preview-artwork { display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px; }
 
 .expression-select { display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer; }
+
+.prop-tiles { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:10px 0 18px; }
+.prop-tile { display:flex;align-items:center;gap:8px;min-height:42px;padding:8px 10px;border:1px solid #ffffff12;border-radius:9px;background:#ffffff03;color:#bdbdbd;font:inherit;font-size:12px;text-align:left;cursor:pointer; }
+.prop-tile:hover { background:#ffffff09;color:#eee; }
+.prop-tile.active { border-color:#ffffff55;background:#ffffff0d;color:#fff; }
+.prop-tile-symbol { display:grid;place-items:center;width:24px;flex-shrink:0;font-size:21px;line-height:1; }
+.prop-tile svg { margin-left:auto;flex-shrink:0; }
+.particle-controls { padding-top:6px; }

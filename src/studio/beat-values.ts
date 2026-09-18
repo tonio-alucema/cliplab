@@ -1,7 +1,7 @@
 import type { Beat, Pose } from './model'
 
 export const POSE_SECTIONS = {
-  'Pose & props': ['rotationX', 'rotationY', 'rotationZ', 'squash', 'prop'],
+  'Pose & props': ['rotationX', 'rotationY', 'rotationZ', 'squash', 'prop', 'propSize', 'propCount', 'propOutward'],
   Eyes: ['eye', 'cheeks', 'faceScale', 'faceY', 'eyeSize', 'eyeHeight', 'spacing', 'eyeTilt', 'leftScale', 'rightScale', 'gazeX', 'gazeY'],
   'Eye placement & rotation': ['leftX', 'rightX', 'leftY', 'rightY', 'leftRotation', 'rightRotation'],
   Mouth: ['mouth', 'mouthStroke', 'mouthWidth', 'mouthOpen', 'tongue', 'teeth', 'drool', 'tears'],

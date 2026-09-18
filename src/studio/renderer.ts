@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { particleLayout, type ParticleSettings } from './particles'
 import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
 import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
@@ -261,15 +262,15 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   ctx.restore()
 }
 
-export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number) {
+export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number, settings: Partial<ParticleSettings> = {}) {
   ctx.clearRect(0, 0, 256, 256)
-  const count = ['zzz', 'sparkle', 'heart'].includes(prop) ? 3 : 1
-  for (let i = 0; i < count; i++) {
-    const p = fract((phase ?? .34) + i * .29), ease = p * p
-    ctx.save(); ctx.globalAlpha = phase === undefined ? 1 : effectEnvelope(p)
-    ctx.translate(prop === 'zzz' ? 45 + i * 64 + ease * 36 : count === 1 ? 128 : 51 + i * 69, prop === 'zzz' ? 204 - i * 58 - ease * 54 : count === 1 ? 132 - ease * 26 : 198 - i * 60 - ease * 38)
-    const scale = phase === undefined ? 1 : .62 + .38 * smoothstep(0, .38, p)
-    ctx.scale(scale, scale); ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  const layout = particleLayout(prop, phase, settings)
+  ctx.save(); ctx.translate(128, 128); ctx.scale(256 / layout.extent, 256 / layout.extent); ctx.translate(-128, -128)
+  for (const particle of layout.particles) {
+    const i = particle.index
+    ctx.save(); ctx.globalAlpha = particle.alpha
+    ctx.translate(particle.x, particle.y); ctx.scale(particle.scale, particle.scale)
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
     if (prop === 'zzz') { const r = 14 + i * 5; ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, -r); ctx.lineTo(-r, r); ctx.lineTo(r, r); ctx.stroke() }
     else if (prop === 'sparkle') star(ctx, 0, 0, 23 + i * 4, 4)
     else if (prop === 'heart') heart(ctx, 0, 0, 17 + i * 3)
@@ -278,6 +279,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], colo
     else if (prop === 'crown') { ctx.beginPath(); ctx.moveTo(-78, 42); ctx.lineTo(-94, -45); ctx.lineTo(-35, -3); ctx.lineTo(0, -67); ctx.lineTo(35, -3); ctx.lineTo(94, -45); ctx.lineTo(78, 42); ctx.closePath(); ctx.fill() }
     ctx.restore()
   }
+  ctx.restore()
 }
 
 export class CharacterRenderer {
@@ -418,10 +420,10 @@ export class CharacterRenderer {
     this.prop.visible = detail === 'full' && pose.prop !== 'none'
     this.prop.material.depthTest = pose.prop !== 'zzz'
     this.prop.renderOrder = pose.prop === 'zzz' ? 2 : 0
-    const propKey = `${pose.prop}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
-    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase); this.propTexture.needsUpdate = true; this.lastProp = propKey }
+    const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
+    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
     const propSize = this.shape === 'capsule' ? .42 : .32
-    this.prop.scale.setScalar(propSize * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
+    this.prop.scale.setScalar(propSize * particleLayout(pose.prop, sample.effectPhase, pose).extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
     this.prop.position.set(pose.prop === 'crown' ? 0 : .56, pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
