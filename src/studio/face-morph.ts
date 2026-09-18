@@ -182,6 +182,12 @@ export function drawMorphMouth(ctx: CanvasRenderingContext2D, pose: Pose, layers
   if (tongue > 0) { ctx.globalAlpha = tongue; ctx.fillStyle = '#f37b83'; ctx.beginPath(); ctx.ellipse(10, h * .65, w * .65, h * .34, -.1, 0, TAU); ctx.fill() }
   if (teeth > 0) { ctx.globalAlpha = teeth; ctx.fillStyle = '#fffef8'; ctx.beginPath(); ctx.roundRect(-w * .76, -23, w * 1.52, 30, 12); ctx.fill() }
   ctx.restore()
+  // Match the still renderer: interior details must not paint over the inner
+  // half of the lip stroke. Clip to the blended outline during shape morphs.
+  if (tongue > 0 || teeth > 0) {
+    ctx.save(); trace(ctx, outline); ctx.clip(); trace(ctx, opening)
+    ctx.strokeStyle = ink; ctx.lineWidth = 17 * pose.mouthStroke; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore()
+  }
   const out = traitWeight(layers, t => t.mouth === 'tongue-out')
   if (out > 0) {
     const w = 61 * pose.mouthWidth

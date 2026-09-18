@@ -1,10 +1,37 @@
 import { describe, expect, it } from 'vitest'
 import { BASE_POSE, EYES, MOUTHS, clone, defaultProject, definitionOf, faceLayers, mixFaceLayers, parseProject, sampleDefinition, sampleExpression, upgradeStudioDefaults } from './model'
-import { blendContours, eyeContour, mouthGeometry } from './face-morph'
+import { blendContours, drawMorphMouth, eyeContour, mouthGeometry } from './face-morph'
+import { SvgCanvas } from './svg-canvas'
 import { irisOffset } from './gaze'
 
 const bounds = (points: { x: number; y: number }[]) => ({ left: Math.min(...points.map(p => p.x)), right: Math.max(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), bottom: Math.max(...points.map(p => p.y)) })
 describe('continuous face contours', () => {
+  it('keeps the authored lip stroke above tongue and teeth during playback and SVG export', () => {
+    for (const mouth of ['open', 'grin', 'cry', 'oh'] as const) for (const mouthStroke of [.5, 1, 2.2]) {
+      const pose = { ...BASE_POSE, mouth, mouthStroke, tongue: true, teeth: true }
+      const recorder = new SvgCanvas('mouth')
+      drawMorphMouth(recorder as unknown as CanvasRenderingContext2D, pose, faceLayers(pose), '#080909')
+      const markup = recorder.markup(), lip = markup.lastIndexOf('stroke="#080909"')
+      expect(lip).toBeGreaterThan(markup.indexOf('fill="#f37b83"'))
+      expect(lip).toBeGreaterThan(markup.indexOf('fill="#fffef8"'))
+      expect(Number(markup.slice(lip).match(/stroke-width="([\d.]+)"/)?.[1])).toBeCloseTo(17 * mouthStroke, 4)
+      expect(markup).toMatch(/<g clip-path="url\(#mouth-clip-\d+\)"><path[^>]*stroke="#080909"/)
+    }
+  })
+
+  it('uses the interpolated mouth stroke throughout beat transitions', () => {
+    const expression = { id: 'stroke', name: 'Stroke', description: '', beats: [
+      { id: 'a', name: 'Thin', duration: 1, pose: { ...BASE_POSE, mouth: 'open' as const, tongue: true, mouthStroke: .5 } },
+      { id: 'b', name: 'Thick', duration: 1, pose: { ...BASE_POSE, mouth: 'grin' as const, tongue: true, mouthStroke: 2.2 } },
+    ] }
+    for (const time of [1, 1.1, 1.2, 1.4, 1.8]) {
+      const sample = sampleExpression(expression, time), recorder = new SvgCanvas('animated')
+      drawMorphMouth(recorder as unknown as CanvasRenderingContext2D, sample.pose, sample.faceLayers, '#080909')
+      const width = Number(recorder.markup().match(/stroke-width="([\d.]+)"/)?.[1])
+      expect(width).toBeCloseTo(17 * sample.pose.mouthStroke, 4)
+    }
+  })
+
   it('preserves circular eyes, half-circle arcs, and round-ended mouth strokes', () => {
     const dot = bounds(eyeContour(BASE_POSE, 27, -1, 0, 'full'))
     expect(dot.left).toBeCloseTo(-27, 1); expect(dot.right).toBeCloseTo(27, 1)
