@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.2.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.3.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -23,7 +23,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.2.0.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.3.0.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -59,6 +59,12 @@ Use a square container with explicit CSS dimensions. Mount in the browser after 
 `autoplay: false` shows the sequence's initial pose until the app calls `play()`. With `loop: false`, playback holds the final pose on completion. Calling `setAnimation(id)` followed by `play()` restarts it. `setExpression(id)` previews an expression as a loop; use an animation with `loop: false` for one-shot app behavior. The player does not expose an on-complete callback in this release; do not invent that API or couple application state to a wall-clock timeout.
 
 Supported methods: `play`, `pause`, `setAnimation`, `setExpression`, `seek` (seconds), `setGaze`, `setSize`, `setDefinition`, and `destroy`. See generated `cliplab.d.ts` for the exact API. `setDefinition` resets the current selection to the first animation; select the desired animation again afterward. Preserve authored eye/body following by omitting `followCursor` and `followRotation` overrides unless the host specifically needs to change them.
+
+## Per-beat 3D rotation
+
+`Beat.rotationTravel` is optional and stores signed degree amounts: `{ "x": 0, "y": 720, "z": 0 }` makes two Y-axis turns over that beat's full duration. Values support −1440° through +1440° per axis. Rotation uses gentle sine easing and retains full turns rather than taking the shortest path. Completed amounts carry into later beats; whole turns produce a seamless loop. The older pose rotation fields remain resting angles and keep their original short transitions.
+
+Keep `character.trueFront` false to show rotation. Authored turns add to body-follow orientation when enabled. Compact sizes at 32 px and below stay front-locked. Beat rotation is preserved in JSON, favorites, copy/paste, and media exports. Runtime 0.3.0 or newer is required; 0.2.x does not play these new fields.
 
 ## Size and motion behavior
 

@@ -2175,3 +2175,10 @@ input:checked+.switch-track:after {
 .favorite-beat-summary strong { display: block; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
 .favorite-beat-summary span { display: block; margin-top: 5px; color: #999; font-size: 11px; }
 .favorite-insert { width: 100%; margin-top: 10px; }
+
+.beat-rotation-controls { padding: 16px 0; margin-bottom: 16px; border-top: 1px solid #ffffff12; border-bottom: 1px solid #ffffff12; }
+.beat-rotation-controls h3 { font-size: 13px; font-weight: 500; margin: 0 0 8px; }
+.beat-rotation-row { display: grid; grid-template-columns: 14px 78px minmax(0, 1fr); align-items: center; gap: 10px; margin: 12px 0; }
+.beat-rotation-row label { font-size: 12px; color: #aaa; }
+.beat-rotation-row .text-field { margin: 0; padding: 8px; font-variant-numeric: tabular-nums; }
+.beat-rotation-row input[type=range] { min-width: 0; width: 100%; }

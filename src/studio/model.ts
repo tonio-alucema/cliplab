@@ -14,7 +14,8 @@ export interface Pose {
   rotationX: number; rotationY: number; rotationZ: number; squash: number
   tongue: boolean; teeth: boolean; drool: boolean; cheeks: boolean; tears: boolean; mouthStroke: number
 }
-export interface Beat { id: string; name: string; duration: number; pose: Pose; gradientAction?: 'rotate' | 'hold'; gradientTurns?: number }
+export interface RotationTravel { x: number; y: number; z: number }
+export interface Beat { id: string; name: string; duration: number; pose: Pose; gradientAction?: 'rotate' | 'hold'; gradientTurns?: number; rotationTravel?: RotationTravel }
 export interface FavoriteBeat { id: string; sourceBeatId: string; beat: Beat }
 export interface Expression { id: string; name: string; description: string; beats: Beat[]; poseExpressionId?: string }
 export interface Step { id: string; expressionId: string; duration: number }
@@ -41,7 +42,7 @@ export function removeExpression(project: Project, id: string) {
 }
 export type FaceTraits = Pick<Pose, 'eye' | 'mouth' | 'faceSet' | 'brows' | 'cheeks' | 'tongue' | 'teeth' | 'drool'>
 export interface FaceLayer { traits: FaceTraits; weight: number }
-export interface Sample { pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number; gradientMix?: number; faceLayers?: FaceLayer[] }
+export interface Sample { rotationTravel?: RotationTravel; pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number; gradientMix?: number; faceLayers?: FaceLayer[] }
 
 export const EYES: Eye[] = ['dot', 'soft', 'closed', 'wink', 'star', 'heart', 'squint', 'wide', 'arc-up', 'arc-down', 'half-lidded', 'pupil']
 export const MOUTHS: Mouth[] = ['smile', 'open', 'line', 'frown', 'oh', 'wave', 'sleep', 'grin', 'cry', 'u-smile', 'kiss', 'tongue-out']
@@ -191,11 +192,18 @@ const smooth = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v 
 function featureAmount(a: unknown, b: unknown, blend: number) { return a === b ? 1 : blend < .5 ? 1 - smooth(blend * 2) : smooth((blend - .5) * 2) }
 const mod = (t: number, d: number) => ((t % d) + d) % d
 export const gradientTurns = (beat: Beat) => Number.isFinite(beat.gradientTurns) ? Math.max(1, Math.min(8, Math.round(beat.gradientTurns!))) : 1
-export function sampleExpression(expression: Expression, time: number, expressions: Expression[] = [], visited = new Set<string>()): { pose: Pose; beatIndex: number; propAmount: number; tearAmount: number; gradientRotation?: number; gradientMix?: number; faceLayers: FaceLayer[] } {
+export const rotationAxes = ['x', 'y', 'z'] as const
+export function beatEndRotation(expression: Expression, index: number): RotationTravel {
+  const result = { x: 0, y: 0, z: 0 }
+  for (const beat of expression.beats.slice(0, index + 1)) for (const axis of rotationAxes) result[axis] += beat.rotationTravel?.[axis] ?? 0
+  return result
+}
+export function sampleExpression(expression: Expression, time: number, expressions: Expression[] = [], visited = new Set<string>()): { rotationTravel?: RotationTravel; pose: Pose; beatIndex: number; propAmount: number; tearAmount: number; gradientRotation?: number; gradientMix?: number; faceLayers: FaceLayer[] } {
   const duration = expressionDuration(expression)
   let t = mod(time, duration)
   const gradient = isGradientExpression(expression)
   let gradientStart = 0
+  const rotationStart = { x: 0, y: 0, z: 0 }
   for (let i = 0; i < expression.beats.length; i++) {
     const beat = expression.beats[i]!
     const beatDuration = safeDuration(beat.duration)
@@ -208,8 +216,11 @@ export function sampleExpression(expression: Expression, time: number, expressio
       const turnEased = (1 - Math.cos(Math.PI * turn)) / 2
       const source = expressions.find(e => e.id === expression.poseExpressionId && !visited.has(e.id) && e.id !== expression.id)
       const face = source ? sampleExpression(source, mod(time, duration) / duration * expressionDuration(source), expressions, new Set([...visited, expression.id])) : undefined
-      return { pose: face?.pose ?? mixPose(previous.pose, beat.pose, eased), faceLayers: face?.faceLayers ?? mixFaceLayers(faceLayers(previous.pose), faceLayers(beat.pose), eased), beatIndex: i, propAmount: face?.propAmount ?? featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: face?.tearAmount ?? featureAmount(previous.pose.tears, beat.pose.tears, eased), ...(gradient ? { gradientRotation: gradientStart + (beat.gradientAction === 'rotate' ? 360 * gradientTurns(beat) * turnEased : 0), gradientMix: 1 } : {}) }
+      const rotationTravel = { ...rotationStart }
+      for (const axis of rotationAxes) rotationTravel[axis] += (beat.rotationTravel?.[axis] ?? 0) * turnEased + (face?.rotationTravel?.[axis] ?? 0)
+      return { ...(rotationAxes.some(axis => rotationTravel[axis] !== 0) ? { rotationTravel } : {}), pose: face?.pose ?? mixPose(previous.pose, beat.pose, eased), faceLayers: face?.faceLayers ?? mixFaceLayers(faceLayers(previous.pose), faceLayers(beat.pose), eased), beatIndex: i, propAmount: face?.propAmount ?? featureAmount(previous.pose.prop, beat.pose.prop, eased), tearAmount: face?.tearAmount ?? featureAmount(previous.pose.tears, beat.pose.tears, eased), ...(gradient ? { gradientRotation: gradientStart + (beat.gradientAction === 'rotate' ? 360 * gradientTurns(beat) * turnEased : 0), gradientMix: 1 } : {}) }
     }
+    for (const axis of rotationAxes) rotationStart[axis] += beat.rotationTravel?.[axis] ?? 0
     if (beat.gradientAction === 'rotate') gradientStart += 360 * gradientTurns(beat)
     t -= beatDuration
   }
@@ -250,6 +261,15 @@ export function sampleDefinition(def: Definition, animationId: string, time: num
     sample.propAmount *= featureAmount(oldProp, sample.pose.prop, eased)
     sample.tearAmount *= featureAmount(oldTears, sample.pose.tears, eased)
     sample.pose = mixPose(previous.pose, sample.pose, eased)
+    if (previous.rotationTravel || sample.rotationTravel) {
+      const travel = { x: 0, y: 0, z: 0 }
+      for (const axis of rotationAxes) {
+        const from = previous.rotationTravel?.[axis] ?? 0, to = sample.rotationTravel?.[axis] ?? 0
+        const aligned = from - Math.round(from / 360) * 360
+        travel[axis] = aligned + (to - aligned) * eased
+      }
+      sample.rotationTravel = travel
+    }
     sample.faceLayers = mixFaceLayers(previous.faceLayers, sample.faceLayers, eased)
     if (previous.gradientRotation !== undefined || sample.gradientRotation !== undefined) {
       const from = previous.gradientRotation ?? 0, to = sample.gradientRotation ?? 0
@@ -289,7 +309,8 @@ export function parseCharacter(value: unknown): Character {
 }
 function parseBeat(item: unknown, index: number): Beat {
   const b = obj(item)
-  return { id: str(b.id, `beat-${index}`), name: str(b.name, `Beat ${index + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose), ...(b.gradientAction === 'rotate' || b.gradientAction === 'hold' ? { gradientAction: b.gradientAction, ...(b.gradientTurns !== undefined ? { gradientTurns: Math.round(num(b.gradientTurns, 1, 1, 8)) } : {}) } : {}) }
+  const travel = b.rotationTravel === undefined ? undefined : obj(b.rotationTravel)
+  return { ...(travel ? { rotationTravel: { x: num(travel.x, 0, -1440, 1440), y: num(travel.y, 0, -1440, 1440), z: num(travel.z, 0, -1440, 1440) } } : {}), id: str(b.id, `beat-${index}`), name: str(b.name, `Beat ${index + 1}`), duration: num(b.duration, 1.5, .2, 15), pose: parsePose(b.pose), ...(b.gradientAction === 'rotate' || b.gradientAction === 'hold' ? { gradientAction: b.gradientAction, ...(b.gradientTurns !== undefined ? { gradientTurns: Math.round(num(b.gradientTurns, 1, 1, 8)) } : {}) } : {}) }
 }
 export function parseProject(value: unknown): Project {
   const v = obj(value)

@@ -259,6 +259,6 @@ it('keeps toon optional at 32px with a frozen body and an up-left face', () => {
 it('centers body following on front regardless of prior orbit or beat rotations', () => {
   const c = { trueFront: false, followRotation: true }
   const p = { rotationX: 20, rotationY: 35, rotationZ: -12 }
-  expect(characterRotation(c, p, { x: 30, y: -80, z: 60 })).toEqual({ x: -0, y: 0, z: 0 })
+  expect(characterRotation(c, p, { x: 30, y: -80, z: 60 })).toEqual({ x: 0, y: 0, z: 0 })
   expect(characterRotation(c, p, undefined, { x: 1, y: -1 })).toEqual({ x: 16, y: 28, z: 0 })
 })

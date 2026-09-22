@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
-import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape } from './model'
+import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type RotationTravel } from './model'
 import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
 
@@ -10,12 +10,12 @@ export interface RenderOptions {
   pointerLook?: PointerLook; eyeGazes?: EyeGazes; reducedMotion?: boolean
 }
 /** Cursor pitch owns the vertical look direction, independent of the resting tilt. */
-export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5.9, y: -24.2, z: 0 }, cursor: Gaze = { x: 0, y: 0 }) {
+export function characterRotation(character: Pick<Character, 'trueFront' | 'followRotation'>, pose: Pick<Pose, 'rotationX' | 'rotationY' | 'rotationZ'>, rotation = { x: -5.9, y: -24.2, z: 0 }, cursor: Gaze = { x: 0, y: 0 }, travel?: RotationTravel) {
   if (character.trueFront) return { x: 0, y: 0, z: 0 }
   return {
-    x: character.followRotation ? -cursor.y * 16 : rotation.x + pose.rotationX,
-    y: character.followRotation ? cursor.x * 28 : rotation.y + pose.rotationY,
-    z: character.followRotation ? 0 : rotation.z + pose.rotationZ
+    x: (character.followRotation ? -cursor.y * 16 : rotation.x + pose.rotationX) + (travel?.x ?? 0),
+    y: (character.followRotation ? cursor.x * 28 : rotation.y + pose.rotationY) + (travel?.y ?? 0),
+    z: (character.followRotation ? 0 : rotation.z + pose.rotationZ) + (travel?.z ?? 0)
   }
 }
 /** Anchor the rounded highlight to the face direction shown by the orbit marker.
@@ -356,7 +356,7 @@ export class CharacterRenderer {
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
     u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height
-    const rotation = characterRotation(this.options.reducedMotion ? { ...character, followRotation: false } : character, pose, this.options.rotation, this.options.cursor)
+    const rotation = characterRotation(this.options.reducedMotion ? { ...character, followRotation: false } : character, pose, this.options.rotation, this.options.cursor, sample.rotationTravel)
     this.root.rotation.set(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
