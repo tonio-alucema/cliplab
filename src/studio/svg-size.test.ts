@@ -15,6 +15,39 @@ vi.mock('three', async original => ({ ...await original<typeof import('three')>(
 } }))
 beforeEach(() => { vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => new SvgCanvas('canvas') as unknown as CanvasRenderingContext2D) })
 afterEach(() => vi.restoreAllMocks())
+it('keeps end-cap modifications in compact SVG snapshots, including ghost concavities and translucent bones', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 512, height: 512 })
+  const character = { ...defaultProject().characters[0]!, shape: 'cap' as const, trueFront: false, toon: true }
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, effectPhase: .2, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  const parse = (text: string) => new DOMParser().parseFromString(text, 'image/svg+xml')
+  try {
+    for (const bodyModification of ['none', 'upside-down', 'ghost', 'skeleton'] as const) {
+      for (const rotation of [{ x: 0, y: 0, z: 0 }, { x: 15, y: 60, z: -10 }, { x: 0, y: 180, z: 0 }]) {
+        renderer.render({ ...character, bodyModification }, sample, { rotation })
+        const text = snapshotSvg(renderer.snapshotScene()), doc = parse(text)
+        expect(text).not.toMatch(/NaN|Infinity|data:image/)
+        expect(doc.querySelector('parsererror, image')).toBeNull()
+        expect(doc.querySelectorAll('[id$="-body"] path')).toHaveLength(1)
+        expect(doc.querySelectorAll('path').length).toBeLessThan(75)
+        expect(text.length).toBeLessThan(150000)
+        expect(!!doc.querySelector('[data-name="Inner skeleton"]')).toBe(bodyModification === 'skeleton')
+        if (bodyModification === 'skeleton') {
+          expect(Number(doc.querySelector('[data-name="Outer body"]')!.getAttribute('opacity'))).toBeGreaterThan(0)
+          expect(Number(doc.querySelector('[data-name="Outer body"]')!.getAttribute('opacity'))).toBeLessThan(1)
+          expect(doc.querySelector('[data-name="skull"] path')).not.toBeNull()
+          expect(text.indexOf('data-name="Inner skeleton"')).toBeLessThan(text.indexOf('data-name="Outer body"'))
+        }
+      }
+    }
+    const ghostPath = (phase: number, reducedMotion = false) => {
+      renderer.render({ ...character, bodyModification: 'ghost' }, { ...sample, effectPhase: phase }, { rotation: { x: 0, y: 0, z: 0 }, reducedMotion })
+      return parse(snapshotSvg(renderer.snapshotScene())).querySelector('[data-name="Outer body"] path')!.getAttribute('d')
+    }
+    expect(ghostPath(.2)).not.toBe(ghostPath(.6))
+    expect(ghostPath(.2)).toBe(ghostPath(1.2))
+    expect(ghostPath(.2, true)).toBe(ghostPath(.6, true))
+  } finally { renderer.dispose() }
+})
 it('exports the enlarged standard 16px face with unchanged body geometry', () => {
   const project = defaultProject(), character = { ...project.characters[0]!, shape: 'cap' as const }
   const definition = definitionOf(project, character)
@@ -30,7 +63,7 @@ it('exports the enlarged standard 16px face with unchanged body geometry', () =>
 it('exports production meshes with four semantic groups and no per-triangle SVG layers', () => {
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 1080, height: 1080 })
   try {
-    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const rotation of [{ x: 0, y: 0, z: 0 }, { x: -5, y: -12, z: -7 }, { x: 20, y: 65, z: 17 }]) {
+    for (const shape of ['sphere', 'capsule', 'chunky-pill', 'cap'] as const) for (const rotation of [{ x: 0, y: 0, z: 0 }, { x: -5, y: -12, z: -7 }, { x: 20, y: 65, z: 17 }]) {
       const character = { ...defaultProject().characters[0]!, shape, iris: true, trueFront: false, toon: true, shadow: true }
       const pose = { ...BASE_POSE, cheeks: true, mouth: 'open' as const, teeth: true }
       renderer.render(character, { pose, faceLayers: faceLayers(pose), blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }, { rotation })
@@ -65,7 +98,7 @@ it('uses one rounded lighting region for all three shapes and captures its face-
   const sample = { pose: { ...BASE_POSE, rotationX: 0, rotationY: 0, rotationZ: 0 }, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
   const innerPath = (text: string) => new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('[id$="-candle-light"] path')!.getAttribute('d')
   try {
-    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const tracking of [{ followCursor: true, followRotation: true }, { followCursor: false, followRotation: true }]) {
+    for (const shape of ['sphere', 'capsule', 'chunky-pill', 'cap'] as const) for (const tracking of [{ followCursor: true, followRotation: true }, { followCursor: false, followRotation: true }]) {
       const character = { ...defaultProject().characters[0]!, shape, toon: true, trueFront: false, ...tracking }
       const positions: THREE.Vector3[] = [], paths: (string | null)[] = []
       for (const cursor of [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }]) {
@@ -112,7 +145,7 @@ it('anchors toon lighting to the rendered face for manual, animated, cursor and 
     return lightFill.getWorldPosition(new THREE.Vector3()).sub(body.getWorldPosition(new THREE.Vector3()))
   }
   try {
-    for (const shape of ['sphere', 'capsule', 'cap'] as const) {
+    for (const shape of ['sphere', 'capsule', 'chunky-pill', 'cap'] as const) {
       const character = { ...defaultProject().characters[0]!, shape, toon: true, trueFront: false, followRotation: false }
       const front = { x: 0, y: 0, z: 0 }
       const positions: THREE.Vector3[] = []
@@ -147,7 +180,7 @@ it('renders sleep marks in the foreground at every body angle and preserves that
     for (const y of [-120, 0, 120, 180]) {
       renderer.render(character, sample, { rotation: { x: 15, y, z: -8 } })
       const state = renderer.snapshotScene()
-      expect(state.prop.material.depthTest).toBe(false); expect(state.prop.renderOrder).toBe(2)
+      expect(state.prop.material.depthTest).toBe(false); expect(state.prop.renderOrder).toBeGreaterThan(Math.max(state.body.renderOrder, state.lightFill.renderOrder, state.face.renderOrder))
       const svg = new DOMParser().parseFromString(snapshotSvg(state), 'image/svg+xml')
       const prop = svg.querySelector('[id$="-supporting-elements"]')!
       expect(prop.getAttribute('mask')).toBeNull()
@@ -164,7 +197,7 @@ it('fits every small preset consistently and enforces front-only gradient detail
   const original = { ...defaultProject().characters[0]!, trueFront: false, lockPosition: false, followRotation: true, toon: true, iris: true }
   const sample = { pose: { ...BASE_POSE, squash: 1.1, rotationX: 20, rotationY: 30, rotationZ: 15 }, blink: 0, bob: 1, breathe: 1, expressionId: '', beatIndex: 0, stepIndex: 0 }
   try {
-    for (const shape of ['sphere', 'capsule', 'cap'] as const) for (const size of [12, 16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512]) {
+    for (const shape of ['sphere', 'capsule', 'chunky-pill', 'cap'] as const) for (const size of [12, 16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512]) {
       renderer.resize(size, size, size)
       renderer.render({ ...original, shape }, sample, { rotation: { x: 20, y: 50, z: 30 }, cursor: { x: 1, y: -1 }, zoom: 1.4 })
       const state = renderer.snapshotScene()
@@ -207,7 +240,7 @@ it('keeps rotating bodies inside the 48px and 96px canvas with a clear margin', 
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 96, height: 96 })
   const sample = { pose: { ...BASE_POSE, squash: 1.1 }, blink: 0, bob: 1, breathe: 1, expressionId: '', beatIndex: 0, stepIndex: 0 }
   try {
-    for (const shape of ['sphere', 'cap', 'capsule'] as const) for (const size of [48, 96]) {
+    for (const shape of ['sphere', 'cap', 'capsule', 'chunky-pill'] as const) for (const size of [48, 96]) {
       renderer.resize(size, size, size)
       let previousHalf: number | undefined
       for (const x of [0, 45, 90]) for (const y of [0, 45, 90]) for (const z of [0, 45, 90]) {
@@ -247,7 +280,7 @@ it('locks the 24px eye positions to a leftward gaze despite cursor and animated 
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 512, height: 512 })
   const render = vi.spyOn(renderer.gl, 'render')
   try {
-    for (const shape of ['cap', 'capsule', 'sphere'] as const) for (const toon of [false, true]) {
+    for (const shape of ['cap', 'capsule', 'chunky-pill', 'sphere'] as const) for (const toon of [false, true]) {
       render.mockClear()
       renderer.render({ ...defaultProject().characters[0]!, shape, toon, shadow: true }, { pose: BASE_POSE, blink: 0, bob: 1, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }, { rotation: { x: 80, y: 140, z: 60 }, background: '#f4f4f4' })
       const state = renderer.snapshotScene()

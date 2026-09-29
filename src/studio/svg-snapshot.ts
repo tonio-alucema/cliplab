@@ -6,7 +6,7 @@ import { boundaryContours, pathData, type Point, type ProjectPoint } from './svg
 
 type Snapshot = ReturnType<CharacterRenderer['snapshotScene']>
 type Vertex = { x: number; y: number; z: number; t: number }
-type Triangle = { points: Vertex[]; indices: number[] }
+type Triangle = { points: Vertex[]; indices: number[]; materialIndex: number }
 const cross = (a: Pick<Vertex, 'x' | 'y'>, b: Pick<Vertex, 'x' | 'y'>, c: Pick<Vertex, 'x' | 'y'>) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 function hull(points: Vertex[]) {
   const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y)
@@ -80,7 +80,10 @@ export function snapshotSvg(snapshot: Snapshot): string {
     const triangles: Triangle[] = []
     for (let i = 0; i < (index?.count ?? position.count); i += 3) {
       const indices = [0, 1, 2].map(j => index ? index.getX(i + j) : i + j), points = indices.map(i => vertices[i]!)
-      if (cross(points[0]!, points[1]!, points[2]!) < -1e-8) triangles.push({ points, indices })
+      const materialIndex = geometry.groups.find(group => i >= group.start && i < group.start + group.count)?.materialIndex ?? 0
+      const side = (Array.isArray(mesh.material) ? mesh.material[materialIndex] : mesh.material)?.side ?? THREE.FrontSide
+      const area = cross(points[0]!, points[1]!, points[2]!)
+      if (side === THREE.DoubleSide ? Math.abs(area) > 1e-8 : side === THREE.BackSide ? area > 1e-8 : area < -1e-8) triangles.push({ points, indices, materialIndex })
     }
     return { triangles, vertices }
   }
@@ -100,13 +103,40 @@ export function snapshotSvg(snapshot: Snapshot): string {
         fill = `url(#${id})`
       }
     }
-    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : 'Inner body'}"><path fill="${fill}" d="${outline(data.vertices)}"/></g>`)
+    // A convex hull would erase the ghost's scalloped hem. Keep the actual
+    // projected boundary, including its concavities, as one editable path.
+    const silhouette = character.shape === 'cap' && character.bodyModification === 'ghost'
+      ? pathData(boundaryContours(data.triangles.map(triangle => triangle.points)))
+      : outline(data.vertices)
+    const opacity = u.bodyOpacity?.value ?? 1
+    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : label === 'body-back' ? 'Back body' : 'Inner body'}"${opacity < 1 ? ` opacity="${n(opacity)}"` : ''}><path fill="${fill}" d="${silhouette}"/></g>`)
     return data
   }
   if (options.background) contents.push(`<rect width="${width}" height="${height}" fill="${xml(options.background)}"/>`)
   if (shadow.visible) {
     const material = shadow.material, data = triangles(shadow)
     contents.push(`<g id="ground-shadow" data-name="Shadow"><path d="${outline(data.vertices)}" fill="#${material.color.getHexString()}" opacity="${n(material.opacity)}"/></g>`)
+  }
+  if (snapshot.backShell?.visible) surface(snapshot.backShell, 'body-back')
+  if (snapshot.skeleton?.visible) {
+    const bones: { z: number; markup: string }[] = []
+    snapshot.skeleton.traverse(object => {
+      if (!(object instanceof THREE.Mesh) || !object.visible) return
+      const data = triangles(object), materials = Array.isArray(object.material) ? object.material : [object.material]
+      const pieces: string[] = []
+      // Extruded skull caps (material 0) must cover deeper walls (material 1).
+      // Painting the walls last fills the far socket with a broad horizontal band.
+      materials.map((material, index) => ({ material: material as THREE.MeshBasicMaterial, index })).reverse().forEach(({ material, index }) => {
+        const faces = data.triangles.filter(triangle => triangle.materialIndex === index)
+        if (!faces.length) return
+        pieces.push(`<path fill="#${material.color.getHexString()}" d="${pathData(boundaryContours(faces.map(triangle => triangle.points)))}"/>`)
+      })
+      const center = project(object.getWorldPosition(new THREE.Vector3()))
+      bones.push({ z: center.z, markup: `<g data-name="${xml(object.name || 'Bone')}">${pieces.join('')}</g>` })
+    })
+    // Bones are projected from their real 3D meshes before the translucent body.
+    // Keep a compact semantic group rather than one layer per mesh triangle.
+    contents.push(`<g id="skeleton" data-name="Inner skeleton">${bones.sort((a, b) => b.z - a.z).map(bone => bone.markup).join('')}</g>`)
   }
   const bodyData = surface(body, 'body')
   if (lightFill.visible) surface(lightFill, 'candle-light')

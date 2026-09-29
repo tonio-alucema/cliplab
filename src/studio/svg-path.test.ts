@@ -16,6 +16,12 @@ describe('compact vector outlines', () => {
     expect(outlines.reduce((sum, c) => sum + area(c.points), 0)).toBeCloseTo(8.5)
     expect(outlines.some(c => area(c.points) < 0)).toBe(true)
   })
+  it('retains winding multiplicity when projected surfaces share overlapping edges', () => {
+    const a = { x: 0, y: 0 }, b = { x: 1, y: 0 }, c = { x: 1, y: 1 }, d = { x: 0, y: 1 }
+    // The same front-facing surface can appear twice in a folded 3D projection.
+    const outlines = boundaryContours([[a, b, c], [a, b, c], [a, c, d]])
+    expect(outlines.reduce((sum, contour) => sum + area(contour.points), 0)).toBeCloseTo(1.5)
+  })
   it('preserves round stroke width and end caps when converting a line to an outline', () => {
     const [outline] = strokeOutline({ points: [{ x: 0, y: 0 }, { x: 100, y: 0 }], closed: false }, 20)
     expect(Math.min(...outline!.points.map(p => p.x))).toBeCloseTo(-10, 1)

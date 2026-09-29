@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.3.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.4.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -23,7 +23,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.3.0.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.4.0.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -66,6 +66,18 @@ Supported methods: `play`, `pause`, `setAnimation`, `setExpression`, `seek` (sec
 
 Keep `character.trueFront` false to show rotation. Authored turns add to body-follow orientation when enabled. Compact sizes at 32 px and below stay front-locked. Beat rotation is preserved in JSON, favorites, copy/paste, and media exports. Runtime 0.3.0 or newer is required; 0.2.x does not play these new fields.
 
+## Body shapes and modifications
+
+Runtime 0.4.0 adds `character.shape: "chunky-pill"`, a capsule with a width-to-height ratio of 1:1.5. Existing `capsule` (1:2), `cap` (1:1), and `sphere` shapes remain supported.
+
+For `shape: "cap"`, optional `character.bodyModification` selects exactly one of `none`, `upside-down`, `ghost`, or `skeleton`. It defaults to `none` for older JSON. The setting is retained but inactive on other shapes. Modifications leave the authored face, expressions, colors, gradient, and animation settings intact:
+
+- `upside-down` flips only the body silhouette; the facial expression stays upright.
+- `ghost` adds a gently rippling scalloped hem. The wave uses the playback timeline, pauses with playback, and stays still with reduced motion. It is independent of the body-movement amount and position lock.
+- `skeleton` reveals a 3D skull and four ribs through the translucent gradient shell. The bones follow all body rotations and pose transforms. It does not add arms or a ghost hem.
+
+PNG/video exports use the same scene. SVG snapshots retain the wavy silhouette or a compact additional Inner skeleton group. Update the runtime as well as the character JSON when using these features; older runtimes do not support the new shape/modifications.
+
 ## Size and motion behavior
 
 Size is in CSS pixels, independently of display pixel density.
@@ -78,7 +90,7 @@ Size is in CSS pixels, independently of display pixel density.
 | 40–48 px | Body motion/turning restored; simplified black eyes, no iris; authored toon shading. |
 | Above 48 px | Full authored expression, props, iris and motion settings. |
 
-At 12 px and below, the renderer shows the body only; 12 px is no longer a studio preset. At sizes of 24 px and below, end-cap bottom fillets are removed. The 16px appearance replaces the old 16-A option.
+At 12 px and below, the renderer shows the body only; 12 px is no longer a studio preset. At sizes of 24 px and below, end-cap bottom fillets are removed; the ghost keeps its scalloped hem. The 16px appearance replaces the old 16-A option.
 
 Reduced motion is respected by default and offscreen animation work pauses. Keep those behaviors enabled. Eye and body following are independent; front lock takes precedence over body turning. Toon lighting follows face orientation. JSON alone cannot render these behaviors without the matching player.
 

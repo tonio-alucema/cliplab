@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
-import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type RotationTravel } from './model'
+import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyModification, disposeSkeleton, faceOffset, isPill, radiusAt, skeletonGeometry, SKELETON_BACK_OPACITY, SKELETON_BODY_OPACITY, SKELETON_INSET_OPACITY } from './body-geometry'
+export { bodyHeight, radiusAt } from './body-geometry'
+import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type BodyModification, type RotationTravel } from './model'
 import { clampGaze, gazeAtPoint, irisOffset, localGaze, type EyeGazes, type Gaze, type PointerLook } from './gaze'
 import { drawMorphBrow, drawMorphEye, drawMorphMouth, drawDrool, droolAnchor, mouthGeometry, traitWeight } from './face-morph'
 
@@ -38,23 +40,6 @@ export function faceForSize(character: Character, sample: Sample, size: number) 
     simpleEyes
   }
 }
-export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : 1
-export function radiusAt(shape: Shape, y: number): number {
-  if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
-  if (shape === 'capsule') { const dy = Math.max(Math.abs(y) - .5, 0); return Math.sqrt(Math.max(0, .25 - dy * dy)) }
-  if (y >= 0) return Math.sqrt(Math.max(0, .25 - y * y))
-  if (y >= -.43) return .5
-  return .43 + Math.sqrt(Math.max(0, .07 ** 2 - (y + .43) ** 2))
-}
-function geometryFor(shape: Shape, squareBottom = false): THREE.BufferGeometry {
-  if (shape === 'sphere') return new THREE.SphereGeometry(.5, 80, 64)
-  if (shape === 'capsule') return new THREE.CapsuleGeometry(.5, 1, 24, 80)
-  const points = [new THREE.Vector2(0, -.5), new THREE.Vector2(squareBottom ? .5 : .43, -.5)]
-  for (let i = 1; !squareBottom && i <= 12; i++) { const a = -Math.PI / 2 + i / 12 * Math.PI / 2; points.push(new THREE.Vector2(.43 + .07 * Math.cos(a), -.43 + .07 * Math.sin(a))) }
-  points.push(new THREE.Vector2(.5, 0))
-  for (let i = 1; i <= 32; i++) { const a = i / 32 * Math.PI / 2; points.push(new THREE.Vector2(.5 * Math.cos(a), .5 * Math.sin(a))) }
-  return new THREE.LatheGeometry(points, 80)
-}
 const vertexShader = `
   uniform vec3 fillScale;
   uniform vec3 fillOffset;
@@ -72,13 +57,14 @@ const fragmentShader = `
   uniform float insetFill;
   uniform float angle;
   uniform float bodyHeight;
+  uniform float bodyOpacity;
   varying vec3 vPosition;
   void main() {
     float t = clamp(0.5 + vPosition.y / bodyHeight * cos(angle) + vPosition.x * sin(angle), 0.0, 1.0);
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
     // The light fill uses an inset copy of the silhouette, with one crisp shade step.
     float shade = mix(0.82, 1.0, insetFill);
-    gl_FragColor = vec4(color * mix(1.0, shade, toonOn), 1.0);
+    gl_FragColor = vec4(color * mix(1.0, shade, toonOn), bodyOpacity);
     #include <colorspace_fragment>
   }
 `
@@ -110,8 +96,8 @@ export function projectedEye(character: Character, pose: Pose, blink: number, si
     const tx = cx + Math.cos(angle) * dx - Math.sin(angle) * dy * h
     const ty = cy + faceAspect * (Math.sin(angle) * dx + Math.cos(angle) * dy * h)
     const x = (tx / 512 - .5) * .76 * pose.faceScale
-    const y = (.5 - ty / 512) * .57 * pose.faceScale + (character.shape === 'capsule' ? -.14 : -.025) + pose.faceY
-    const r = shell * radiusAt(character.shape, y / shell)
+    const y = (.5 - ty / 512) * .57 * pose.faceScale + faceOffset(character.shape) + pose.faceY
+    const r = shell * radiusAt(character.shape, y / shell, bodyModification(character))
     return new THREE.Vector3(x, y, Math.sqrt(Math.max(.001, r * r - x * x))).applyMatrix4(matrix).project(camera)
   }
   const center = project(0, 0)
@@ -302,6 +288,9 @@ export class CharacterRenderer {
   private shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
   private shape: Shape = 'capsule'
   private squareBottom = false
+  private modification: BodyModification = 'none'
+  private skeleton?: THREE.Group
+  private backShell?: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
   private lastFaceKey = ''
   private resolvedEyes: EyeGazes | undefined
   private lastProp = ''
@@ -320,9 +309,9 @@ export class CharacterRenderer {
     this.propCanvas.width = this.propCanvas.height = 256; this.propCtx = this.propCanvas.getContext('2d')!
     this.propTexture = new THREE.CanvasTexture(this.propCanvas); this.propTexture.colorSpace = THREE.SRGBColorSpace
     const material = new THREE.ShaderMaterial({
-      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 } }, vertexShader, fragmentShader
+      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 }, bodyOpacity: { value: 1 } }, vertexShader, fragmentShader
     })
-    this.body = new THREE.Mesh(geometryFor('capsule'), material)
+    this.body = new THREE.Mesh(bodyGeometry('capsule'), material)
     const fillMaterial = material.clone(); fillMaterial.depthTest = false; fillMaterial.depthWrite = false; fillMaterial.uniforms.insetFill!.value = 1
     this.lightFill = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .94, 24, 80), fillMaterial); this.lightFill.renderOrder = 1
     this.face = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 56, 40), new THREE.MeshBasicMaterial({ map: this.faceTexture, transparent: true, alphaTest: .008, depthWrite: false, side: THREE.FrontSide, toneMapped: false }))
@@ -348,7 +337,35 @@ export class CharacterRenderer {
     const appearance = faceForSize(character, sample, displaySize)
     character = appearance.character; sample = appearance.sample
     const squareBottom = character.shape === 'cap' && displaySize <= 24
-    if (character.shape !== this.shape || squareBottom !== this.squareBottom) { this.shape = character.shape; this.squareBottom = squareBottom; this.body.geometry.dispose(); this.body.geometry = geometryFor(this.shape, squareBottom); this.lightFill.geometry.dispose(); this.lightFill.geometry = this.shape === 'capsule' ? new THREE.CapsuleGeometry(.42, .94, 24, 80) : geometryFor(this.shape) }
+    const modification = bodyModification(character)
+    if (character.shape !== this.shape || squareBottom !== this.squareBottom || modification !== this.modification) {
+      this.shape = character.shape; this.squareBottom = squareBottom; this.modification = modification
+      this.body.geometry.dispose(); this.body.geometry = bodyGeometry(this.shape, squareBottom, modification)
+      this.lightFill.geometry.dispose(); this.lightFill.geometry = bodyGeometry(this.shape, false, modification, true)
+    }
+    if (modification === 'ghost') {
+      const phase = this.options.reducedMotion ? 0 : sample.effectPhase ?? 0
+      animateGhostGeometry(this.body.geometry, phase); animateGhostGeometry(this.lightFill.geometry, phase)
+    }
+    const skeleton = modification === 'skeleton'
+    if (skeleton && !this.skeleton) { this.skeleton = skeletonGeometry(); this.root.add(this.skeleton) }
+    if (skeleton && !this.backShell) {
+      const backMaterial = this.body.material.clone()
+      // Share live gradient uniforms, but keep an independent rear coat opacity.
+      backMaterial.uniforms = { ...this.body.material.uniforms, toonOn: { value: 0 }, insetFill: { value: 1 }, bodyOpacity: { value: SKELETON_BACK_OPACITY } }
+      backMaterial.side = THREE.BackSide; backMaterial.transparent = true; backMaterial.depthWrite = false
+      this.backShell = new THREE.Mesh(this.body.geometry, backMaterial)
+      this.backShell.renderOrder = -1; this.backShell.name = 'skeleton-back-shell'; this.root.add(this.backShell)
+    }
+    if (this.skeleton) this.skeleton.visible = skeleton
+    if (this.backShell) { this.backShell.visible = skeleton; this.backShell.geometry = this.body.geometry }
+    // Bones render with real depth before the translucent shell. The shell still
+    // writes depth, so the face cannot show through the back of the character.
+    this.body.material.transparent = skeleton; this.lightFill.material.transparent = skeleton
+    this.body.renderOrder = skeleton ? 1 : 0; this.lightFill.renderOrder = skeleton ? 2 : 1
+    this.face.renderOrder = skeleton ? 3 : 0
+    this.body.material.uniforms.bodyOpacity!.value = skeleton ? character.toon ? SKELETON_BODY_OPACITY : 1 - (1 - SKELETON_BODY_OPACITY) * (1 - SKELETON_INSET_OPACITY) : 1
+    this.lightFill.material.uniforms.bodyOpacity!.value = skeleton ? SKELETON_INSET_OPACITY : 1
     const { pose } = sample
     const height = bodyHeight(this.shape)
     const detail = detailAt(displaySize)
@@ -362,7 +379,7 @@ export class CharacterRenderer {
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))
     this.lightFill.visible = character.toon
-    const fillScale = this.shape === 'capsule' ? 1 : .85
+    const fillScale = isPill(this.shape) ? 1 : .85
     this.lightFill.scale.setScalar(fillScale)
     this.root.updateMatrixWorld(true)
     // Shift the inset toward the face marker in the camera plane, not the tilted
@@ -407,11 +424,11 @@ export class CharacterRenderer {
     const valid = this.face.geometry.attributes.faceValid!
     const shell = character.elevated ? 1 + character.elevation : 1.003
     const scale = pose.faceScale
-    const offset = (this.shape === 'capsule' ? -.14 : -.025) + pose.faceY
+    const offset = faceOffset(this.shape) + pose.faceY
     for (let i = 0; i < vertices.count; i++) {
       const x = (uv.getX(i) - .5) * .76 * scale
       const y = (uv.getY(i) - .5) * .57 * scale + offset
-      const r = shell * radiusAt(this.shape, y / shell)
+      const r = shell * radiusAt(this.shape, y / shell, modification)
       const z = Math.sqrt(Math.max(.001, r * r - x * x))
       vertices.setXYZ(i, x, y, z)
       valid.setX(i, x * x < r * r && Math.abs(y) < height / 2 * shell ? 1 : 0)
@@ -419,15 +436,15 @@ export class CharacterRenderer {
     vertices.needsUpdate = true; valid.needsUpdate = true; this.face.geometry.computeBoundingSphere()
     this.prop.visible = detail === 'full' && pose.prop !== 'none'
     this.prop.material.depthTest = pose.prop !== 'zzz'
-    this.prop.renderOrder = pose.prop === 'zzz' ? 2 : 0
+    this.prop.renderOrder = pose.prop === 'zzz' ? 4 : skeleton ? 3 : 0
     const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
     if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
-    const propSize = this.shape === 'capsule' ? .42 : .32
+    const propSize = isPill(this.shape) ? .32 + .1 * (height - 1) : .32
     this.prop.scale.setScalar(propSize * particleLayout(pose.prop, sample.effectPhase, pose).extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
     this.prop.position.set(pose.prop === 'crown' ? 0 : .56, pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
-    this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (this.shape === 'capsule' ? 1 : .95), .12, 1)
+    this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (isPill(this.shape) ? 1 : .95), .12, 1)
     const bg = this.options.background
     if (bg) this.gl.setClearColor(bg, 1); else this.gl.setClearColor(0x000000, 0)
     // Composite the ground shadow first: body rotation must never bring it
@@ -442,7 +459,7 @@ export class CharacterRenderer {
   }
   snapshotScene() {
     if (!this.captured) throw new Error('Render the character before taking a snapshot.')
-    return { ...this.captured, options: this.options, camera: this.camera, body: this.body, lightFill: this.lightFill, face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
+    return { ...this.captured, options: this.options, camera: this.camera, body: this.body, lightFill: this.lightFill, ...(this.skeleton?.visible ? { skeleton: this.skeleton } : {}), ...(this.backShell?.visible ? { backShell: this.backShell } : {}), face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
   }
   orientation() { return this.root.quaternion.clone() }
   eyeGazes() { return this.resolvedEyes ? { left: { ...this.resolvedEyes.left }, right: { ...this.resolvedEyes.right } } : undefined }
@@ -450,6 +467,9 @@ export class CharacterRenderer {
     if (this.disposed) return
     this.disposed = true
     this.body.geometry.dispose(); this.body.material.dispose(); this.lightFill.geometry.dispose(); this.lightFill.material.dispose(); this.face.geometry.dispose(); this.face.material.dispose()
+    if (this.skeleton) disposeSkeleton(this.skeleton)
+    // backShell shares body.geometry; only its material is independently owned.
+    this.backShell?.material.dispose()
     this.faceTexture.dispose(); this.propTexture.dispose(); this.prop.material.dispose(); this.shadow.geometry.dispose(); this.shadow.material.dispose()
     this.gl.dispose(); this.gl.forceContextLoss()
   }

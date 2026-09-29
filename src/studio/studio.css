@@ -1155,7 +1155,7 @@ select.text-field {
 
 .shape-options {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 8px;
 }
 
@@ -1184,6 +1184,39 @@ select.text-field {
 .shape-option>span {
   font-size: 10px;
   color: #b6b6b6;
+}
+
+.body-modification-options {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.body-modification-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 11px;
+  border: 1px solid #ffffff0b;
+  border-radius: 12px;
+  background: #ffffff02;
+  text-align: left;
+}
+
+.body-modification-option.active {
+  border-color: #a3a3a355;
+  background: #393939;
+}
+
+.body-modification-option strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.body-modification-option>span {
+  color: #b6b6b6;
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 .color-fields {

@@ -1,4 +1,5 @@
-export type Shape = 'capsule' | 'cap' | 'sphere'
+export type Shape = 'capsule' | 'chunky-pill' | 'cap' | 'sphere'
+export type BodyModification = 'none' | 'upside-down' | 'ghost' | 'skeleton'
 export type Eye = 'dot' | 'soft' | 'closed' | 'wink' | 'star' | 'heart' | 'squint' | 'wide' | 'arc-up' | 'arc-down' | 'half-lidded' | 'pupil'
 export type Mouth = 'smile' | 'open' | 'line' | 'frown' | 'oh' | 'wave' | 'sleep' | 'grin' | 'cry' | 'u-smile' | 'kiss' | 'tongue-out'
 export type Prop = 'none' | 'zzz' | 'sparkle' | 'heart' | 'question' | 'sweat' | 'crown'
@@ -21,7 +22,7 @@ export interface Expression { id: string; name: string; description: string; bea
 export interface Step { id: string; expressionId: string; duration: number }
 export interface Animation { id: string; name: string; steps: Step[]; loop: boolean }
 export interface Character {
-  id: string; name: string; shape: Shape; color: string; color2: string; gradient: boolean
+  id: string; name: string; shape: Shape; bodyModification?: BodyModification; color: string; color2: string; gradient: boolean
   gradientAngle: number; toon: boolean; trueFront: boolean; lockPosition: boolean; eyeColor: string; iris: boolean
   elevated: boolean; elevation: number; shadow: boolean
   motion: number; speed: number; blink: boolean; blinkInterval: number; followCursor: boolean; followRotation: boolean
@@ -48,7 +49,14 @@ export const EYES: Eye[] = ['dot', 'soft', 'closed', 'wink', 'star', 'heart', 's
 export const MOUTHS: Mouth[] = ['smile', 'open', 'line', 'frown', 'oh', 'wave', 'sleep', 'grin', 'cry', 'u-smile', 'kiss', 'tongue-out']
 export const PROPS: Prop[] = ['none', 'zzz', 'sparkle', 'heart', 'question', 'sweat', 'crown']
 export const SHAPES: { id: Shape; name: string; ratio: string }[] = [
-  { id: 'capsule', name: 'Capsule', ratio: '1:2' }, { id: 'cap', name: 'End cap', ratio: '1:1' }, { id: 'sphere', name: 'Circle', ratio: '1:1' }
+  { id: 'capsule', name: 'Capsule', ratio: '1:2' }, { id: 'chunky-pill', name: 'Chunky pill', ratio: '1:1.5' },
+  { id: 'cap', name: 'End cap', ratio: '1:1' }, { id: 'sphere', name: 'Circle', ratio: '1:1' }
+]
+export const BODY_MODIFICATIONS: { id: BodyModification; name: string; description: string }[] = [
+  { id: 'none', name: 'Standard', description: 'Original end cap' },
+  { id: 'upside-down', name: 'Upside down', description: 'Flip the body only' },
+  { id: 'ghost', name: 'Ghost', description: 'A gently waving hem' },
+  { id: 'skeleton', name: 'Skeleton', description: 'Bones beneath the color' }
 ]
 export const PALETTES = [
   ['#ff986d', '#ffd092'], ['#81d4c1', '#c6efd2'], ['#a79ce8', '#d8cafa'],
@@ -108,7 +116,7 @@ export function defaultExpressions(): Expression[] {
 }
 export function defaultProject(): Project {
   const base: Character = {
-    id: 'milo', name: 'Milo', shape: 'capsule', color: '#ff986d', color2: '#ffd092', gradient: true,
+    id: 'milo', name: 'Milo', shape: 'capsule', bodyModification: 'none', color: '#ff986d', color2: '#ffd092', gradient: true,
     gradientAngle: -24, toon: true, trueFront: false, lockPosition: false, eyeColor: '#080909', iris: false, elevated: false, elevation: .065,
     shadow: true, motion: .45, speed: 1, blink: true, blinkInterval: 4.2, followCursor: false, followRotation: false
   }
@@ -305,7 +313,7 @@ function parsePose(value: unknown): Pose {
 }
 export function parseCharacter(value: unknown): Character {
   const v = obj(value), d = defaultProject().characters[0]!
-  return { ...d, id: str(v.id, uid('character')), name: str(v.name, 'Character'), shape: choice(v.shape, ['capsule', 'cap', 'sphere'], 'capsule'), color: color(v.color, d.color), color2: color(v.color2, d.color2), gradient: boolean(v.gradient, true), gradientAngle: num(v.gradientAngle, -24, -180, 180), toon: boolean(v.toon, d.toon), trueFront: boolean(v.trueFront, false), lockPosition: boolean(v.lockPosition, false), eyeColor: color(v.eyeColor, d.eyeColor), iris: boolean(v.iris, false), elevated: boolean(v.elevated, false), elevation: num(v.elevation, .065, .005, .2), shadow: boolean(v.shadow, true), motion: num(v.motion, .45, 0, 1), speed: num(v.speed, 1, .25, 3), blink: boolean(v.blink, true), blinkInterval: num(v.blinkInterval, 4.2, 1, 12), followCursor: boolean(v.followCursor, false), followRotation: boolean(v.followRotation, false) }
+  return { ...d, id: str(v.id, uid('character')), name: str(v.name, 'Character'), shape: choice(v.shape, SHAPES.map(shape => shape.id), 'capsule'), bodyModification: choice(v.bodyModification, BODY_MODIFICATIONS.map(mod => mod.id), 'none'), color: color(v.color, d.color), color2: color(v.color2, d.color2), gradient: boolean(v.gradient, true), gradientAngle: num(v.gradientAngle, -24, -180, 180), toon: boolean(v.toon, d.toon), trueFront: boolean(v.trueFront, false), lockPosition: boolean(v.lockPosition, false), eyeColor: color(v.eyeColor, d.eyeColor), iris: boolean(v.iris, false), elevated: boolean(v.elevated, false), elevation: num(v.elevation, .065, .005, .2), shadow: boolean(v.shadow, true), motion: num(v.motion, .45, 0, 1), speed: num(v.speed, 1, .25, 3), blink: boolean(v.blink, true), blinkInterval: num(v.blinkInterval, 4.2, 1, 12), followCursor: boolean(v.followCursor, false), followRotation: boolean(v.followRotation, false) }
 }
 function parseBeat(item: unknown, index: number): Beat {
   const b = obj(item)

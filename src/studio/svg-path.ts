@@ -75,16 +75,20 @@ export function pathData(contours: Contour[], project: ProjectPoint = p => p, to
     return simplify(points, tolerance).map((p, i) => `${i ? 'L' : 'M'}${n(p.x)} ${n(p.y)}`).join('') + (contour.closed ? 'Z' : '')
   }).join('')
 }
-/** Union a triangle/polygon tessellation by cancelling shared edges, keeping only
- * the boundary loops. The output has no interior mesh edges or per-triangle layers. */
+/** Combine consistently wound polygons by cancelling shared edges. Preserve edge
+ * multiplicity: projected 3D surfaces can overlap, and discarding a repeated edge
+ * changes their nonzero winding into false holes. No per-triangle layers remain. */
 export function boundaryContours(polygons: Point[][]): Contour[] {
   const key = (p: Point) => `${Math.round(p.x * 1e5)},${Math.round(p.y * 1e5)}`
-  const edges = new Map<string, { a: Point; b: Point; start: string; end: string }>()
+  const edges = new Map<string, { a: Point; b: Point; start: string; end: string; count: number }>()
   for (const poly of polygons) for (let i = 0; i < poly.length; i++) {
     const a = poly[i]!, b = poly[(i + 1) % poly.length]!, start = key(a), end = key(b)
     if (start === end) continue
     const reverse = `${end}/${start}`, forward = `${start}/${end}`
-    if (edges.has(reverse)) edges.delete(reverse); else edges.set(forward, { a, b, start, end })
+    const reversed = edges.get(reverse), repeated = edges.get(forward)
+    if (reversed) { if (--reversed.count === 0) edges.delete(reverse) }
+    else if (repeated) repeated.count++
+    else edges.set(forward, { a, b, start, end, count: 1 })
   }
   const starts = new Map<string, Set<string>>()
   for (const [id, e] of edges) { const set = starts.get(e.start) ?? new Set<string>(); set.add(id); starts.set(e.start, set) }
@@ -94,7 +98,8 @@ export function boundaryContours(polygons: Point[][]): Contour[] {
     let next: string | undefined = `${first.start}/${first.end}`
     while (next) {
       const e = edges.get(next); if (!e) break
-      edges.delete(next); starts.get(e.start)!.delete(next); points.push(e.b)
+      if (--e.count === 0) { edges.delete(next); starts.get(e.start)!.delete(next) }
+      points.push(e.b)
       if (e.end === first.start) break
       next = starts.get(e.end)?.values().next().value
     }
