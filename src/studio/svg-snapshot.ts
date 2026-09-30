@@ -66,14 +66,14 @@ export function snapshotSvg(snapshot: Snapshot): string {
   const triangles = (mesh: THREE.Mesh, shading = false): { triangles: Triangle[]; vertices: Vertex[] } => {
     const geometry = mesh.geometry, position = geometry.getAttribute('position'), index = geometry.index
     const material = mesh.material as THREE.ShaderMaterial, uniforms = shading ? material.uniforms : undefined
-    const angle = uniforms?.angle?.value ?? 0, bodyHeight = uniforms?.bodyHeight?.value ?? 1
+    const angle = uniforms?.angle?.value ?? 0, bodyHeight = uniforms?.bodyHeight?.value ?? 1, bodyWidth = uniforms?.bodyWidth?.value ?? 1
     const scale = uniforms?.fillScale?.value as THREE.Vector3 | undefined, offset = uniforms?.fillOffset?.value as THREE.Vector3 | undefined
     const vertices: Vertex[] = []
     for (let i = 0; i < position.count; i++) {
       const local = new THREE.Vector3().fromBufferAttribute(position, i), v = project(local.clone().applyMatrix4(mesh.matrixWorld))
       if (shading) {
         local.multiply(scale ?? new THREE.Vector3(1, 1, 1)).add(offset ?? new THREE.Vector3())
-        v.t = .5 + local.y / bodyHeight * Math.cos(angle) + local.x * Math.sin(angle)
+        v.t = .5 + local.y / bodyHeight * Math.cos(angle) + local.x / bodyWidth * Math.sin(angle)
       }
       vertices.push(v)
     }

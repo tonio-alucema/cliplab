@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BODY_MODIFICATIONS, SHAPES, defaultProject, definitionOf, parseCharacter, parseProject, sampleDefinition } from './model'
+import { BODY_MODIFICATIONS, PILL_BODY_MODIFICATIONS, SHAPES, bodyModificationsFor, defaultProject, definitionOf, parseCharacter, parseProject, sampleDefinition } from './model'
 
 describe('body shapes and modifications', () => {
   it('imports the chunky pill as its own shape and preserves character settings', () => {
@@ -37,9 +37,36 @@ describe('body shapes and modifications', () => {
   })
 
   it('remembers the end-cap modification while a different body shape is selected', () => {
-    const character = { ...defaultProject().characters[1]!, bodyModification: 'ghost' as const, shape: 'chunky-pill' as const }
+    const character = { ...defaultProject().characters[1]!, bodyModification: 'ghost' as const, roundedSkull: true, shape: 'chunky-pill' as const }
     const restored = parseCharacter(JSON.parse(JSON.stringify(character)))
     expect(restored.shape).toBe('chunky-pill')
     expect(restored.bodyModification).toBe('ghost')
+    expect(restored.roundedSkull).toBe(true)
+  })
+
+  it('offers modifications only for their supported body shapes', () => {
+    expect(bodyModificationsFor('cap').map(mod => mod.id)).toEqual(['none', 'upside-down', 'rotate-left', 'rotate-right', 'ghost', 'skeleton'])
+    for (const shape of ['capsule', 'chunky-pill'] as const) {
+      expect(bodyModificationsFor(shape)).toEqual(PILL_BODY_MODIFICATIONS)
+      const character = { ...defaultProject().characters[0]!, shape, bodyModification: 'horizontal' as const }
+      const restored = parseProject(JSON.parse(JSON.stringify(definitionOf(defaultProject(), character))))
+      expect(restored.characters[0]).toEqual(character)
+    }
+    expect(bodyModificationsFor('sphere')).toEqual([])
+    // Inactive selections remain stored when temporarily switching body shapes.
+    expect(parseCharacter({ ...defaultProject().characters[0], shape: 'sphere', bodyModification: 'horizontal' }).bodyModification).toBe('horizontal')
+  })
+
+  it('keeps the original skeleton by default and preserves the rounded variant in app exports', () => {
+    const project = defaultProject()
+    expect(project.characters.every(character => character.roundedSkull === false)).toBe(true)
+    const legacy = { ...project.characters[1]!, bodyModification: 'skeleton' as const }
+    delete legacy.roundedSkull
+    expect(parseCharacter(legacy).roundedSkull).toBe(false)
+    expect(parseCharacter({ ...legacy, roundedSkull: 'true' }).roundedSkull).toBe(false)
+    for (const roundedSkull of [false, true]) {
+      const exported = definitionOf(project, { ...legacy, roundedSkull })
+      expect(parseProject(JSON.parse(JSON.stringify(exported))).characters[0]!.roundedSkull).toBe(roundedSkull)
+    }
   })
 })

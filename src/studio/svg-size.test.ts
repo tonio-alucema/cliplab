@@ -21,7 +21,7 @@ it('keeps end-cap modifications in compact SVG snapshots, including ghost concav
   const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, effectPhase: .2, expressionId: '', beatIndex: 0, stepIndex: 0 }
   const parse = (text: string) => new DOMParser().parseFromString(text, 'image/svg+xml')
   try {
-    for (const bodyModification of ['none', 'upside-down', 'ghost', 'skeleton'] as const) {
+    for (const bodyModification of ['none', 'upside-down', 'rotate-left', 'rotate-right', 'ghost', 'skeleton'] as const) {
       for (const rotation of [{ x: 0, y: 0, z: 0 }, { x: 15, y: 60, z: -10 }, { x: 0, y: 180, z: 0 }]) {
         renderer.render({ ...character, bodyModification }, sample, { rotation })
         const text = snapshotSvg(renderer.snapshotScene()), doc = parse(text)
@@ -46,6 +46,30 @@ it('keeps end-cap modifications in compact SVG snapshots, including ghost concav
     expect(ghostPath(.2)).not.toBe(ghostPath(.6))
     expect(ghostPath(.2)).toBe(ghostPath(1.2))
     expect(ghostPath(.2, true)).toBe(ghostPath(.6, true))
+  } finally { renderer.dispose() }
+})
+it('exports sideways pills and the rounded skeleton as compact editable vectors at every view', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const base = { ...defaultProject().characters[0]!, trueFront: false, toon: true }
+  const variants = [
+    { ...base, shape: 'capsule' as const, bodyModification: 'horizontal' as const },
+    { ...base, shape: 'chunky-pill' as const, bodyModification: 'horizontal' as const },
+    { ...base, shape: 'cap' as const, bodyModification: 'skeleton' as const, roundedSkull: true }
+  ]
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const character of variants) for (const y of [0, 55, 90, 180, 270]) {
+      renderer.render(character, sample, { rotation: { x: 0, y, z: 0 } })
+      const text = snapshotSvg(renderer.snapshotScene()), doc = new DOMParser().parseFromString(text, 'image/svg+xml')
+      expect(text).not.toMatch(/NaN|Infinity|data:image/)
+      expect(doc.querySelector('parsererror, image')).toBeNull()
+      expect(doc.querySelectorAll('[data-name="Outer body"] path')).toHaveLength(1)
+      expect(doc.querySelectorAll('path').length).toBeLessThan(85)
+      expect(text.length).toBeLessThan(150000)
+      expect(JSON.parse(doc.querySelector('metadata')!.textContent!).character).toMatchObject(character)
+      if (character.bodyModification === 'skeleton') expect(doc.querySelector('[data-name="Inner skeleton"]')).not.toBeNull()
+      else expect(doc.querySelector('[data-name="Inner skeleton"]')).toBeNull()
+    }
   } finally { renderer.dispose() }
 })
 it('exports the enlarged standard 16px face with unchanged body geometry', () => {

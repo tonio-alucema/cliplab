@@ -1,10 +1,16 @@
 import * as THREE from 'three'
 import type { BodyModification, Character, Shape } from './model'
+import { roundedSkeletonGeometry } from './rounded-skull'
 
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : shape === 'chunky-pill' ? 1.5 : 1
 export const isPill = (shape: Shape) => shape === 'capsule' || shape === 'chunky-pill'
-export const bodyModification = (character: Pick<Character, 'shape' | 'bodyModification'>): BodyModification => character.shape === 'cap' ? character.bodyModification ?? 'none' : 'none'
-export const faceOffset = (shape: Shape) => isPill(shape) ? -.14 * (bodyHeight(shape) - 1) : -.025
+export const bodyModification = (character: Pick<Character, 'shape' | 'bodyModification'>): BodyModification => character.shape === 'cap' ? character.bodyModification === 'horizontal' ? 'none' : character.bodyModification ?? 'none' : isPill(character.shape) && character.bodyModification === 'horizontal' ? 'horizontal' : 'none'
+export const bodyAngle = (shape: Shape, modification: BodyModification = 'none') => shape === 'cap' ? modification === 'upside-down' ? Math.PI : modification === 'rotate-left' ? Math.PI / 2 : modification === 'rotate-right' ? -Math.PI / 2 : 0 : isPill(shape) && modification === 'horizontal' ? Math.PI / 2 : 0
+export function bodyDimensions(shape: Shape, modification: BodyModification = 'none') {
+  const horizontal = isPill(shape) && modification === 'horizontal'
+  return { width: horizontal ? bodyHeight(shape) : 1, height: horizontal ? 1 : bodyHeight(shape), depth: 1 }
+}
+export const faceOffset = (shape: Shape, modification: BodyModification = 'none') => isPill(shape) && modification !== 'horizontal' ? -.14 * (bodyHeight(shape) - 1) : -.025
 
 export function radiusAt(shape: Shape, y: number, modification: BodyModification = 'none'): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
@@ -15,9 +21,19 @@ export function radiusAt(shape: Shape, y: number, modification: BodyModification
   return .43 + Math.sqrt(Math.max(0, .07 ** 2 - (y + .43) ** 2))
 }
 
+/** Intersect an upright face point with the front surface of a body-only turn. */
+export function bodySurfaceZ(shape: Shape, x: number, y: number, modification: BodyModification = 'none'): number | undefined {
+  const angle = bodyAngle(shape, modification), cos = Math.cos(angle), sin = Math.sin(angle)
+  const u = cos * x + sin * y, v = -sin * x + cos * y
+  if (Math.abs(v) >= bodyHeight(shape) / 2) return undefined
+  const radius = radiusAt(shape, v)
+  const square = radius * radius - u * u
+  return square > 0 ? Math.sqrt(square) : undefined
+}
+
 export function bodyGeometry(shape: Shape, squareBottom = false, modification: BodyModification = 'none', inset = false): THREE.BufferGeometry {
   if (shape === 'sphere') return new THREE.SphereGeometry(.5, 80, 64)
-  if (isPill(shape)) return new THREE.CapsuleGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1), 24, 80)
+  if (isPill(shape)) return new THREE.CapsuleGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1), 24, 80).rotateZ(bodyAngle(shape, modification))
   const ghost = modification === 'ghost'
   // Radial rings let the draped underside deform smoothly from every camera angle.
   const corner = squareBottom && !ghost ? 0 : .07
@@ -28,7 +44,8 @@ export function bodyGeometry(shape: Shape, squareBottom = false, modification: B
   if (!ghost) points.push(new THREE.Vector2(.5, 0))
   for (let i = 1; i <= 32; i++) { const a = i / 32 * Math.PI / 2; points.push(new THREE.Vector2(.5 * Math.cos(a), .5 * Math.sin(a))) }
   const geometry = new THREE.LatheGeometry(points, 80)
-  if (modification === 'upside-down') geometry.rotateZ(Math.PI)
+  const angle = bodyAngle(shape, modification)
+  if (angle) geometry.rotateZ(angle)
   if (ghost) {
     geometry.userData.ghostBase = (geometry.attributes.position!.array as Float32Array).slice()
     animateGhostGeometry(geometry, 0)
@@ -61,7 +78,8 @@ export const SKELETON_INSET_OPACITY = .35
 export const SKELETON_BACK_OPACITY = .72
 
 /** A compact, volumetric skull with real socket/nose openings and four curved ribs. */
-export function skeletonGeometry(): THREE.Group {
+export function skeletonGeometry(rounded = false): THREE.Group {
+  if (rounded) return roundedSkeletonGeometry()
   const group = new THREE.Group(); group.name = 'inner-skeleton'
   // Keep opaque-looking bones in the transparent render pass, between the rear
   // and front shell surfaces; depth writes preserve their real 3D occlusion.

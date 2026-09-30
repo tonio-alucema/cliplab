@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyModification, disposeSkeleton, faceOffset, radiusAt, skeletonGeometry } from './body-geometry'
+import { animateGhostGeometry, bodyGeometry, bodyDimensions, bodyHeight, bodyModification, bodySurfaceZ, disposeSkeleton, faceOffset, radiusAt, skeletonGeometry } from './body-geometry'
 import { BASE_POSE, defaultProject } from './model'
-import { projectedEye } from './renderer'
+import { faceForSize, projectedEye, resolveEyeGazes } from './renderer'
 
 describe('body shape geometry and modifications', () => {
   it('gives chunky pill the requested 1:1.5 ratio with capsule curvature', () => {
@@ -60,6 +60,67 @@ describe('body shape geometry and modifications', () => {
       a.dispose(); b.dispose()
     }
     expect(bodyModification({ shape: 'cap' })).toBe('none')
+  })
+
+  it('turns only the requested body profiles and measures horizontal pills by their long edge', () => {
+    for (const shape of ['capsule', 'chunky-pill'] as const) {
+      const geometry = bodyGeometry(shape, false, 'horizontal'); geometry.computeBoundingBox()
+      const size = geometry.boundingBox!.getSize(new THREE.Vector3()), dimensions = bodyDimensions(shape, 'horizontal')
+      expect(size.x).toBeCloseTo(bodyHeight(shape)); expect(size.y).toBeCloseTo(1); expect(size.z).toBeCloseTo(1)
+      expect(dimensions).toEqual({ width: bodyHeight(shape), height: 1, depth: 1 })
+      expect(bodyModification({ shape, bodyModification: 'horizontal' })).toBe('horizontal')
+      expect(bodyModification({ shape, bodyModification: 'rotate-left' })).toBe('none')
+      geometry.dispose()
+    }
+    expect(bodyModification({ shape: 'cap', bodyModification: 'horizontal' })).toBe('none')
+    for (const modification of ['rotate-left', 'rotate-right'] as const) {
+      const geometry = bodyGeometry('cap', false, modification), positions = geometry.attributes.position!
+      const extrema = modification === 'rotate-left' ? Math.min : Math.max
+      const roundEnd = extrema(...Array.from({ length: positions.count }, (_, i) => positions.getX(i)))
+      expect(roundEnd).toBeCloseTo(modification === 'rotate-left' ? -.5 : .5)
+      expect(bodySurfaceZ('cap', modification === 'rotate-left' ? -.45 : .45, 0, modification)).toBeCloseTo(Math.sqrt(.25 - .45 ** 2))
+      expect(bodySurfaceZ('cap', modification === 'rotate-left' ? .3 : -.3, 0, modification)).toBeCloseTo(.5)
+      geometry.dispose()
+    }
+  })
+
+  it('projects the upright face onto actual quarter-turned body geometry', () => {
+    const cases = [
+      { shape: 'cap', mod: 'rotate-left' }, { shape: 'cap', mod: 'rotate-right' },
+      { shape: 'capsule', mod: 'horizontal' }, { shape: 'chunky-pill', mod: 'horizontal' },
+    ] as const
+    for (const { shape, mod } of cases) {
+      const geometry = bodyGeometry(shape, false, mod), material = new THREE.MeshBasicMaterial(), body = new THREE.Mesh(geometry, material)
+      body.updateMatrixWorld(true)
+      for (const [x, y] of [[-.21, .09], [.21, -.09], [0, .17]]) {
+        const ray = new THREE.Raycaster(new THREE.Vector3(x, y, 3), new THREE.Vector3(0, 0, -1))
+        const hits = ray.intersectObject(body)
+        expect(hits.length).toBeGreaterThan(0)
+        expect(bodySurfaceZ(shape, x!, y!, mod)).toBeCloseTo(hits[0]!.point.z, 2)
+      }
+      const character = { ...defaultProject().characters[0]!, shape, bodyModification: mod }
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 30); camera.position.z = 8; camera.updateMatrixWorld()
+      const transform = new THREE.Matrix4().makeRotationY(.2)
+      const left = projectedEye(character, BASE_POSE, 0, -1, transform, camera), right = projectedEye(character, BASE_POSE, 0, 1, transform, camera)
+      expect(left.center.x).toBeLessThan(right.center.x); expect(left.up.y).toBeGreaterThan(left.center.y)
+      const mid = left.center.clone().add(right.center).multiplyScalar(.5)
+      const gaze = resolveEyeGazes(character, BASE_POSE, 0, transform, camera, { x: 0, y: 0 }, { ...mid, weight: 1 })
+      expect(gaze.left.x).toBeGreaterThan(0); expect(gaze.right.x).toBeLessThan(0)
+      geometry.dispose(); material.dispose()
+    }
+    expect(bodySurfaceZ('capsule', .9, .4, 'horizontal')).toBeUndefined()
+    expect(bodySurfaceZ('capsule', .8, .2, 'horizontal')).toBeCloseTo(Math.sqrt(.25 - .3 ** 2 - .2 ** 2))
+  })
+
+  it('keeps horizontal compact faces centered vertically with the same size constraints', () => {
+    const character = { ...defaultProject().characters[0]!, shape: 'capsule' as const, bodyModification: 'horizontal' as const }
+    const sample = { pose: { ...BASE_POSE }, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
+    const tiny = faceForSize(character, sample, 32)
+    expect(faceOffset(character.shape, character.bodyModification)).toBe(-.025)
+    expect(tiny.sample.pose.faceY).toBeCloseTo(BASE_POSE.faceY + .025)
+    expect(tiny.character.trueFront).toBe(true); expect(tiny.character.lockPosition).toBe(true)
+    expect(tiny.character.bodyModification).toBe('horizontal')
+    expect(tiny.character.iris).toBe(false)
   })
 
   it('builds an internal volumetric skull with genuine openings and exactly four ribs', () => {

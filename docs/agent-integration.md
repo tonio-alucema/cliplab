@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.4.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.5.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -23,7 +23,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.4.0.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.5.0.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -70,11 +70,15 @@ Keep `character.trueFront` false to show rotation. Authored turns add to body-fo
 
 Runtime 0.4.0 adds `character.shape: "chunky-pill"`, a capsule with a width-to-height ratio of 1:1.5. Existing `capsule` (1:2), `cap` (1:1), and `sphere` shapes remain supported.
 
-For `shape: "cap"`, optional `character.bodyModification` selects exactly one of `none`, `upside-down`, `ghost`, or `skeleton`. It defaults to `none` for older JSON. The setting is retained but inactive on other shapes. Modifications leave the authored face, expressions, colors, gradient, and animation settings intact:
+For `shape: "cap"`, optional `character.bodyModification` selects exactly one of `none`, `upside-down`, `rotate-left`, `rotate-right`, `ghost`, or `skeleton`. Capsule and Chunky pill support `none` or `horizontal`. Other shape/modification combinations remain inactive. The setting defaults to `none` for older JSON and is retained when switching shapes. Modifications leave the authored face, expressions, colors, gradient, and animation settings intact:
 
 - `upside-down` flips only the body silhouette; the facial expression stays upright.
+- `rotate-left` and `rotate-right` turn the End cap body 90° left or right, keeping the face upright.
+- `horizontal` lays either pill shape on its side, keeping the face upright and fitting its width within the output.
 - `ghost` adds a gently rippling scalloped hem. The wave uses the playback timeline, pauses with playback, and stays still with reduced motion. It is independent of the body-movement amount and position lock.
-- `skeleton` reveals a 3D skull and four ribs through the translucent gradient shell. The bones follow all body rotations and pose transforms. It does not add arms or a ghost hem.
+- `skeleton` reveals a 3D skull and four ribs through the translucent gradient shell. The bones follow all body rotations and pose transforms. It does not add arms or a ghost hem. Set `character.roundedSkull: true` for a rounded 360° cranium, sculpted eye sockets and nose, and fuller ribs. The original skull remains the default. This flag only affects the Skeleton modification.
+
+Sideways body modifications and `roundedSkull` require runtime 0.5.0 or newer. Preserve both fields when copying definitions.
 
 PNG/video exports use the same scene. SVG snapshots retain the wavy silhouette or a compact additional Inner skeleton group. Update the runtime as well as the character JSON when using these features; older runtimes do not support the new shape/modifications.
 
