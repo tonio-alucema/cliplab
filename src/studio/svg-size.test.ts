@@ -54,7 +54,8 @@ it('exports sideways pills and the rounded skeleton as compact editable vectors 
   const variants = [
     { ...base, shape: 'capsule' as const, bodyModification: 'horizontal' as const },
     { ...base, shape: 'chunky-pill' as const, bodyModification: 'horizontal' as const },
-    { ...base, shape: 'cap' as const, bodyModification: 'skeleton' as const, roundedSkull: true }
+    { ...base, shape: 'cap' as const, bodyModification: 'skeleton' as const, roundedSkull: true },
+    { ...base, shape: 'chunky-pill' as const, bodyModification: 'skeleton' as const, roundedSkull: false }
   ]
   const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
   try {

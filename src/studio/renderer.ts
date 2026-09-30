@@ -291,6 +291,7 @@ export class CharacterRenderer {
   private squareBottom = false
   private modification: BodyModification = 'none'
   private skeleton?: THREE.Group
+  private skeletonShape?: Shape
   private roundedSkull = false
   private backShell?: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
   private lastFaceKey = ''
@@ -350,10 +351,11 @@ export class CharacterRenderer {
       animateGhostGeometry(this.body.geometry, phase); animateGhostGeometry(this.lightFill.geometry, phase)
     }
     const skeleton = modification === 'skeleton'
-    if (skeleton && (!this.skeleton || this.roundedSkull !== !!character.roundedSkull)) {
+    const roundedSkull = this.shape === 'chunky-pill' || !!character.roundedSkull
+    if (skeleton && (!this.skeleton || this.skeletonShape !== this.shape || this.roundedSkull !== roundedSkull)) {
       if (this.skeleton) { this.root.remove(this.skeleton); disposeSkeleton(this.skeleton) }
-      this.roundedSkull = !!character.roundedSkull
-      this.skeleton = skeletonGeometry(this.roundedSkull); this.root.add(this.skeleton)
+      this.roundedSkull = roundedSkull; this.skeletonShape = this.shape
+      this.skeleton = skeletonGeometry(this.roundedSkull, this.shape); this.root.add(this.skeleton)
     }
     if (skeleton && !this.backShell) {
       const backMaterial = this.body.material.clone()

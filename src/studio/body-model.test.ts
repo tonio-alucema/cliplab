@@ -46,8 +46,9 @@ describe('body shapes and modifications', () => {
 
   it('offers modifications only for their supported body shapes', () => {
     expect(bodyModificationsFor('cap').map(mod => mod.id)).toEqual(['none', 'upside-down', 'rotate-left', 'rotate-right', 'ghost', 'skeleton'])
+    expect(bodyModificationsFor('capsule')).toEqual(PILL_BODY_MODIFICATIONS)
+    expect(bodyModificationsFor('chunky-pill').map(mod => mod.id)).toEqual(['none', 'horizontal', 'skeleton'])
     for (const shape of ['capsule', 'chunky-pill'] as const) {
-      expect(bodyModificationsFor(shape)).toEqual(PILL_BODY_MODIFICATIONS)
       const character = { ...defaultProject().characters[0]!, shape, bodyModification: 'horizontal' as const }
       const restored = parseProject(JSON.parse(JSON.stringify(definitionOf(defaultProject(), character))))
       expect(restored.characters[0]).toEqual(character)
@@ -55,6 +56,18 @@ describe('body shapes and modifications', () => {
     expect(bodyModificationsFor('sphere')).toEqual([])
     // Inactive selections remain stored when temporarily switching body shapes.
     expect(parseCharacter({ ...defaultProject().characters[0], shape: 'sphere', bodyModification: 'horizontal' }).bodyModification).toBe('horizontal')
+  })
+
+  it('round-trips the chunky pill skeleton without requiring the end-cap rounded-skull flag', () => {
+    const project = defaultProject()
+    const character = { ...project.characters[0]!, shape: 'chunky-pill' as const, bodyModification: 'skeleton' as const, roundedSkull: false }
+    project.characters[0] = character
+    expect(parseProject(JSON.parse(JSON.stringify(project))).characters[0]).toEqual(character)
+    const exported = definitionOf(project, character, ['sleepy'])
+    expect(parseProject(JSON.parse(JSON.stringify(exported))).characters[0]).toEqual(character)
+    const legacy: Partial<typeof character> = { ...character }
+    delete legacy.roundedSkull
+    expect(parseCharacter(legacy)).toEqual(character)
   })
 
   it('keeps the original skeleton by default and preserves the rounded variant in app exports', () => {

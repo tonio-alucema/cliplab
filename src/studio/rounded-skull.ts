@@ -1,87 +1,59 @@
 import * as THREE from 'three'
 
-const smooth = (value: number) => {
-  const t = Math.max(0, Math.min(1, value))
-  return t * t * (3 - 2 * t)
-}
+type SkeletonShape = 'cap' | 'chunky-pill'
 
-function sockets(x: number, y: number) {
-  return Math.min(Math.hypot((x - .115) / .077, (y - .024) / .074), Math.hypot((x + .115) / .077, (y - .024) / .074))
-}
-
-function nose(x: number, y: number) {
-  // A wider lower opening and narrow bridge suggest a nasal cavity, without a
-  // sharp triangular cut or additional artwork pasted onto the bone surface.
-  const width = .020 + .009 * smooth((-.025 - y) / .04)
-  return Math.hypot(x / width, (y + .047) / .032)
-}
-
-function craniumGeometry() {
-  const geometry = new THREE.SphereGeometry(1, 128, 112)
-  const position = geometry.attributes.position!
-  for (let i = 0; i < position.count; i++) {
-    let x = position.getX(i) * .29
-    const y = position.getY(i) * .255 + .14
-    let z = position.getZ(i) * .23
-    // Gently narrow the cheeks into the lower jaw, preserving a full rear dome.
-    x *= 1 - .13 * smooth((-.015 - y) / .10)
-    if (z > 0) {
-      const eyeDepth = .086 * (1 - smooth((sockets(x, y) - .32) / .68))
-      const noseDepth = .067 * (1 - smooth((nose(x, y) - .18) / .82))
-      z -= Math.max(eyeDepth, noseDepth)
-    }
-    position.setXYZ(i, x, y, z)
+/** A flat-color marking mapped onto the skull's curved surface. Its clean edge
+ * is sampled directly as a circle/ellipse, rather than cutting through triangles
+ * in the sphere mesh. Radial subdivisions keep its depth correct in profile. */
+function surfaceMark(radius: number, x: number, y: number, rx: number, ry: number, material: THREE.MeshBasicMaterial, name: string) {
+  const segments = 80, rings = 8, offset = .0015
+  const zAt = (px: number, py: number) => Math.sqrt(Math.max(0, radius * radius - px * px - py * py)) + offset
+  const center = new THREE.Vector3(x, y, zAt(x, y))
+  const vertices = [0, 0, 0], indices: number[] = []
+  for (let ring = 1; ring <= rings; ring++) for (let i = 0; i < segments; i++) {
+    const angle = i / segments * Math.PI * 2
+    const px = x + Math.cos(angle) * rx * ring / rings, py = y + Math.sin(angle) * ry * ring / rings
+    vertices.push(px - center.x, py - center.y, zAt(px, py) - center.z)
   }
-  // Geometry creates the recesses; a darker bone material helps their inner
-  // walls remain legible through the character's translucent gradient.
-  const indices = geometry.index!
-  geometry.clearGroups()
-  const batches: [number[], number[]] = [[], []]
-  for (let i = 0; i < indices.count; i += 3) {
-    const a = indices.getX(i), b = indices.getX(i + 1), c = indices.getX(i + 2)
-    const x = (position.getX(a) + position.getX(b) + position.getX(c)) / 3
-    const y = (position.getY(a) + position.getY(b) + position.getY(c)) / 3
-    const z = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3
-    const material = z > 0 && (sockets(x, y) < .75 || nose(x, y) < .70) ? 1 : 0
-    batches[material].push(a, b, c)
+  for (let i = 0; i < segments; i++) indices.push(0, 1 + i, 1 + (i + 1) % segments)
+  for (let ring = 1; ring < rings; ring++) for (let i = 0; i < segments; i++) {
+    const a = 1 + (ring - 1) * segments + i, b = 1 + (ring - 1) * segments + (i + 1) % segments
+    const c = 1 + ring * segments + i, d = 1 + ring * segments + (i + 1) % segments
+    indices.push(a, c, d, a, d, b)
   }
-  // Two contiguous material batches mean two draw calls instead of one per UV
-  // row/patch. Only triangle order changes; vertices and winding stay intact.
-  geometry.setIndex([...batches[0], ...batches[1]])
-  geometry.addGroup(0, batches[0].length, 0)
-  geometry.addGroup(batches[0].length, batches[1].length, 1)
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); geometry.setIndex(indices)
   geometry.computeVertexNormals(); geometry.computeBoundingBox(); geometry.computeBoundingSphere()
-  return geometry
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.name = name; mesh.position.copy(center)
+  // These remain surface artwork, even though they have a true curved 3D mesh.
+  mesh.userData.surfaceOverlay = true
+  return mesh
 }
 
-/** Rounded anatomical variant. Every part is a volumetric mesh, including the
- * recessed eye sockets, nasal cavity, jaw, tooth lobes and four curved ribs. */
-export function roundedSkeletonGeometry(): THREE.Group {
+/** A perfectly spherical alternate skull with clean two-tone curved markings.
+ * The original skull is separate; this style works for end caps and chunky pills. */
+export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Group {
   const group = new THREE.Group(); group.name = 'inner-skeleton'
   const options = { transparent: true, opacity: 1, depthWrite: true, toneMapped: false }
   const bone = new THREE.MeshBasicMaterial({ ...options, color: '#fff5cd' })
-  const cavity = new THREE.MeshBasicMaterial({ ...options, color: '#ddcf9f' })
-  const skull = new THREE.Mesh(craniumGeometry(), [bone, cavity]); skull.name = 'skull'; group.add(skull)
-
-  const jawCurve = new THREE.CubicBezierCurve3(
-    new THREE.Vector3(-.145, -.065, .095), new THREE.Vector3(-.115, -.155, .185),
-    new THREE.Vector3(.115, -.155, .185), new THREE.Vector3(.145, -.065, .095),
-  )
-  const jaw = new THREE.Mesh(new THREE.TubeGeometry(jawCurve, 40, .025, 12, false), bone)
-  jaw.name = 'rounded-jaw'; skull.add(jaw)
-  for (const x of [-.05, 0, .05]) {
-    const tooth = new THREE.Mesh(new THREE.CapsuleGeometry(.022, .028, 8, 16), bone)
-    tooth.name = 'tooth'; tooth.position.set(x, -.133, .153)
-    tooth.scale.set(1.08, 1, .76); skull.add(tooth)
-  }
+  const ink = new THREE.MeshBasicMaterial({ ...options, color: '#b8a979' })
+  const radius = shape === 'chunky-pill' ? .40 : .348, centerY = shape === 'chunky-pill' ? .30 : .13
+  const geometry = new THREE.SphereGeometry(radius, 128, 96)
+  geometry.computeBoundingBox(); geometry.computeBoundingSphere()
+  const skull = new THREE.Mesh(geometry, bone)
+  skull.name = 'skull'; skull.position.y = centerY; group.add(skull)
+  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .38, -radius * .30, radius * .24, radius * .24, ink, direction < 0 ? 'socket-left' : 'socket-right'))
+  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .061, -radius * .57, radius * .043, radius * .047, ink, direction < 0 ? 'nose-left' : 'nose-right'))
 
   for (const direction of [-1, 1]) for (let row = 0; row < 2; row++) {
-    const top = -.21 - row * .122
+    const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122
+    const width = shape === 'chunky-pill' ? 1.12 : 1
     const curve = new THREE.CubicBezierCurve3(
       new THREE.Vector3(direction * .065, top - .039, .13),
-      new THREE.Vector3(direction * .15, top - .055, .16),
-      new THREE.Vector3(direction * .255, top - .047, .11),
-      new THREE.Vector3(direction * (.32 - row * .025), top + .006, .035),
+      new THREE.Vector3(direction * .15 * width, top - .055, .16),
+      new THREE.Vector3(direction * .255 * width, top - .047, .11),
+      new THREE.Vector3(direction * (.32 - row * .025) * width, top + .006, .035),
     )
     const rounded = new THREE.Group(); rounded.name = `rib-${direction < 0 ? 'left' : 'right'}-${row + 1}`
     const rib = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, .032, 12, false), bone)

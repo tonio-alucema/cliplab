@@ -3,59 +3,75 @@ import * as THREE from 'three'
 import { roundedSkeletonGeometry } from './rounded-skull'
 import { disposeSkeleton, radiusAt } from './body-geometry'
 
-describe('rounded 3D skeleton', () => {
-  it('has a round dome, actual recessed sockets and nose, and a separate jaw with tooth lobes', () => {
-    const skeleton = roundedSkeletonGeometry()
-    try {
-      skeleton.updateMatrixWorld(true)
-      const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial[]>
-      expect(skull.geometry.type).toBe('SphereGeometry')
-      expect(skull.geometry.groups).toHaveLength(2)
-      expect(skull.geometry.groups.reduce((total, group) => total + group.count, 0)).toBe(skull.geometry.index!.count)
-      const size = skull.geometry.boundingBox!.getSize(new THREE.Vector3())
-      expect(size.z).toBeGreaterThan(.44)
-      expect(size.z / size.x).toBeGreaterThan(.75)
-      const front = (x: number, y: number) => new THREE.Raycaster(new THREE.Vector3(x, y, 2), new THREE.Vector3(0, 0, -1)).intersectObject(skull, false)[0]!
-      const rear = (y: number) => new THREE.Raycaster(new THREE.Vector3(0, y, -2), new THREE.Vector3(0, 0, 1)).intersectObject(skull, false)[0]!
-      // Both sides have a curved dome rather than parallel extrusion planes.
-      expect(front(0, .14).point.z - front(0, .36).point.z).toBeGreaterThan(.10)
-      expect(rear(.36).point.z - rear(.14).point.z).toBeGreaterThan(.10)
-      for (const x of [-.115, .115]) {
-        expect(front(x, .024).point.z).toBeLessThan(.11)
-        expect(front(x, .024).face!.materialIndex).toBe(1)
-        expect(front(Math.sign(x) * .20, .024).point.z).toBeGreaterThan(front(x, .024).point.z + .025)
-      }
-      expect(front(0, -.047).point.z).toBeLessThan(.10)
-      expect(front(0, -.047).face!.materialIndex).toBe(1)
-      expect(skull.getObjectByName('rounded-jaw')).toBeDefined()
-      expect(skull.children.filter(child => child.name === 'tooth')).toHaveLength(3)
-    } finally { disposeSkeleton(skeleton) }
-  })
+describe('spherical 3D skeleton', () => {
+  for (const shape of ['cap', 'chunky-pill'] as const) {
+    const radius = shape === 'cap' ? .348 : .40
+    it(`uses an undeformed perfect sphere with no jaw or teeth for ${shape}`, () => {
+      const skeleton = roundedSkeletonGeometry(shape)
+      try {
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry>
+        const size = skull.geometry.boundingBox!.getSize(new THREE.Vector3())
+        expect(size.x).toBeCloseTo(radius * 2); expect(size.y).toBeCloseTo(size.x); expect(size.z).toBeCloseTo(size.x)
+        const vertices = skull.geometry.attributes.position!
+        for (let i = 0; i < vertices.count; i++) expect(new THREE.Vector3().fromBufferAttribute(vertices, i).length()).toBeCloseTo(radius, 6)
+        expect(skull.children.map(child => child.name)).toEqual(['socket-left', 'socket-right', 'nose-left', 'nose-right'])
+        expect(skeleton.getObjectByName('rounded-jaw')).toBeUndefined()
+        expect(skeleton.getObjectByName('tooth')).toBeUndefined()
+      } finally { disposeSkeleton(skeleton) }
+    })
 
-  it('keeps all volumetric bones inside the end-cap shell and has exactly four thicker ribs', () => {
-    const skeleton = roundedSkeletonGeometry()
-    try {
-      expect(skeleton.children.map(child => child.name)).toEqual(['skull', 'rib-left-1', 'rib-left-2', 'rib-right-1', 'rib-right-2'])
-      skeleton.updateMatrixWorld(true)
-      const ribs: THREE.Mesh<THREE.TubeGeometry>[] = []
-      skeleton.traverse(object => {
-        if (!(object instanceof THREE.Mesh)) return
-        if (object.name.startsWith('rib-') && object.geometry instanceof THREE.TubeGeometry) ribs.push(object)
-        expect(object.material).not.toBeUndefined()
-        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-          expect(material.transparent).toBe(true); expect(material.opacity).toBe(1); expect(material.depthWrite).toBe(true)
-          expect(material.map).toBeNull()
+    it(`maps smooth two-tone marks onto the surface and hides them behind the ${shape} skull`, () => {
+      const skeleton = roundedSkeletonGeometry(shape)
+      try {
+        skeleton.updateMatrixWorld(true)
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry>
+        for (const mark of skull.children as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[]) {
+          expect(mark.userData.surfaceOverlay).toBe(true)
+          expect(mark.material.type).toBe('MeshBasicMaterial')
+          expect(mark.material.color.getHexString()).toBe('b8a979')
+          expect(mark.material.map).toBeNull(); expect(mark.material.depthTest).toBe(true)
+          const position = mark.geometry.attributes.position!
+          for (let i = 0; i < position.count; i++) {
+            const p = new THREE.Vector3().fromBufferAttribute(position, i).add(mark.position)
+            expect(p.length()).toBeGreaterThan(radius)
+            expect(p.length()).toBeLessThan(radius + .002)
+          }
+          // A forward ray hits the marking before the bone; a rear ray hits the
+          // sphere first, proving these markings are not camera-facing overlays.
+          const center = mark.getWorldPosition(new THREE.Vector3())
+          const frontRay = new THREE.Raycaster(new THREE.Vector3(center.x, center.y, 2), new THREE.Vector3(0, 0, -1))
+          const backRay = new THREE.Raycaster(new THREE.Vector3(center.x, center.y, -2), new THREE.Vector3(0, 0, 1))
+          expect(frontRay.intersectObjects([skull, mark], false)[0]!.object).toBe(mark)
+          expect(backRay.intersectObjects([skull, mark], false)[0]!.object).toBe(skull)
         }
-        const vertices = object.geometry.attributes.position!
-        for (let i = 0; i < vertices.count; i++) {
-          const p = new THREE.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld)
-          expect([p.x, p.y, p.z].every(Number.isFinite)).toBe(true)
-          expect(p.y).toBeGreaterThan(-.43); expect(p.y).toBeLessThan(.43)
-          expect(Math.hypot(p.x, p.z)).toBeLessThan(radiusAt('cap', p.y))
-        }
-      })
-      expect(ribs).toHaveLength(4)
-      for (const rib of ribs) expect(rib.geometry.parameters.radius / .026).toBeCloseTo(1.23, 2)
-    } finally { disposeSkeleton(skeleton) }
-  })
+      } finally { disposeSkeleton(skeleton) }
+    })
+
+    it(`keeps all bones inside ${shape}, with exactly four thicker ribs below the sphere`, () => {
+      const skeleton = roundedSkeletonGeometry(shape)
+      try {
+        expect(skeleton.children.map(child => child.name)).toEqual(['skull', 'rib-left-1', 'rib-left-2', 'rib-right-1', 'rib-right-2'])
+        skeleton.updateMatrixWorld(true)
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh
+        const center = skull.getWorldPosition(new THREE.Vector3()), ribs: THREE.Mesh<THREE.TubeGeometry>[] = []
+        skeleton.traverse(object => {
+          if (!(object instanceof THREE.Mesh)) return
+          const isRib = object.parent?.name.startsWith('rib-') ?? false
+          if (object.name.startsWith('rib-') && object.geometry instanceof THREE.TubeGeometry) ribs.push(object)
+          for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+            expect(material.transparent).toBe(true); expect(material.opacity).toBe(1); expect(material.depthWrite).toBe(true)
+          }
+          const vertices = object.geometry.attributes.position!
+          for (let i = 0; i < vertices.count; i++) {
+            const p = new THREE.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld)
+            expect([p.x, p.y, p.z].every(Number.isFinite)).toBe(true)
+            expect(Math.hypot(p.x, p.z)).toBeLessThan(radiusAt(shape, p.y))
+            if (isRib) expect(p.distanceTo(center)).toBeGreaterThan(radius)
+          }
+        })
+        expect(ribs).toHaveLength(4)
+        for (const rib of ribs) expect(rib.geometry.parameters.radius / .026).toBeCloseTo(1.23, 2)
+      } finally { disposeSkeleton(skeleton) }
+    })
+  }
 })

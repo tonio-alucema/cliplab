@@ -120,8 +120,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   if (snapshot.backShell?.visible) surface(snapshot.backShell, 'body-back')
   if (snapshot.skeleton?.visible) {
     const bones: { z: number; markup: string }[] = []
-    snapshot.skeleton.traverse(object => {
-      if (!(object instanceof THREE.Mesh) || !object.visible) return
+    const bonePaths = (object: THREE.Mesh) => {
       const data = triangles(object), materials = Array.isArray(object.material) ? object.material : [object.material]
       const pieces: string[] = []
       // Extruded skull caps (material 0) must cover deeper walls (material 1).
@@ -131,8 +130,17 @@ export function snapshotSvg(snapshot: Snapshot): string {
         if (!faces.length) return
         pieces.push(`<path fill="#${material.color.getHexString()}" d="${pathData(boundaryContours(faces.map(triangle => triangle.points)))}"/>`)
       })
+      return pieces.join('')
+    }
+    snapshot.skeleton.traverse(object => {
+      if (!(object instanceof THREE.Mesh) || !object.visible || object.userData.surfaceOverlay) return
+      // Curved toon patches live on the sphere, so their front-facing triangles
+      // cover it even when a patch's center has passed behind the silhouette.
+      // Rear-facing triangles are culled by the same geometry as the renderer.
+      const overlays = object.children.filter((child): child is THREE.Mesh => child instanceof THREE.Mesh && child.visible && child.userData.surfaceOverlay)
+        .map(child => `<g data-name="${xml(child.name)}">${bonePaths(child)}</g>`).join('')
       const center = project(object.getWorldPosition(new THREE.Vector3()))
-      bones.push({ z: center.z, markup: `<g data-name="${xml(object.name || 'Bone')}">${pieces.join('')}</g>` })
+      bones.push({ z: center.z, markup: `<g data-name="${xml(object.name || 'Bone')}">${bonePaths(object)}${overlays}</g>` })
     })
     // Bones are projected from their real 3D meshes before the translucent body.
     // Keep a compact semantic group rather than one layer per mesh triangle.

@@ -95,3 +95,35 @@ it('exports the ghost hem as a filled silhouette without torn gaps or a convex-h
     }
   } finally { renderer.dispose() }
 })
+
+it('keeps spherical skull toon patches visible and occluded exactly as the 3D surface turns', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 512, height: 512, displaySize: 512 })
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
+  let checked = 0
+  try {
+    for (const shape of ['cap', 'chunky-pill'] as const) for (const yaw of [0, 70, 110, 180]) {
+      renderer.render({ ...defaultProject().characters[1]!, shape, bodyModification: 'skeleton', roundedSkull: true, trueFront: false }, sample, { rotation: { x: 0, y: yaw, z: 0 } })
+      const scene = renderer.snapshotScene(), doc = new DOMParser().parseFromString(snapshotSvg(scene), 'image/svg+xml')
+      const skull = scene.skeleton!.getObjectByName('skull') as THREE.Mesh
+      const center = new THREE.Box3().setFromObject(skull).getCenter(new THREE.Vector3())
+      const paths = [...doc.querySelectorAll('[data-name="Inner skeleton"] path')]
+      const colorAt = (x: number, y: number) => {
+        const hit = new THREE.Raycaster(new THREE.Vector3(x, y, 8), new THREE.Vector3(0, 0, -1)).intersectObject(scene.skeleton!, true)[0]
+        if (!hit) return undefined
+        const mesh = hit.object as THREE.Mesh
+        const material = (Array.isArray(mesh.material) ? mesh.material[hit.face!.materialIndex] : mesh.material) as THREE.MeshBasicMaterial
+        return '#' + material.color.getHexString()
+      }
+      for (const x of [-.22, -.15, -.10, -.02, .02, .10, .15, .22]) for (const dy of [-.171, -.123, -.077, -.025, .05, .15]) {
+        const y = center.y + dy, expected = colorAt(x, y)
+        if (!expected || [colorAt(x - .001, y), colorAt(x + .001, y), colorAt(x, y - .001), colorAt(x, y + .001)].some(color => color !== expected)) continue
+        const screen = new THREE.Vector3(x, y, 8).project(scene.camera)
+        const point = { x: (screen.x + 1) * 256, y: (1 - screen.y) * 256 }
+        const painted = paths.filter(path => contains(path.getAttribute('d')!, point)).at(-1)?.getAttribute('fill')
+        expect(painted, `${shape}, yaw ${yaw}, point ${x},${y}`).toBe(expected)
+        checked++
+      }
+    }
+    expect(checked).toBeGreaterThan(250)
+  } finally { renderer.dispose() }
+}, 15000)

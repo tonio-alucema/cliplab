@@ -64,8 +64,12 @@ export const PILL_BODY_MODIFICATIONS: typeof BODY_MODIFICATIONS = [
   { id: 'none', name: 'Standard', description: 'Original upright pill' },
   { id: 'horizontal', name: 'Horizontal', description: 'Lay the body on its side' }
 ]
+export const CHUNKY_PILL_BODY_MODIFICATIONS: typeof BODY_MODIFICATIONS = [
+  ...PILL_BODY_MODIFICATIONS,
+  { id: 'skeleton', name: 'Skeleton', description: 'A spherical skull and ribs' }
+]
 export function bodyModificationsFor(shape: Shape) {
-  return shape === 'cap' ? BODY_MODIFICATIONS : shape === 'capsule' || shape === 'chunky-pill' ? PILL_BODY_MODIFICATIONS : []
+  return shape === 'cap' ? BODY_MODIFICATIONS : shape === 'chunky-pill' ? CHUNKY_PILL_BODY_MODIFICATIONS : shape === 'capsule' ? PILL_BODY_MODIFICATIONS : []
 }
 export const PALETTES = [
   ['#ff986d', '#ffd092'], ['#81d4c1', '#c6efd2'], ['#a79ce8', '#d8cafa'],

@@ -62,6 +62,22 @@ describe('body shape geometry and modifications', () => {
     expect(bodyModification({ shape: 'cap' })).toBe('none')
   })
 
+  it('allows skeletons on chunky pills and anchors their face to the taller skull', () => {
+    expect(bodyModification({ shape: 'chunky-pill', bodyModification: 'skeleton' })).toBe('skeleton')
+    expect(bodyModification({ shape: 'capsule', bodyModification: 'skeleton' })).toBe('none')
+    expect(bodyModification({ shape: 'sphere', bodyModification: 'skeleton' })).toBe('none')
+    const plain = bodyGeometry('chunky-pill'), skeleton = bodyGeometry('chunky-pill', false, 'skeleton')
+    expect(skeleton.attributes.position!.array).toEqual(plain.attributes.position!.array)
+    expect(faceOffset('chunky-pill', 'skeleton') - faceOffset('chunky-pill', 'none')).toBeCloseTo(.2)
+    expect(faceOffset('cap', 'skeleton')).toBe(faceOffset('cap', 'none'))
+    expect(bodyDimensions('chunky-pill', 'skeleton')).toEqual({ width: 1, height: 1.5, depth: 1 })
+    const rounded = skeletonGeometry(false, 'chunky-pill')
+    expect(rounded.getObjectByName('rounded-jaw')).toBeUndefined()
+    expect(rounded.getObjectByName('socket-left')?.userData.surfaceOverlay).toBe(true)
+    expect((rounded.getObjectByName('skull') as THREE.Mesh).geometry.type).toBe('SphereGeometry')
+    disposeSkeleton(rounded); plain.dispose(); skeleton.dispose()
+  })
+
   it('turns only the requested body profiles and measures horizontal pills by their long edge', () => {
     for (const shape of ['capsule', 'chunky-pill'] as const) {
       const geometry = bodyGeometry(shape, false, 'horizontal'); geometry.computeBoundingBox()

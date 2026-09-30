@@ -4,13 +4,17 @@ import { roundedSkeletonGeometry } from './rounded-skull'
 
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : shape === 'chunky-pill' ? 1.5 : 1
 export const isPill = (shape: Shape) => shape === 'capsule' || shape === 'chunky-pill'
-export const bodyModification = (character: Pick<Character, 'shape' | 'bodyModification'>): BodyModification => character.shape === 'cap' ? character.bodyModification === 'horizontal' ? 'none' : character.bodyModification ?? 'none' : isPill(character.shape) && character.bodyModification === 'horizontal' ? 'horizontal' : 'none'
+export function bodyModification(character: Pick<Character, 'shape' | 'bodyModification'>): BodyModification {
+  if (character.shape === 'cap') return character.bodyModification === 'horizontal' ? 'none' : character.bodyModification ?? 'none'
+  if (character.shape === 'chunky-pill' && character.bodyModification === 'skeleton') return 'skeleton'
+  return isPill(character.shape) && character.bodyModification === 'horizontal' ? 'horizontal' : 'none'
+}
 export const bodyAngle = (shape: Shape, modification: BodyModification = 'none') => shape === 'cap' ? modification === 'upside-down' ? Math.PI : modification === 'rotate-left' ? Math.PI / 2 : modification === 'rotate-right' ? -Math.PI / 2 : 0 : isPill(shape) && modification === 'horizontal' ? Math.PI / 2 : 0
 export function bodyDimensions(shape: Shape, modification: BodyModification = 'none') {
   const horizontal = isPill(shape) && modification === 'horizontal'
   return { width: horizontal ? bodyHeight(shape) : 1, height: horizontal ? 1 : bodyHeight(shape), depth: 1 }
 }
-export const faceOffset = (shape: Shape, modification: BodyModification = 'none') => isPill(shape) && modification !== 'horizontal' ? -.14 * (bodyHeight(shape) - 1) : -.025
+export const faceOffset = (shape: Shape, modification: BodyModification = 'none') => shape === 'chunky-pill' && modification === 'skeleton' ? .13 : isPill(shape) && modification !== 'horizontal' ? -.14 * (bodyHeight(shape) - 1) : -.025
 
 export function radiusAt(shape: Shape, y: number, modification: BodyModification = 'none'): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
@@ -78,8 +82,8 @@ export const SKELETON_INSET_OPACITY = .35
 export const SKELETON_BACK_OPACITY = .72
 
 /** A compact, volumetric skull with real socket/nose openings and four curved ribs. */
-export function skeletonGeometry(rounded = false): THREE.Group {
-  if (rounded) return roundedSkeletonGeometry()
+export function skeletonGeometry(rounded = false, shape: Shape = 'cap'): THREE.Group {
+  if (rounded || shape === 'chunky-pill') return roundedSkeletonGeometry(shape === 'chunky-pill' ? 'chunky-pill' : 'cap')
   const group = new THREE.Group(); group.name = 'inner-skeleton'
   // Keep opaque-looking bones in the transparent render pass, between the rear
   // and front shell surfaces; depth writes preserve their real 3D occlusion.
