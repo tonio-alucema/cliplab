@@ -114,9 +114,17 @@ describe('spherical 3D skeleton', () => {
           )
           const current = rib.geometry.parameters.path
           expect(current.getLength() / previous.getLength()).toBeCloseTo(.5, 5)
-          expect(current.getPoint(.5).x / previous.getPoint(.5).x).toBeCloseTo(.8, 5)
+          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715])[row]!
+          expect(current.getPoint(.5).x).toBeCloseTo(previous.getPoint(.5).x * .8 - direction * previousGap / 4, 5)
           expect(current.getPoint(.5).y).toBeCloseTo(previous.getPoint(.5).y - (shape === 'cap' ? row === 0 ? .05 : .025 : 0), 5)
           expect(current.getPoint(.5).z).toBeCloseTo(previous.getPoint(.5).z, 5)
+        }
+        for (const row of [1, 2]) {
+          const left = new THREE.Box3().setFromObject(skeleton.getObjectByName(`rib-left-${row}`)!)
+          const right = new THREE.Box3().setFromObject(skeleton.getObjectByName(`rib-right-${row}`)!)
+          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715])[row - 1]!
+          expect(right.min.x - left.max.x).toBeCloseTo(previousGap / 2, 5)
+          expect(right.min.x).toBeCloseTo(-left.max.x, 5)
         }
       } finally { disposeSkeleton(skeleton) }
     })

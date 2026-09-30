@@ -64,6 +64,10 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
     // Bring the center of each shortened rib 20% closer to the body's midline.
     const center = curve.getPoint(.5)
     const target = center.clone(); target.x *= .8
+    // Halve the visible gap between the left/right pairs. Measuring from the
+    // round inner end preserves bone thickness and avoids merging the ribs.
+    const innerEdge = Math.abs((curve.v0.x - center.x) * .5 + target.x) - .032
+    target.x -= direction * innerEdge * .5
     // Keep a visible neck gap after lowering the end-cap skull.
     if (shape === 'cap') target.y -= row === 0 ? .05 : .025
     for (const point of [curve.v0, curve.v1, curve.v2, curve.v3]) point.sub(center).multiplyScalar(.5).add(target)
