@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import { roundedSkeletonGeometry } from './rounded-skull'
-import { disposeSkeleton, radiusAt } from './body-geometry'
+import { bodyGeometry, disposeSkeleton, radiusAt } from './body-geometry'
+import { toonLightOffset } from './renderer'
 
 describe('spherical 3D skeleton', () => {
   for (const shape of ['cap', 'chunky-pill'] as const) {
-    const radius = shape === 'cap' ? .348 : .40
+    const radius = shape === 'cap' ? .3132 : .36
     it(`uses an undeformed perfect sphere with no jaw or teeth for ${shape}`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
@@ -18,6 +19,36 @@ describe('spherical 3D skeleton', () => {
         expect(skeleton.getObjectByName('rounded-jaw')).toBeUndefined()
         expect(skeleton.getObjectByName('tooth')).toBeUndefined()
       } finally { disposeSkeleton(skeleton) }
+    })
+
+    it(`leaves positive clearance around the skull inside the moving toon inset for ${shape}`, () => {
+      const skeleton = roundedSkeletonGeometry(shape), inset = bodyGeometry(shape, false, 'skeleton', true)
+      try {
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry>
+        const positions = inset.attributes.position!, scale = shape === 'cap' ? .85 : 1
+        const directions = Array.from({ length: 72 }, (_, i) => new THREE.Vector2(Math.cos(i * Math.PI / 36), Math.sin(i * Math.PI / 36)))
+        const rotations = [{ x: -5.9, y: -24.2, z: 0 }]
+        for (const x of [-90, -45, 0, 45, 90]) for (const y of [-180, -90, -45, -28, 0, 28, 45, 90, 180]) for (const z of [0, 45, 90, 180]) rotations.push({ x, y, z })
+        let minimum = Infinity, worst = ''
+        const vertex = new THREE.Vector3(), projected = new Float64Array(positions.count * 2)
+        for (const rotation of rotations) {
+          const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ'))
+          const offset = toonLightOffset(q, true), center = skull.position.clone().applyQuaternion(q)
+          for (let i = 0; i < positions.count; i++) {
+            vertex.fromBufferAttribute(positions, i).multiplyScalar(scale).applyQuaternion(q)
+            projected[i * 2] = vertex.x + offset.x; projected[i * 2 + 1] = vertex.y + offset.y
+          }
+          // Support bounds test the complete convex silhouette in every screen
+          // direction, including opposite profiles and rolled/pitched views.
+          for (const direction of directions) {
+            let support = -Infinity
+            for (let i = 0; i < positions.count; i++) support = Math.max(support, projected[i * 2]! * direction.x + projected[i * 2 + 1]! * direction.y)
+            const gap = support - center.x * direction.x - center.y * direction.y - radius
+            if (gap < minimum) { minimum = gap; worst = `${JSON.stringify(rotation)}, direction ${direction.x.toFixed(3)},${direction.y.toFixed(3)}` }
+          }
+        }
+        expect(minimum, `Minimum inset gap ${minimum} at ${worst}`).toBeGreaterThan(.005)
+      } finally { inset.dispose(); disposeSkeleton(skeleton) }
     })
 
     it(`maps smooth two-tone marks onto the surface and hides them behind the ${shape} skull`, () => {
@@ -65,12 +96,28 @@ describe('spherical 3D skeleton', () => {
           for (let i = 0; i < vertices.count; i++) {
             const p = new THREE.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld)
             expect([p.x, p.y, p.z].every(Number.isFinite)).toBe(true)
+            expect(Math.abs(p.y)).toBeLessThan(shape === 'cap' ? .5 : .75)
             expect(Math.hypot(p.x, p.z)).toBeLessThan(radiusAt(shape, p.y))
             if (isRib) expect(p.distanceTo(center)).toBeGreaterThan(radius)
           }
         })
         expect(ribs).toHaveLength(4)
-        for (const rib of ribs) expect(rib.geometry.parameters.radius / .026).toBeCloseTo(1.23, 2)
+        for (const rib of ribs) {
+          expect(rib.geometry.parameters.radius).toBe(.032)
+          const direction = rib.name.includes('left') ? -1 : 1, row = rib.name.endsWith('2') ? 1 : 0
+          const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122, width = shape === 'chunky-pill' ? 1.12 : 1
+          const previous = new THREE.CubicBezierCurve3(
+            new THREE.Vector3(direction * .065, top - .039, .13),
+            new THREE.Vector3(direction * .15 * width, top - .055, .16),
+            new THREE.Vector3(direction * .255 * width, top - .047, .11),
+            new THREE.Vector3(direction * (.32 - row * .025) * width, top + .006, .035),
+          )
+          const current = rib.geometry.parameters.path
+          expect(current.getLength() / previous.getLength()).toBeCloseTo(.5, 5)
+          expect(current.getPoint(.5).x / previous.getPoint(.5).x).toBeCloseTo(.8, 5)
+          expect(current.getPoint(.5).y).toBeCloseTo(previous.getPoint(.5).y - (shape === 'cap' ? row === 0 ? .05 : .025 : 0), 5)
+          expect(current.getPoint(.5).z).toBeCloseTo(previous.getPoint(.5).z, 5)
+        }
       } finally { disposeSkeleton(skeleton) }
     })
   }

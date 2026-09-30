@@ -34,6 +34,26 @@ function observeDisposal(group: THREE.Group) {
 }
 
 describe('skeleton renderer shape lifecycle', () => {
+  it('aligns spherical skull sockets with default eye centers in the front view', () => {
+    const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 256, height: 256, displaySize: 256, pixelRatio: 1 })
+    renderers.push(renderer)
+    for (const shape of ['cap', 'chunky-pill'] as const) {
+      const character: Character = { ...defaultProject().characters[0]!, shape, bodyModification: 'skeleton', roundedSkull: shape === 'cap', trueFront: true }
+      renderer.render(character, sample)
+      const snapshot = renderer.snapshotScene()
+      for (const side of [-1, 1]) {
+        const socket = snapshot.skeleton!.getObjectByName(side < 0 ? 'socket-left' : 'socket-right')!
+        const center = socket.getWorldPosition(new THREE.Vector3()).project(snapshot.camera)
+        const eye = projectedEye(character, sample.pose, 0, side, snapshot.face.matrixWorld, snapshot.camera)
+        expect(center.x).toBeCloseTo(eye.center.x, 7)
+        expect(center.y).toBeCloseTo(eye.center.y, 7)
+        // Alignment does not flatten the skeleton onto the face surface.
+        expect(center.z).toBeGreaterThan(eye.center.z)
+      }
+      expect(snapshot.sample.pose).toEqual(sample.pose)
+    }
+  })
+
   it('rebuilds cap/chunky skeletons by effective shape and skull style, and disposes each resource once', () => {
     const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 256, height: 256, displaySize: 256, pixelRatio: 1 })
     renderers.push(renderer)

@@ -38,13 +38,18 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
   const options = { transparent: true, opacity: 1, depthWrite: true, toneMapped: false }
   const bone = new THREE.MeshBasicMaterial({ ...options, color: '#fff5cd' })
   const ink = new THREE.MeshBasicMaterial({ ...options, color: '#b8a979' })
-  const radius = shape === 'chunky-pill' ? .40 : .348, centerY = shape === 'chunky-pill' ? .30 : .13
+  // Leave breathing room beneath the inner toon silhouette, including in profile.
+  const radius = shape === 'chunky-pill' ? .36 : .3132, centerY = shape === 'chunky-pill' ? .21 : .075
   const geometry = new THREE.SphereGeometry(radius, 128, 96)
   geometry.computeBoundingBox(); geometry.computeBoundingSphere()
   const skull = new THREE.Mesh(geometry, bone)
   skull.name = 'skull'; skull.position.y = centerY; group.add(skull)
-  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .38, -radius * .30, radius * .24, radius * .24, ink, direction < 0 ? 'socket-left' : 'socket-right'))
-  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .061, -radius * .57, radius * .043, radius * .047, ink, direction < 0 ? 'nose-left' : 'nose-right'))
+  // Match the resting face centers; skull resizing must not widen socket spacing.
+  const eyeX = 103 / 512 * .76 * .75
+  const eyeY = 59 / 512 * .57 * .75 + (shape === 'chunky-pill' ? .13 : -.025)
+  const socketY = eyeY - centerY
+  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * eyeX, socketY, radius * .24, radius * .24, ink, direction < 0 ? 'socket-left' : 'socket-right'))
+  for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .061, socketY - radius * .27, radius * .043, radius * .047, ink, direction < 0 ? 'nose-left' : 'nose-right'))
 
   for (const direction of [-1, 1]) for (let row = 0; row < 2; row++) {
     const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122
@@ -55,6 +60,13 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
       new THREE.Vector3(direction * .255 * width, top - .047, .11),
       new THREE.Vector3(direction * (.32 - row * .025) * width, top + .006, .035),
     )
+    // Halve centerline length while leaving tube/end-cap thickness untouched.
+    // Bring the center of each shortened rib 20% closer to the body's midline.
+    const center = curve.getPoint(.5)
+    const target = center.clone(); target.x *= .8
+    // Keep a visible neck gap after lowering the end-cap skull.
+    if (shape === 'cap') target.y -= row === 0 ? .05 : .025
+    for (const point of [curve.v0, curve.v1, curve.v2, curve.v3]) point.sub(center).multiplyScalar(.5).add(target)
     const rounded = new THREE.Group(); rounded.name = `rib-${direction < 0 ? 'left' : 'right'}-${row + 1}`
     const rib = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, .032, 12, false), bone)
     rib.name = rounded.name; rounded.add(rib)
