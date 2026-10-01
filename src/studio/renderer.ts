@@ -425,20 +425,24 @@ export class CharacterRenderer {
     const propSize = cyclingIcon ? isPill(this.shape) ? .60 + .1 * (bodyHeight(this.shape) - 1) : .58 : isPill(this.shape) ? .32 + .1 * (bodyHeight(this.shape) - 1) : .32
     const propLayout = particleLayout(pose.prop, propPhase, pose)
     let propAnchor: THREE.Vector3 | undefined
+    let propFit = 1
     if (cyclingIcon && detail === 'full') {
       // These thoughts/celebrations occupy the upper-right camera plane even
       // when the character turns away or rolls, like the supplied reference.
       const bodyBounds = new THREE.Box3().setFromObject(this.body)
       const anchor = propAnchor = new THREE.Vector3(bodyBounds.min.x + (bodyBounds.max.x - bodyBounds.min.x) * .88, bodyBounds.max.y - (bodyBounds.max.y - bodyBounds.min.y) * .10, .15)
-      // Use fixed cycle bounds, never the current frame, to avoid zoom pulsing
-      // as particles grow/fade and to preserve large/outward slider settings.
+      // Fit the supporting artwork inside the existing view, never the body.
+      // Full-cycle bounds keep its placement steady as individual marks animate.
       const bounds = propLayout.bounds
       if (bounds) {
         const sx = propSize * this.root.scale.x / 256, sy = propSize * this.root.scale.y / 256
-        const extentX = Math.max(Math.abs(anchor.x + (bounds.left - 128) * sx), Math.abs(anchor.x + (bounds.right - 128) * sx))
-        const extentY = Math.max(Math.abs(anchor.y + (128 - bounds.top) * sy), Math.abs(anchor.y + (128 - bounds.bottom) * sy))
-        const reservedHalf = Math.max(half, (extentX + .025) / aspect / zoom, (extentY + .025) / zoom)
-        half += (reservedHalf - half) * THREE.MathUtils.clamp(sample.propAmount ?? 1, 0, 1)
+        const margin = Math.min(.025, half * .04)
+        const edgeX = half * aspect - margin, edgeY = half - margin
+        propFit = Math.min(1, 2 * edgeX / ((bounds.right - bounds.left) * sx), 2 * edgeY / ((bounds.bottom - bounds.top) * sy))
+        const left = (bounds.left - 128) * sx * propFit, right = (bounds.right - 128) * sx * propFit
+        const bottom = (128 - bounds.bottom) * sy * propFit, top = (128 - bounds.top) * sy * propFit
+        anchor.x = THREE.MathUtils.clamp(anchor.x, -edgeX - left, edgeX - right)
+        anchor.y = THREE.MathUtils.clamp(anchor.y, -edgeY - bottom, edgeY - top)
       }
     }
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
@@ -474,7 +478,7 @@ export class CharacterRenderer {
     this.prop.renderOrder = foreground ? 4 : skeleton ? 3 : 0
     const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${propPhase?.toFixed(4) ?? 'still'}`
     if (!cyclingIcon && propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', propPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
-    this.prop.scale.setScalar(propSize * propLayout.extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
+    this.prop.scale.setScalar(propFit * propSize * propLayout.extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
     this.prop.position.set(cyclingIcon ? width * .38 : pose.prop === 'crown' ? 0 : width / 2 + .06, cyclingIcon ? height / 2 - .14 : pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     if (propAnchor) this.prop.position.copy(this.root.worldToLocal(propAnchor.clone()))
     // Keep the sprite's layout as the shared SVG-export transform, while WebGL

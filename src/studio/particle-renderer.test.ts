@@ -122,22 +122,44 @@ it('keeps a continuous shared particle cycle across beat and animation-step boun
 })
 
 
-it('eases particle framing in and out with prop visibility and preserves compact-size framing', () => {
+it('keeps body framing identical when question and star effects enter, play, and leave', () => {
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
-  const character = { ...defaultProject().characters[0]!, shape: 'cap' as const, trueFront: true, followRotation: false, lockPosition: true }
-  const half = (prop: Prop, propAmount = 1, displaySize = 400) => {
-    renderer.render(character, { ...sampleFor(prop, .4), propAmount }, { displaySize })
-    return renderer.snapshotScene().camera.top
-  }
+  const base = { ...defaultProject().characters[0]!, followRotation: false, lockPosition: true }
   try {
-    const base = half('none')
-    for (const prop of ['question', 'sparkle'] as const) {
-      expect(half(prop, 0)).toBeCloseTo(base)
-      const full = half(prop), middle = half(prop, .5)
-      expect(full).toBeGreaterThan(base)
-      expect(middle).toBeCloseTo((base + full) / 2)
-      expect(half(prop, .00001) - base).toBeLessThan(.00001)
-      expect(half(prop, 1, 24)).toBe(half('none', 1, 24))
+    for (const shape of ['cap', 'chunky-pill', 'capsule'] as const) for (const displaySize of [24, 48, 400]) for (const zoom of [1, 2]) {
+      const character = { ...base, shape }
+      renderer.render(character, sampleFor('none'), { displaySize, zoom })
+      const original = renderer.snapshotScene()
+      const projection = original.camera.projectionMatrix.clone()
+      const bodyMatrix = original.body.matrixWorld.clone()
+      for (const prop of ['question', 'sparkle'] as const) for (const propAmount of [0, .5, 1]) for (const effectPhase of [0, .4, .9]) {
+        renderer.render(character, { ...sampleFor(prop, effectPhase), propAmount }, { displaySize, zoom })
+        const state = renderer.snapshotScene()
+        expect(state.camera.projectionMatrix.equals(projection)).toBe(true)
+        expect(state.body.matrixWorld.equals(bodyMatrix)).toBe(true)
+      }
+    }
+  } finally { renderer.dispose() }
+})
+
+it('fits the particle cloud inside the fixed view and shares its placement with SVG exports', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const base = { ...defaultProject().characters[0]!, followRotation: false, lockPosition: true }
+  try {
+    for (const shape of ['cap', 'chunky-pill', 'capsule'] as const) for (const prop of ['question', 'sparkle'] as const) {
+      for (const width of [200, 600]) for (const zoom of [1, 2]) for (const propSize of [1, 2]) {
+        const pose = { ...BASE_POSE, prop, propSize, propCount: 6, propOutward: 3 }
+        const layout = particleLayout(prop, .4, pose), bounds = layout.bounds!
+        renderer.render({ ...base, shape }, { ...sampleFor(prop, .4), pose }, { width, height: 400, zoom, rotation: { x: 20, y: 70, z: 25 } })
+        const state = renderer.snapshotScene()
+        const center = state.prop.getWorldPosition(new THREE.Vector3()), scale = state.prop.getWorldScale(new THREE.Vector3())
+        for (const x of [bounds.left, bounds.right]) for (const y of [bounds.top, bounds.bottom]) {
+          const corner = new THREE.Vector3(center.x + (x - 128) / layout.extent * scale.x, center.y + (128 - y) / layout.extent * scale.y, center.z).project(state.camera)
+          expect(Math.abs(corner.x)).toBeLessThan(1)
+          expect(Math.abs(corner.y)).toBeLessThan(1)
+        }
+        expect(supportingArt(renderer).querySelectorAll('path')).toHaveLength(6)
+      }
     }
   } finally { renderer.dispose() }
 })
