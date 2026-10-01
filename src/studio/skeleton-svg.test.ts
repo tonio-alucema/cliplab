@@ -126,7 +126,7 @@ it('keeps recessed skull bowls and toon rims occluded like the 3D geometry at ev
       }
       const points = [-.22, -.15, -.10, -.02, .02, .10, .15, .22].flatMap(x => [-.171, -.123, -.077, -.025, .05, .15].map(dy => ({ x, y: center.y + dy })))
       if (Math.abs(rotation.x) >= 80 || rotation.y === 145) {
-        for (const name of ['socket-left', 'socket-right', 'nose', 'tooth-left', 'tooth-right']) {
+        for (const name of ['socket-left', 'socket-right', 'nose', 'tooth-left', 'tooth-center', 'tooth-right']) {
           const feature = skull.getObjectByName(name)!.getWorldPosition(new THREE.Vector3())
           for (const dx of [-.02, 0, .02]) for (const dy of [-.02, 0, .02]) points.push({ x: feature.x + dx, y: feature.y + dy })
         }

@@ -5,7 +5,7 @@ import { BASE_POSE, defaultProject } from './model'
 import { faceForSize, projectedEye, resolveEyeGazes } from './renderer'
 
 describe('body shape geometry and modifications', () => {
-  it('gives chunky pill the requested 1:1.5 ratio with capsule curvature', () => {
+  it('gives chunky pill the requested 1:1.5 ratio with continuous cap curvature', () => {
     const geometry = bodyGeometry('chunky-pill')
     geometry.computeBoundingBox()
     const size = geometry.boundingBox!.getSize(new THREE.Vector3())
@@ -15,6 +15,55 @@ describe('body shape geometry and modifications', () => {
     expect(radiusAt('chunky-pill', .75)).toBe(0)
     expect(faceOffset('chunky-pill')).toBeCloseTo(-.07)
     geometry.dispose()
+  })
+
+  it('eases pill curvature continuously away from the straight sides', () => {
+    for (const shape of ['capsule', 'chunky-pill'] as const) {
+      const join = (bodyHeight(shape) - 1) / 2
+      const curvatureAtJoin = (h: number) => Math.abs((radiusAt(shape, join + h) - 2 * radiusAt(shape, join) + radiusAt(shape, join - h)) / h ** 2)
+      // Circular caps have a nonzero curvature jump here; the new profile's
+      // one-sided curvature tends to the straight side's zero curvature.
+      expect(curvatureAtJoin(.00001)).toBeLessThan(.025)
+      expect(curvatureAtJoin(.00001)).toBeLessThan(curvatureAtJoin(.001) * .2)
+      expect(radiusAt(shape, join + .25)).toBeGreaterThan(Math.sqrt(.25 - .25 ** 2))
+      expect(radiusAt(shape, bodyHeight(shape))).toBe(0)
+    }
+  })
+
+  it('keeps pill facial projection on the continuous surface, including the rounded shoulders', () => {
+    const material = new THREE.MeshBasicMaterial()
+    for (const shape of ['capsule', 'chunky-pill'] as const) for (const modification of ['none', 'horizontal'] as const) {
+      const geometry = bodyGeometry(shape, false, modification), mesh = new THREE.Mesh(geometry, material)
+      mesh.updateMatrixWorld(true)
+      for (const capY of [.02, .15, .3, .45]) for (const direction of [-1, 1]) for (const radialFraction of [0, .4, .8]) {
+        const uprightY = direction * ((bodyHeight(shape) - 1) / 2 + capY)
+        const uprightX = radiusAt(shape, uprightY) * radialFraction
+        const x = modification === 'horizontal' ? -uprightY : uprightX
+        const y = modification === 'horizontal' ? uprightX : uprightY
+        const ray = new THREE.Raycaster(new THREE.Vector3(x, y, 3), new THREE.Vector3(0, 0, -1))
+        const hit = ray.intersectObject(mesh)[0]
+        expect(hit, `${shape} ${modification}: ${x}, ${y}`).toBeDefined()
+        expect(Math.abs(hit!.point.z - bodySurfaceZ(shape, x, y, modification)!)).toBeLessThan(.0015)
+      }
+      geometry.dispose()
+    }
+    material.dispose()
+  })
+
+  it('keeps continuous pill toon insets contained and gives every vertex a finite unit normal', () => {
+    for (const shape of ['capsule', 'chunky-pill'] as const) {
+      const outer = bodyGeometry(shape), inset = bodyGeometry(shape, false, 'none', true)
+      for (const geometry of [outer, inset]) {
+        const normals = geometry.attributes.normal!
+        for (let i = 0; i < normals.count; i++) expect(Math.hypot(normals.getX(i), normals.getY(i), normals.getZ(i))).toBeCloseTo(1, 5)
+      }
+      const vertices = inset.attributes.position!
+      for (let i = 0; i < vertices.count; i++) {
+        expect(Math.abs(vertices.getY(i))).toBeLessThan(bodyHeight(shape) / 2)
+        expect(Math.hypot(vertices.getX(i), vertices.getZ(i))).toBeLessThan(radiusAt(shape, vertices.getY(i)))
+      }
+      outer.dispose(); inset.dispose()
+    }
   })
 
   it('flips only the end-cap surface and keeps its facial projection upright', () => {
@@ -127,7 +176,7 @@ describe('body shape geometry and modifications', () => {
       geometry.dispose(); material.dispose()
     }
     expect(bodySurfaceZ('capsule', .9, .4, 'horizontal')).toBeUndefined()
-    expect(bodySurfaceZ('capsule', .8, .2, 'horizontal')).toBeCloseTo(Math.sqrt(.25 - .3 ** 2 - .2 ** 2))
+    expect(bodySurfaceZ('capsule', .8, .2, 'horizontal')).toBeCloseTo(Math.sqrt(radiusAt('capsule', .8) ** 2 - .2 ** 2))
   })
 
   it('keeps horizontal compact faces centered vertically with the same size constraints', () => {

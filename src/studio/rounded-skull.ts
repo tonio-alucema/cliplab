@@ -1,67 +1,8 @@
 import * as THREE from 'three'
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
+import { craniumGeometry, skullSurface } from './skull-cranium'
 
 type SkeletonShape = 'cap' | 'chunky-pill'
 const SEGMENTS = 80
-const edgeKey = (a: number, b: number) => a < b ? `${a}:${b}` : `${b}:${a}`
-
-// The top retains its spherical dome. A shallow superellipse rounds off the
-// lower corners while keeping the underside short and almost horizontal.
-function skullSurface(radius: number, x: number, y: number) {
-  const sphereY = y >= 0 ? y : -radius * Math.asin(Math.min(1, Math.max(0, -y / (radius * .6)))) * 2 / Math.PI
-  return Math.sqrt(Math.max(0, radius * radius - x * x - sphereY * sphereY))
-}
-
-/** Triangulate the curved front with genuine openings. Shared subdivisions keep
- * a watertight seam with the back and the cavity rims, without CSG artifacts. */
-function craniumGeometry(radius: number, openings: THREE.Vector2[][]) {
-  const outline = Array.from({ length: 128 }, (_, i) => {
-    const angle = i / 128 * Math.PI * 2, y = Math.sin(angle)
-    return new THREE.Vector2(Math.cos(angle) * radius, (y < 0 ? -.6 * Math.sin(-y * Math.PI / 2) : y) * radius)
-  })
-  const positions: number[] = [], indices: number[] = []
-  for (const sign of [1, -1]) {
-    const loops = [outline, ...(sign === 1 ? openings : [])]
-    const flat = loops.flat(), points = flat.map((p, i) => new THREE.Vector3(p.x, p.y, i < outline.length ? 0 : skullSurface(radius, p.x, p.y) * sign))
-    let faces = THREE.ShapeUtils.triangulateShape(outline, loops.slice(1))
-    let boundary = new Set<string>(), offset = 0
-    for (const loop of loops) {
-      loop.forEach((_, i) => boundary.add(edgeKey(offset + i, offset + (i + 1) % loop.length)))
-      offset += loop.length
-    }
-    // Keep hole and silhouette edges linear between their densely sampled
-    // endpoints so independently built rims share the exact same boundary.
-    for (let level = 0; level < (sign === 1 ? 3 : 4); level++) {
-      const cache = new Map<string, number>(), nextBoundary = new Set<string>()
-      const midpoint = (a: number, b: number) => {
-        const key = edgeKey(a, b), cached = cache.get(key)
-        if (cached !== undefined) return cached
-        const point = points[a]!.clone().add(points[b]!).multiplyScalar(.5)
-        if (!boundary.has(key)) point.z = skullSurface(radius, point.x, point.y) * sign
-        const index = points.push(point) - 1; cache.set(key, index)
-        if (boundary.has(key)) { nextBoundary.add(edgeKey(a, index)); nextBoundary.add(edgeKey(index, b)) }
-        return index
-      }
-      faces = faces.flatMap(([a, b, c]) => {
-        const ab = midpoint(a!, b!), bc = midpoint(b!, c!), ca = midpoint(c!, a!)
-        return [[a!, ab, ca], [ab, b!, bc], [ca, bc, c!], [ab, bc, ca]]
-      })
-      boundary = nextBoundary
-    }
-    const base = positions.length / 3
-    for (const point of points) positions.push(point.x, point.y, point.z)
-    for (const [a, b, c] of faces) {
-      const pa = points[a!]!, pb = points[b!]!, pc = points[c!]!
-      const winding = (pb.x - pa.x) * (pc.y - pa.y) - (pb.y - pa.y) * (pc.x - pa.x)
-      indices.push(base + a!, base + (winding * sign > 0 ? b! : c!), base + (winding * sign > 0 ? c! : b!))
-    }
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setIndex(indices)
-  geometry.computeVertexNormals(); geometry.computeBoundingBox(); geometry.computeBoundingSphere()
-  return geometry
-}
-
 type Opening = { name: string; center: THREE.Vector2; points: THREE.Vector2[] }
 function opening(name: string, x: number, y: number, rx: number, ry: number, nose = false): Opening {
   return { name, center: new THREE.Vector2(x, y), points: Array.from({ length: SEGMENTS }, (_, i) => {
@@ -73,7 +14,7 @@ function opening(name: string, x: number, y: number, rx: number, ry: number, nos
 
 /** A beveled lip leads into a closed, concave bowl. Both are actual depth-tested
  * surfaces, not decals. Discrete colors carry the same toon bands into SVG. */
-function recessedOpening(radius: number, aperture: Opening, palette: THREE.MeshBasicMaterial[]) {
+function recessedOpening(radius: number, aperture: Opening, shade: THREE.MeshBasicMaterial) {
   const { center, points, name } = aperture, isNose = name === 'nose'
   const centerZ = skullSurface(radius, center.x, center.y)
   const depth = radius * (isNose ? .10 : .16), inset = isNose ? .80 : .87
@@ -82,7 +23,7 @@ function recessedOpening(radius: number, aperture: Opening, palette: THREE.MeshB
     return new THREE.Vector3(point.x - center.x, point.y - center.y, skullSurface(radius, point.x, point.y) - centerZ - depression)
   }
   const build = (rim: boolean) => {
-    const positions: number[] = [], bands: number[][] = [[], [], []]
+    const positions: number[] = [], indices: number[] = []
     const rings = rim ? 3 : 8
     for (let ring = 0; ring <= rings; ring++) {
       const t = ring / rings, scale = rim ? 1 - (1 - inset) * t : inset * (1 - t)
@@ -92,17 +33,14 @@ function recessedOpening(radius: number, aperture: Opening, palette: THREE.MeshB
     for (let ring = 0; ring < rings; ring++) for (let i = 0; i < SEGMENTS; i++) {
       const a = ring * SEGMENTS + i, b = ring * SEGMENTS + (i + 1) % SEGMENTS
       const c = a + SEGMENTS, d = b + SEGMENTS
-      // The upper/right rim falls into shade; the lower/left lip catches light.
-      const angle = (i + .5) / SEGMENTS * Math.PI * 2
-      const light = -Math.cos(angle) * .45 - Math.sin(angle) * .8
-      const band = rim ? light > .1 ? 0 : 1 : 2
-      bands[band]!.push(a, b, d, a, d, c)
+      // Every wall and backing surface uses the socket shade, including the
+      // complete beveled lip. No highlighted arc can break the filled opening.
+      indices.push(a, b, d, a, d, c)
     }
-    const geometry = new THREE.BufferGeometry(), indices: number[] = []
+    const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    for (const [index, band] of bands.entries()) { geometry.addGroup(indices.length, band.length, index); indices.push(...band) }
     geometry.setIndex(indices); geometry.computeVertexNormals(); geometry.computeBoundingBox(); geometry.computeBoundingSphere()
-    const mesh = new THREE.Mesh(geometry, palette)
+    const mesh = new THREE.Mesh(geometry, shade)
     mesh.name = rim ? `${name}-rim` : name
     mesh.position.set(center.x, center.y, centerZ)
     mesh.userData.skullLayer = rim ? 1 : 0
@@ -111,15 +49,13 @@ function recessedOpening(radius: number, aperture: Opening, palette: THREE.MeshB
   return [build(false), build(true)]
 }
 
-/** Rounded dome, shortened underside, and two front teeth. The classic skull
+/** Rounded dome with three gently scalloped front tooth lobes. The classic skull
  * remains separate; this alternate style serves end caps and chunky pills. */
 export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Group {
   const group = new THREE.Group(); group.name = 'inner-skeleton'
   const options = { transparent: true, opacity: 1, depthWrite: true, toneMapped: false }
   const bone = new THREE.MeshBasicMaterial({ ...options, color: '#fff5cd' })
-  const rimShade = new THREE.MeshBasicMaterial({ ...options, color: '#c9b984' })
   const cavity = new THREE.MeshBasicMaterial({ ...options, color: '#74674f' })
-  const palette = [bone, rimShade, cavity]
   const radius = shape === 'chunky-pill' ? .36 : .3132, centerY = shape === 'chunky-pill' ? .21 : .075
   // Preserve the alignment between the face's resting eyes and the sockets.
   const eyeX = 103 / 512 * .76 * .75
@@ -130,13 +66,29 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
   const skull = new THREE.Mesh(craniumGeometry(radius, holes.map(hole => hole.points)), bone)
   skull.name = 'skull'; skull.position.y = centerY; skull.userData.recessedSkull = true
   group.add(skull)
-  for (const hole of holes) skull.add(...recessedOpening(radius, hole, palette))
-  for (const direction of [-1, 1]) {
-    const tooth = new THREE.Mesh(new RoundedBoxGeometry(radius * .25, radius * .32, radius * .32, 4, radius * .07), bone)
-    tooth.name = direction < 0 ? 'tooth-left' : 'tooth-right'
-    tooth.position.set(direction * radius * .15, -radius * .635, radius * .38)
-    skull.add(tooth)
+  for (const hole of holes) skull.add(...recessedOpening(radius, hole, cavity))
+  // Displace the existing underside continuously instead of intersecting box
+  // teeth with it. The shoulders blend into the skull, with shallow valleys
+  // between three small forward lobes and no separate join line. The depth
+  // falloff finishes before the nose aperture, preserving its matching seam.
+  const teeth = [-.32, 0, .32]
+  const smooth = (value: number) => { const t = THREE.MathUtils.clamp(value, 0, 1); return t * t * t * (10 + t * (-15 + 6 * t)) }
+  const positions = skull.geometry.attributes.position!
+  const toothLift = (x: number, y: number, z: number) => {
+    const lobes = teeth.reduce((sum, center) => sum + Math.exp(-.5 * ((x / radius - center) / .105) ** 2), 0)
+    const front = smooth(z / radius / .18) * (1 - smooth((z / radius - .48) / .14)) * Math.exp(-.5 * ((z / radius - .40) / .20) ** 2)
+    return radius * .13 * lobes * front * smooth((-y / radius - .32) / .25)
   }
+  for (let i = 0; i < positions.count; i++) positions.setY(i, positions.getY(i) - toothLift(positions.getX(i), positions.getY(i), positions.getZ(i)))
+  positions.needsUpdate = true
+  skull.geometry.computeVertexNormals(); skull.geometry.computeBoundingBox(); skull.geometry.computeBoundingSphere()
+  teeth.forEach((x, index) => {
+    // Semantic anchors keep exported/runtime tooling able to locate each lobe.
+    const anchor = new THREE.Object3D(); anchor.name = ['tooth-left', 'tooth-center', 'tooth-right'][index]!
+    const z = radius * .40, y = -radius * .6 * Math.sin(Math.sqrt(1 - x * x - .40 ** 2) * Math.PI / 2)
+    anchor.position.set(x * radius, y - toothLift(x * radius, y, z), z)
+    skull.add(anchor)
+  })
 
   for (const direction of [-1, 1]) for (let row = 0; row < (shape === 'chunky-pill' ? 3 : 2); row++) {
     const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122
@@ -186,5 +138,11 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
       }
     }
   }
+  const ribs = group.children.filter(child => child.name.startsWith('rib-'))
+  const skullBottom = new THREE.Box3().setFromObject(skull).min.y
+  const ribTop = Math.max(...ribs.map(rib => new THREE.Box3().setFromObject(rib).max.y))
+  const lift = Math.max(0, skullBottom - ribTop) * .5
+  for (const rib of ribs) rib.position.y += lift
+  group.userData.ribLift = lift
   return group
 }

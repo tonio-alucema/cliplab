@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { BodyModification, Character, Shape } from './model'
 import { roundedSkeletonGeometry } from './rounded-skull'
+import { continuousPillGeometry, continuousPillRadius } from './continuous-pill'
 
 export const bodyHeight = (shape: Shape) => shape === 'capsule' ? 2 : shape === 'chunky-pill' ? 1.5 : 1
 export const isPill = (shape: Shape) => shape === 'capsule' || shape === 'chunky-pill'
@@ -18,7 +19,7 @@ export const faceOffset = (shape: Shape, modification: BodyModification = 'none'
 
 export function radiusAt(shape: Shape, y: number, modification: BodyModification = 'none'): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
-  if (isPill(shape)) { const dy = Math.max(Math.abs(y) - (bodyHeight(shape) - 1) / 2, 0); return Math.sqrt(Math.max(0, .25 - dy * dy)) }
+  if (isPill(shape)) return continuousPillRadius(y, .5, bodyHeight(shape) - 1)
   if (modification === 'upside-down') y = -y
   if (y >= 0) return Math.sqrt(Math.max(0, .25 - y * y))
   if (y >= -.43) return .5
@@ -37,7 +38,7 @@ export function bodySurfaceZ(shape: Shape, x: number, y: number, modification: B
 
 export function bodyGeometry(shape: Shape, squareBottom = false, modification: BodyModification = 'none', inset = false): THREE.BufferGeometry {
   if (shape === 'sphere') return new THREE.SphereGeometry(.5, 80, 64)
-  if (isPill(shape)) return new THREE.CapsuleGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1), 24, 80).rotateZ(bodyAngle(shape, modification))
+  if (isPill(shape)) return continuousPillGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1)).rotateZ(bodyAngle(shape, modification))
   const ghost = modification === 'ghost'
   // Radial rings let the draped underside deform smoothly from every camera angle.
   const corner = squareBottom && !ghost ? 0 : .07

@@ -322,7 +322,7 @@ export class CharacterRenderer {
     })
     this.body = new THREE.Mesh(bodyGeometry('capsule'), material)
     const fillMaterial = material.clone(); fillMaterial.depthTest = false; fillMaterial.depthWrite = false; fillMaterial.uniforms.insetFill!.value = 1
-    this.lightFill = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .94, 24, 80), fillMaterial); this.lightFill.renderOrder = 1
+    this.lightFill = new THREE.Mesh(bodyGeometry('capsule', false, 'none', true), fillMaterial); this.lightFill.renderOrder = 1
     this.face = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 56, 40), new THREE.MeshBasicMaterial({ map: this.faceTexture, transparent: true, alphaTest: .008, depthWrite: false, side: THREE.FrontSide, toneMapped: false }))
     this.face.geometry.setAttribute('faceValid', new THREE.BufferAttribute(new Float32Array(this.face.geometry.attributes.position!.count).fill(1), 1))
     this.face.material.onBeforeCompile = shader => {

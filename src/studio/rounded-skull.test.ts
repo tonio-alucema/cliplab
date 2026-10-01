@@ -7,13 +7,14 @@ import { toonLightOffset } from './renderer'
 describe('recessed 3D skeleton', () => {
   for (const shape of ['cap', 'chunky-pill'] as const) {
     const radius = shape === 'cap' ? .3132 : .36
-    it(`uses a round dome, shallow underside and two forward teeth for ${shape}`, () => {
+    it(`uses a round dome, shallow underside and three shallow, smoothly joined front lobes for ${shape}`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
         const skull = skeleton.getObjectByName('skull') as THREE.Mesh
         const bounds = skull.geometry.boundingBox!
         expect(bounds.max.y).toBeCloseTo(radius)
-        expect(bounds.min.y).toBeCloseTo(-radius * .6)
+        expect(bounds.min.y).toBeLessThan(-radius * .67)
+        expect(bounds.min.y).toBeGreaterThan(-radius * .76)
         expect(bounds.max.x - bounds.min.x).toBeCloseTo(radius * 2)
         expect(bounds.max.z - bounds.min.z).toBeCloseTo(radius * 2, 2)
         expect(skull.userData.recessedSkull).toBe(true)
@@ -24,14 +25,23 @@ describe('recessed 3D skeleton', () => {
           if (vertex.y >= 0) expect(vertex.length()).toBeCloseTo(radius, 3)
         }
         const teeth = skull.children.filter(child => child.name.startsWith('tooth-'))
-        expect(teeth).toHaveLength(2)
+        expect(teeth).toHaveLength(3)
+        skeleton.updateMatrixWorld(true)
         for (const tooth of teeth) {
           expect(tooth.position.z).toBeGreaterThan(radius * .2)
-          const bounds = new THREE.Box3().setFromObject(tooth)
-          expect(bounds.min.y).toBeLessThan(-radius * .6)
-          expect(bounds.max.y).toBeGreaterThan(-radius * .6)
+          expect(tooth.position.y).toBeLessThan(-radius * .6)
+          expect(tooth.position.y).toBeGreaterThan(-radius * .76)
+          // Teeth are smoothly displaced regions of the same skull mesh, not
+          // overlapping blocks with an abrupt seam where they meet the head.
+          expect(tooth).not.toBeInstanceOf(THREE.Mesh)
+          const ray = new THREE.Raycaster(new THREE.Vector3(tooth.position.x, -2, tooth.position.z), new THREE.Vector3(0, 1, 0))
+          const hit = ray.intersectObject(skull, false)[0]
+          expect(hit).toBeDefined()
+          expect(hit!.point.y - skull.position.y).toBeCloseTo(tooth.position.y, 2)
         }
-        expect(teeth[0]!.position.x).toBeCloseTo(-teeth[1]!.position.x)
+        expect(teeth[0]!.position.x).toBeCloseTo(-teeth[2]!.position.x)
+        expect(teeth[1]!.position.x).toBe(0)
+        expect(teeth[1]!.position.x - teeth[0]!.position.x).toBeGreaterThan(radius * .3)
         expect(skeleton.getObjectByName('rounded-jaw')).toBeUndefined()
       } finally { disposeSkeleton(skeleton) }
     })
@@ -72,13 +82,15 @@ describe('recessed 3D skeleton', () => {
         skeleton.updateMatrixWorld(true)
         const skull = skeleton.getObjectByName('skull') as THREE.Mesh
         for (const name of ['socket-left', 'socket-right', 'nose']) {
-          const patch = skeleton.getObjectByName(name) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial[]>
+          const patch = skeleton.getObjectByName(name) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>
           const rim = skeleton.getObjectByName(`${name}-rim`) as typeof patch
           expect(patch.userData.skullLayer).toBe(0); expect(rim.userData.skullLayer).toBe(1)
           expect(patch.userData.surfaceOverlay).toBeUndefined()
-          for (const material of patch.material) {
-            expect(material.type).toBe('MeshBasicMaterial')
-            expect(material.map).toBeNull(); expect(material.depthTest).toBe(true)
+          for (const mesh of [patch, rim]) {
+            expect(Array.isArray(mesh.material)).toBe(false)
+            expect(mesh.material.color.getHexString()).toBe('74674f')
+            expect(mesh.material.type).toBe('MeshBasicMaterial')
+            expect(mesh.material.map).toBeNull(); expect(mesh.material.depthTest).toBe(true)
           }
           const position = patch.geometry.attributes.position!
           // The center is physically deeper than the matching lip, so camera
@@ -113,10 +125,9 @@ describe('recessed 3D skeleton', () => {
         expect(skeleton.children.map(child => child.name)).toEqual(['skull', ...['left', 'right'].flatMap(side => Array.from({ length: rows }, (_, i) => `rib-${side}-${i + 1}`))])
         skeleton.updateMatrixWorld(true)
         const skull = skeleton.getObjectByName('skull') as THREE.Mesh
-        const center = skull.getWorldPosition(new THREE.Vector3()), ribs: THREE.Mesh<THREE.TubeGeometry>[] = []
+        const ribs: THREE.Mesh<THREE.TubeGeometry>[] = []
         skeleton.traverse(object => {
           if (!(object instanceof THREE.Mesh)) return
-          const isRib = object.parent?.name.startsWith('rib-') ?? false
           if (object.name.startsWith('rib-') && object.geometry instanceof THREE.TubeGeometry) ribs.push(object)
           for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
             expect(material.transparent).toBe(true); expect(material.opacity).toBe(1); expect(material.depthWrite).toBe(true)
@@ -127,9 +138,12 @@ describe('recessed 3D skeleton', () => {
             expect([p.x, p.y, p.z].every(Number.isFinite)).toBe(true)
             expect(Math.abs(p.y)).toBeLessThan(shape === 'cap' ? .5 : .75)
             expect(Math.hypot(p.x, p.z)).toBeLessThan(radiusAt(shape, p.y))
-            if (isRib) expect(p.distanceTo(center)).toBeGreaterThan(radius)
           }
         })
+        const ribTop = Math.max(...skeleton.children.filter(child => child.name.startsWith('rib-')).map(rib => new THREE.Box3().setFromObject(rib).max.y))
+        const neckGap = new THREE.Box3().setFromObject(skull).min.y - ribTop
+        expect(neckGap).toBeGreaterThan(0)
+        expect(neckGap).toBeCloseTo(skeleton.userData.ribLift, 6)
         expect(ribs).toHaveLength(rows * 2)
         for (const rib of ribs) {
           expect(rib.geometry.parameters.radius).toBe(.032)
