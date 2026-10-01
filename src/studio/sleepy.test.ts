@@ -4,6 +4,7 @@ import { BASE_POSE, faceLayers } from './model'
 import { drawProp } from './renderer'
 import { SvgCanvas } from './svg-canvas'
 import { particleLayout } from './particles'
+import { particleIconSource } from './particle-art'
 it('anchors drool at the lower-right lip as the sleepy mouth opens and morphs', () => {
   const sleep = { ...BASE_POSE, mouth: 'sleep' as const, drool: true }, oh = { ...sleep, mouth: 'oh' as const, mouthOpen: .25, mouthWidth: .65 }
   const open = mouthGeometry(oh), anchor = droolAnchor(open.outline, open.width)
@@ -36,4 +37,13 @@ it('drifts the sleep marks outward and upward while retaining their eased loop',
   expect(later[0]! - early[0]!).toBeGreaterThan(8)
   expect(early[1]! - later[1]!).toBeGreaterThan(12)
   expect(positions(0)).toEqual(positions(1))
+})
+
+it('uses the supplied question mark yellow for sleep marks in the shared raster and SVG drawing path', () => {
+  const ctx = new SvgCanvas('sleep-color')
+  drawProp(ctx as unknown as CanvasRenderingContext2D, 'zzz', '#ffd362', .3)
+  const yellow = particleIconSource('question').svg.match(/fill="(#[A-Fa-f0-9]{6})"/)![1]!
+  const strokes = [...ctx.markup().matchAll(/stroke="([^"]+)"/g)].map(match => match[1]!.toUpperCase())
+  expect(strokes).toHaveLength(3)
+  expect(strokes.every(color => color === yellow.toUpperCase())).toBe(true)
 })

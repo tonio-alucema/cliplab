@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
-import { drawParticleIcon } from './particle-art'
+import { drawParticleIcon, PARTICLE_YELLOW } from './particle-art'
 import { ParticleVectors } from './particle-vectors'
 import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyDimensions, bodyModification, bodySurfaceZ, disposeSkeleton, faceOffset, isPill, skeletonGeometry, SKELETON_BACK_OPACITY, SKELETON_BODY_OPACITY, SKELETON_INSET_OPACITY } from './body-geometry'
 export { bodyHeight, radiusAt } from './body-geometry'
@@ -262,7 +262,7 @@ export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], colo
     const i = particle.index
     ctx.save(); ctx.globalAlpha = particle.alpha
     ctx.translate(particle.x, particle.y); ctx.rotate(particle.rotation); ctx.scale(particle.scale, particle.scale)
-    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    ctx.fillStyle = prop === 'zzz' ? PARTICLE_YELLOW : color; ctx.strokeStyle = prop === 'zzz' ? PARTICLE_YELLOW : color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
     if (prop === 'zzz') { const r = 14 + i * 5; ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, -r); ctx.lineTo(-r, r); ctx.lineTo(r, r); ctx.stroke() }
     else if (prop === 'sparkle') drawParticleIcon(ctx, prop)
     else if (prop === 'heart') heart(ctx, 0, 0, 17 + i * 3)
@@ -421,7 +421,7 @@ export class CharacterRenderer {
       half = Math.max(half, safeHalf, safeHalf / aspect)
     }
     const cyclingIcon = pose.prop === 'question' || pose.prop === 'sparkle'
-    const propPhase = cyclingIcon && this.options.reducedMotion ? undefined : sample.effectPhase
+    const propPhase = cyclingIcon && this.options.reducedMotion ? undefined : pose.prop === 'sparkle' && sample.effectPhase !== undefined ? sample.propPhase ?? sample.effectPhase : sample.effectPhase
     const propSize = cyclingIcon ? isPill(this.shape) ? .60 + .1 * (bodyHeight(this.shape) - 1) : .58 : isPill(this.shape) ? .32 + .1 * (bodyHeight(this.shape) - 1) : .32
     const propLayout = particleLayout(pose.prop, propPhase, pose)
     let propAnchor: THREE.Vector3 | undefined

@@ -296,3 +296,20 @@ it('keeps a visible gap between the tighter, independently tilted question silho
     }
   }
 })
+
+
+it('uses the fresh star-run clock in both the live mesh and SVG snapshot', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  try {
+    const sample = { ...sampleFor('sparkle', .78), propPhase: .02 }
+    renderer.render(defaultProject().characters[0]!, sample)
+    expect(renderer.snapshotScene().propPhase).toBe(.02)
+    const fresh = supportingArt(renderer).innerHTML
+    renderer.render(defaultProject().characters[0]!, { ...sample, effectPhase: .2 })
+    expect(supportingArt(renderer).innerHTML).toBe(fresh)
+    renderer.render(defaultProject().characters[0]!, { ...sample, propPhase: .4 })
+    expect(supportingArt(renderer).innerHTML).not.toBe(fresh)
+    renderer.render(defaultProject().characters[0]!, { ...sample, effectPhase: undefined })
+    expect(renderer.snapshotScene().propPhase).toBeUndefined()
+  } finally { renderer.dispose() }
+})

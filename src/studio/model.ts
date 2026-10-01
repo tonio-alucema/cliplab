@@ -43,7 +43,7 @@ export function removeExpression(project: Project, id: string) {
 }
 export type FaceTraits = Pick<Pose, 'eye' | 'mouth' | 'faceSet' | 'brows' | 'cheeks' | 'tongue' | 'teeth' | 'drool'>
 export interface FaceLayer { traits: FaceTraits; weight: number }
-export interface Sample { rotationTravel?: RotationTravel; pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number; gradientMix?: number; faceLayers?: FaceLayer[] }
+export interface Sample { rotationTravel?: RotationTravel; pose: Pose; blink: number; bob: number; breathe: number; expressionId: string; beatIndex: number; stepIndex: number; effectPhase?: number; propPhase?: number; propAmount?: number; tearAmount?: number; gradientRotation?: number; gradientMix?: number; faceLayers?: FaceLayer[] }
 
 export const EYES: Eye[] = ['dot', 'soft', 'closed', 'wink', 'star', 'heart', 'squint', 'wide', 'arc-up', 'arc-down', 'half-lidded', 'pupil']
 export const MOUTHS: Mouth[] = ['smile', 'open', 'line', 'frown', 'oh', 'wave', 'sleep', 'grin', 'cry', 'u-smile', 'kiss', 'tongue-out']
@@ -247,8 +247,7 @@ export function sampleExpression(expression: Expression, time: number, expressio
   }
   return { pose: p(), faceLayers: faceLayers(p()), beatIndex: 0, propAmount: 1, tearAmount: 1 }
 }
-export function sampleDefinition(def: Definition, animationId: string, time: number, expressionId?: string): Sample {
-  const speedTime = Math.max(0, time) * def.character.speed
+function samplePoseAt(def: Definition, animationId: string, speedTime: number, expressionId?: string) {
   const animation = def.animations.find(a => a.id === animationId) ?? def.animations[0]
   let expression = def.expressions.find(e => e.id === expressionId) ?? def.expressions[0]!
   let local = speedTime, stepIndex = 0
@@ -302,6 +301,50 @@ export function sampleDefinition(def: Definition, animationId: string, time: num
       sample.gradientMix = fromMix + ((sample.gradientMix ?? 0) - fromMix) * eased
     }
   }
+  return { sample, expression, animation, stepIndex }
+}
+
+/** Candidate times at which the discrete prop can change, including face sources. */
+function propSwitches(expression: Expression, expressions: Expression[], start: number, duration: number, visited = new Set<string>()): number[] {
+  if (visited.has(expression.id)) return []
+  const seen = new Set([...visited, expression.id])
+  const source = expressions.find(e => e.id === expression.poseExpressionId && !seen.has(e.id))
+  if (source) return propSwitches(source, expressions, start, duration, seen)
+  const scale = duration / expressionDuration(expression)
+  let offset = start
+  return expression.beats.flatMap(beat => {
+    const seconds = safeDuration(beat.duration)
+    const switches = [offset, offset + Math.min(.45, seconds * .4) * .5 * scale]
+    offset += seconds * scale
+    return switches
+  })
+}
+
+/** Start a new star run at its actual entrance, without resetting adjacent star beats.
+ * Derive the clock from the timeline so seeks, exports and runtime playback agree. */
+function starRunStart(def: Definition, animationId: string, time: number, expression: Expression, animation: Animation | undefined, expressionId?: string) {
+  let switches: number[]
+  if (expressionId || !animation?.steps.length) switches = propSwitches(expression, def.expressions, 0, expressionDuration(expression))
+  else {
+    let start = 0
+    switches = animation.steps.flatMap(step => {
+      const duration = safeDuration(step.duration), next = def.expressions.find(e => e.id === step.expressionId) ?? expression
+      const times = [...propSwitches(next, def.expressions, start, duration), start + Math.min(.35, duration * .2) * .5]
+      start += duration
+      return times
+    })
+  }
+  const edges = [...new Set([0, ...switches.filter(t => t > 0 && t < time), time])].sort((a, b) => a - b)
+  for (let i = edges.length - 2; i >= 0; i--) {
+    const midpoint = (edges[i]! + edges[i + 1]!) / 2
+    if (samplePoseAt(def, animationId, midpoint, expressionId).sample.pose.prop !== 'sparkle') return edges[i + 1]!
+  }
+  return 0
+}
+
+export function sampleDefinition(def: Definition, animationId: string, time: number, expressionId?: string): Sample {
+  const speedTime = Math.max(0, time) * def.character.speed
+  const { sample, expression, animation, stepIndex } = samplePoseAt(def, animationId, speedTime, expressionId)
   // All secondary motion uses the cycle period, so exported loops close exactly.
   const period = expressionId ? expressionDuration(expression) : animation ? animationDuration(animation) : expressionDuration(expression)
   const phase = 2 * Math.PI * mod(speedTime, period) / period
@@ -309,7 +352,9 @@ export function sampleDefinition(def: Definition, animationId: string, time: num
   const blinkPhase = mod(speedTime + period * .17, period / blinkCount)
   const gradientOnly = isGradientExpression(expression) && !expression.poseExpressionId
   const blink = !gradientOnly && def.character.blink && blinkPhase < .19 ? Math.sin(blinkPhase / .19 * Math.PI) ** 2 : 0
-  return { ...sample, expressionId: expression.id, stepIndex, blink, effectPhase: mod(speedTime, period) / period * Math.max(1, Math.round(period / 2.4)), bob: gradientOnly ? 0 : Math.sin(phase) * def.character.motion, breathe: gradientOnly ? 0 : Math.cos(phase) * def.character.motion }
+  const cycleTime = !expressionId && animation && !animation.loop ? Math.min(speedTime, period - .00001) : mod(speedTime, period)
+  const propPhase = sample.pose.prop === 'sparkle' ? (cycleTime - starRunStart(def, animationId, cycleTime, expression, animation, expressionId)) / period * Math.max(1, Math.round(period / 2.4)) : undefined
+  return { ...sample, ...(propPhase !== undefined ? { propPhase } : {}), expressionId: expression.id, stepIndex, blink, effectPhase: mod(speedTime, period) / period * Math.max(1, Math.round(period / 2.4)), bob: gradientOnly ? 0 : Math.sin(phase) * def.character.motion, breathe: gradientOnly ? 0 : Math.cos(phase) * def.character.motion }
 }
 
 function obj(v: unknown): Record<string, unknown> { if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('This file is not a ClipLab project.'); return v as Record<string, unknown> }

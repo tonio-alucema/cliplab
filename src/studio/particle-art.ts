@@ -15,6 +15,7 @@ function compile(svg: string): Icon {
 }
 
 const icons = { question: compile(questionSvg), sparkle: compile(starSvg) }
+export const PARTICLE_YELLOW = icons.question.color
 
 /** Shared normalization keeps the live vector meshes and SVG snapshots identical. */
 export function particleIconSource(prop: keyof typeof icons) {

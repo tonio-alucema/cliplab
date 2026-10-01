@@ -49,7 +49,10 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     const still = phase === undefined
     // Launch the outer stars first so independently moving lanes never collide.
     const delay = (count - 1 - i) * .05
-    const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62 : cycle(phase + (burst ? -delay : i / count))
+    // Delays belong to this burst, never the tail of the previous loop.
+    const lifetime = 1 - (count - 1) * .05
+    const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62
+      : burst ? Math.max(0, Math.min(1, (cycle(phase) - delay) / lifetime)) : cycle(phase + i / count)
     // A compact question trail opens up gradually as its marks grow.
     const progress = burst ? (still ? .55 * p + .45 * smooth(p) : easeOut(p)) : .4 * p + .6 * p * p
     const growth = burst && !still ? progress : smooth(p / .88)

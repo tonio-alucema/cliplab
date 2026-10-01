@@ -203,13 +203,13 @@ it('gives each star its own launch timing and a 45 degree spin over its lifetime
   const one = (phase: number, index: number) => particleLayout('sparkle', phase).particles[index]!
   const phases = [.1, .05, 0]
   phases.forEach((delay, index) => {
-    const start = one(delay, index), end = one(delay + 1 - 1e-8, index)
+    const start = one(delay, index), end = one(delay + .9 - 1e-8, index)
     expect((end.rotation - start.rotation) * 180 / Math.PI).toBeCloseTo(45, 5)
     expect(start.alpha).toBeLessThan(1e-8)
     expect(end.alpha).toBeLessThan(1e-8)
   })
   const launches = phases.map((delay, index) => {
-    const start = one(delay, index), end = one(delay + 1 - 1e-8, index), now = one(.12, index)
+    const start = one(delay, index), end = one(delay + .9 - 1e-8, index), now = one(.12, index)
     return (now.x - start.x) / (end.x - start.x)
   })
   expect(launches[1]! - launches[0]!).toBeGreaterThan(.1)
@@ -230,4 +230,20 @@ it('gives neighboring marks contrasting seeded tilts without changing the star s
   expect(question[2]!.x - question[0]!.x).toBeLessThan(85)
   const star = particleLayout('sparkle').particles
   expect(Math.hypot(star[2]!.x - star[0]!.x, star[2]!.y - star[0]!.y)).toBeLessThan(125)
+})
+
+
+it('starts every burst cleanly, with no wrapped tail before each delayed launch', () => {
+  for (const propCount of [1, 3, 6]) for (const loop of [0, 1, 7]) {
+    const start = particleLayout('sparkle', loop, { propCount }).particles
+    expect(start.every(p => p.alpha === 0)).toBe(true)
+    for (let i = 0; i < propCount; i++) {
+      const delay = (propCount - 1 - i) * .05
+      for (const phase of [0, delay / 2, Math.max(0, delay - 1e-6)]) {
+        expect(particleLayout('sparkle', loop + phase, { propCount }).particles[i]!.alpha).toBe(0)
+      }
+      expect(particleLayout('sparkle', loop + delay + .03, { propCount }).particles[i]!.alpha).toBeGreaterThan(0)
+    }
+    expect(particleLayout('sparkle', loop + .99999, { propCount }).particles.every(p => p.alpha === 0)).toBe(true)
+  }
 })
