@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { CharacterRenderer, drawProp } from './renderer'
 import { BASE_POSE, defaultProject, sampleDefinition, type Definition, type Prop, type Sample } from './model'
 import { particleLayout } from './particles'
+import { ParticleVectors } from './particle-vectors'
 import { SvgCanvas } from './svg-canvas'
 import { snapshotSvg } from './svg-snapshot'
 
@@ -137,4 +138,115 @@ it('eases particle framing in and out with prop visibility and preserves compact
       expect(half(prop, 1, 24)).toBe(half('none', 1, 24))
     }
   } finally { renderer.dispose() }
+})
+
+it('keeps mesh particles aligned with the SVG sprite plane under body rotation and nonuniform squash', () => {
+  const vectors = new ParticleVectors(), root = new THREE.Group()
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ opacity: .73, transparent: true }))
+  const camera = new THREE.OrthographicCamera(-2, 2, 2, -2, .1, 20)
+  camera.position.set(1, 2, 5); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true)
+  root.position.set(.12, -.08, .03); root.rotation.set(.3, 1.4, -.7); root.scale.set(.91, 1.2, .91)
+  sprite.position.set(.7, .48, .15); root.add(sprite)
+  try {
+    for (const prop of ['question', 'sparkle'] as const) {
+      const layout = particleLayout(prop, .43, { propSize: 1.4, propCount: 3 })
+      sprite.scale.setScalar(layout.extent * .58 / 256); root.updateMatrixWorld(true)
+      vectors.update(prop, layout, sprite, camera); vectors.group.updateMatrixWorld(true)
+      const worldCenter = sprite.getWorldPosition(new THREE.Vector3())
+      const worldSize = sprite.getWorldScale(new THREE.Vector3())
+      const cameraRotation = camera.getWorldQuaternion(new THREE.Quaternion())
+      vectors.group.children.forEach((child, i) => {
+        const mesh = child as THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>
+        const particle = layout.particles[i]!, positions = mesh.geometry.getAttribute('position')
+        expect(mesh.material.map).toBeNull()
+        expect(mesh.material.color.getHexString()).toBe('ffbe16')
+        expect(mesh.material.depthTest).toBe(false)
+        expect(mesh.material.opacity).toBeCloseTo(particle.alpha * sprite.material.opacity)
+        expect(positions.count).toBeGreaterThan(20)
+        // Compare the mesh against the existing canvas/SVG convention: Y points
+        // down in artwork, rotations are clockwise, and the sprite faces camera.
+        for (const index of [0, Math.floor(positions.count / 2), positions.count - 1]) {
+          const point = new THREE.Vector3().fromBufferAttribute(positions, index)
+          const canvasX = point.x * particle.scale, canvasY = -point.y * particle.scale
+          const x = particle.x + Math.cos(particle.rotation) * canvasX - Math.sin(particle.rotation) * canvasY
+          const y = particle.y + Math.sin(particle.rotation) * canvasX + Math.cos(particle.rotation) * canvasY
+          const expected = new THREE.Vector3((x - 128) / layout.extent * worldSize.x, (128 - y) / layout.extent * worldSize.y, 0)
+            .applyQuaternion(cameraRotation).add(worldCenter)
+          expect(point.applyMatrix4(mesh.matrixWorld).distanceTo(expected)).toBeLessThan(1e-8)
+        }
+      })
+    }
+  } finally { vectors.dispose(); sprite.material.dispose() }
+})
+
+it('renders reusable mesh artwork across frames and zoom, then restores existing sprite props', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const render = vi.spyOn(renderer.gl, 'render')
+  const character = { ...defaultProject().characters[0]!, trueFront: false, followRotation: false }
+  const geometries = new Map<Prop, THREE.BufferGeometry>()
+  const materials = new Set<THREE.Material>()
+  let vectorGroup: THREE.Group | undefined
+  try {
+    for (const prop of ['question', 'sparkle', 'question'] as const) for (const zoom of [1, 2.5]) {
+      for (const effectPhase of [.21, .58]) {
+        const sample = sampleFor(prop, effectPhase); sample.pose.squash = 1.2
+        renderer.render(character, sample, { rotation: { x: 20, y: 155, z: 85 }, zoom })
+        const scene = render.mock.calls.at(-1)![0]
+        vectorGroup = scene.getObjectByName('Vector particles') as THREE.Group
+        expect(vectorGroup.visible).toBe(true)
+        const meshes = vectorGroup.children as THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>[]
+        expect(meshes).toHaveLength(3)
+        expect(meshes.some(mesh => mesh.visible)).toBe(true)
+        const geometry = meshes[0]!.geometry
+        if (geometries.has(prop)) expect(geometry).toBe(geometries.get(prop))
+        else geometries.set(prop, geometry)
+        for (const mesh of meshes) {
+          expect(mesh.geometry).toBe(geometry)
+          expect(mesh.material.map).toBeNull()
+          materials.add(mesh.material)
+        }
+        const snapshot = renderer.snapshotScene()
+        expect(snapshot.prop.visible).toBe(true)
+        expect(snapshot.prop.material.visible).toBe(false)
+        expect(supportingArt(renderer).querySelectorAll('path')).toHaveLength(3)
+      }
+    }
+    expect(geometries.get('question')).not.toBe(geometries.get('sparkle'))
+    expect(materials.size).toBe(3)
+    renderer.render(character, sampleFor('heart', .3))
+    expect(vectorGroup!.visible).toBe(false)
+    expect(renderer.snapshotScene().prop.material.visible).toBe(true)
+    expect(renderer.snapshotScene().prop.material.map).not.toBeNull()
+    renderer.render(character, sampleFor('none'))
+    expect(vectorGroup!.visible).toBe(false)
+    expect(renderer.snapshotScene().prop.visible).toBe(false)
+
+    const disposeGeometry = [...geometries.values()].map(geometry => vi.spyOn(geometry, 'dispose'))
+    const disposeMaterial = [...materials].map(material => vi.spyOn(material, 'dispose'))
+    renderer.dispose(); renderer.dispose()
+    for (const dispose of [...disposeGeometry, ...disposeMaterial]) expect(dispose).toHaveBeenCalledTimes(1)
+    expect(vectorGroup!.children).toHaveLength(0)
+  } finally { renderer.dispose() }
+})
+
+it('reuses the particle mesh pool when count falls and disposes each cached icon exactly once', () => {
+  const vectors = new ParticleVectors(), sprite = new THREE.Sprite(new THREE.SpriteMaterial())
+  const camera = new THREE.OrthographicCamera()
+  try {
+    vectors.update('question', particleLayout('question', undefined, { propCount: 6 }), sprite, camera)
+    const pool = [...vectors.group.children] as THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>[]
+    const questionGeometry = pool[0]!.geometry
+    vectors.update('sparkle', particleLayout('sparkle', undefined, { propCount: 3 }), sprite, camera)
+    const sparkleGeometry = pool[0]!.geometry
+    expect(pool.slice(3).every(mesh => !mesh.visible)).toBe(true)
+    vectors.update('question', particleLayout('question', undefined, { propCount: 1 }), sprite, camera)
+    expect(vectors.group.children).toEqual(pool)
+    expect(pool[0]!.geometry).toBe(questionGeometry)
+    expect(pool[0]!.visible).toBe(true)
+    expect(pool.slice(1).every(mesh => !mesh.visible)).toBe(true)
+    const dispose = [questionGeometry, sparkleGeometry, ...pool.map(mesh => mesh.material)].map(resource => vi.spyOn(resource, 'dispose'))
+    vectors.dispose(); vectors.dispose()
+    for (const spy of dispose) expect(spy).toHaveBeenCalledTimes(1)
+    expect(vectors.group.children).toHaveLength(0)
+  } finally { vectors.dispose(); sprite.material.dispose() }
 })

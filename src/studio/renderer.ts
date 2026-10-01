@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
 import { drawParticleIcon } from './particle-art'
+import { ParticleVectors } from './particle-vectors'
 import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyDimensions, bodyModification, bodySurfaceZ, disposeSkeleton, faceOffset, isPill, skeletonGeometry, SKELETON_BACK_OPACITY, SKELETON_BODY_OPACITY, SKELETON_INSET_OPACITY } from './body-geometry'
 export { bodyHeight, radiusAt } from './body-geometry'
 import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type BodyModification, type RotationTravel } from './model'
@@ -290,6 +291,7 @@ export class CharacterRenderer {
   private propCtx: CanvasRenderingContext2D
   private propTexture: THREE.CanvasTexture
   private prop: THREE.Sprite
+  private particleVectors = new ParticleVectors()
   private shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
   private shape: Shape = 'capsule'
   private squareBottom = false
@@ -329,7 +331,7 @@ export class CharacterRenderer {
     }
     this.prop = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.propTexture, transparent: true, depthWrite: false, toneMapped: false }))
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(.35, 64), new THREE.MeshBasicMaterial({ color: '#809299', transparent: true, opacity: .2, depthWrite: false }))
-    this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root); this.shadowScene.add(this.shadow)
+    this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root, this.particleVectors.group); this.shadowScene.add(this.shadow)
     this.camera.position.set(0, 0, 8); this.camera.lookAt(0, 0, 0)
     this.resize(options.width, options.height, options.displaySize)
   }
@@ -471,10 +473,15 @@ export class CharacterRenderer {
     this.prop.material.depthTest = !foreground
     this.prop.renderOrder = foreground ? 4 : skeleton ? 3 : 0
     const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${propPhase?.toFixed(4) ?? 'still'}`
-    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', propPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
+    if (!cyclingIcon && propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', propPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
     this.prop.scale.setScalar(propSize * propLayout.extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
     this.prop.position.set(cyclingIcon ? width * .38 : pose.prop === 'crown' ? 0 : width / 2 + .06, cyclingIcon ? height / 2 - .14 : pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     if (propAnchor) this.prop.position.copy(this.root.worldToLocal(propAnchor.clone()))
+    // Keep the sprite's layout as the shared SVG-export transform, while WebGL
+    // renders these icons as actual vector geometry at the display resolution.
+    this.prop.material.visible = !cyclingIcon
+    this.particleVectors.group.visible = false
+    if ((pose.prop === 'question' || pose.prop === 'sparkle') && this.prop.visible) this.particleVectors.update(pose.prop, propLayout, this.prop, this.camera)
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
     this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (isPill(this.shape) ? width : .95), .12, 1)
@@ -504,6 +511,7 @@ export class CharacterRenderer {
     // backShell shares body.geometry; only its material is independently owned.
     this.backShell?.material.dispose()
     this.faceTexture.dispose(); this.propTexture.dispose(); this.prop.material.dispose(); this.shadow.geometry.dispose(); this.shadow.material.dispose()
+    this.particleVectors.dispose()
     this.gl.dispose(); this.gl.forceContextLoss()
   }
 }

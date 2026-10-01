@@ -2,6 +2,15 @@ import { expect, it } from 'vitest'
 import { particleCount, particleLayout } from './particles'
 import { defaultProject, parseProject, PROPS } from './model'
 import { copyBeatValues, pasteBeatValues } from './beat-values'
+import { particleIconSource } from './particle-art'
+
+it('normalizes both supplied SVG artworks exactly twenty percent smaller', () => {
+  const question = particleIconSource('question'), star = particleIconSource('sparkle')
+  expect(question.height * question.scale).toBeCloseTo(124 * .8)
+  expect(star.width * star.scale).toBeCloseTo(104 * .8)
+  expect(question.svg).toContain('<svg')
+  expect(star.svg).toContain('<svg')
+})
 
 it('preserves original particle counts until a count is chosen', () => {
   expect(particleCount('none', 6)).toBe(0)
@@ -27,7 +36,7 @@ it('adjusts size independently and lets outward movement stop or increase travel
 it('keeps even maximum particles inside their padded texture for the whole cycle', () => {
   for (const prop of PROPS) for (const count of [1, 3, 6]) for (const phase of [undefined, ...Array.from({ length: 101 }, (_, i) => i / 100)]) {
     const { extent, particles, bounds } = particleLayout(prop, phase, { propSize: 2, propCount: count, propOutward: 3 })
-    const radius = prop === 'crown' ? 100 : prop === 'question' ? 82 : prop === 'sparkle' ? 74 : prop === 'sweat' ? 80 : 48
+    const radius = prop === 'crown' ? 100 : prop === 'question' ? 65.6 : prop === 'sparkle' ? 59.2 : prop === 'sweat' ? 80 : 48
     for (const p of particles) {
       expect(Math.abs(p.x - 128) + radius * p.scale).toBeLessThan(extent / 2)
       expect(Math.abs(p.y - 128) + radius * p.scale).toBeLessThan(extent / 2)
@@ -62,25 +71,38 @@ it('launches stars in a compact burst and lets their movement settle during the 
   const at = (prop: 'sparkle' | 'question', phase: number) => particleLayout(prop, phase, { propCount: 1 }).particles[0]!
   const starLaunch = at('sparkle', .2).x - at('sparkle', 0).x
   const questionLaunch = at('question', .2).x - at('question', 0).x
-  expect(starLaunch).toBeGreaterThan(questionLaunch * 2)
+  expect(starLaunch).toBeGreaterThan(questionLaunch)
   expect(at('sparkle', .2).x - at('sparkle', .1).x).toBeGreaterThan((at('sparkle', .8).x - at('sparkle', .7).x) * 4)
   expect(at('sparkle', .55).alpha).toBeGreaterThan(.4)
   expect(at('sparkle', .8).alpha).toBeGreaterThan(0)
   expect(at('sparkle', .95).alpha).toBe(0)
 })
 
-it('gives burst stars distinct sizes and divergent destinations instead of overlapping at full size', () => {
-  for (const phase of [.5, .6, .7]) {
-    const particles = particleLayout('sparkle', phase).particles
-    for (let i = 1; i < particles.length; i++) {
-      const near = particles[i - 1]!, far = particles[i]!
-      expect(far.scale).toBeGreaterThan(near.scale)
-      expect(far.x).toBeGreaterThan(near.x)
-      expect(far.y).toBeLessThan(near.y)
-      // The visible star silhouettes separate once the burst opens.
-      expect(Math.hypot(far.x - near.x, far.y - near.y)).toBeGreaterThan(54 * (near.scale + far.scale))
+it('separates all visible default stars throughout launch, growth, fade and the stationary preview', () => {
+  for (const propSize of [.5, 1, 2]) for (const propOutward of [0, .5, 1, 3]) {
+    for (const phase of [undefined, ...Array.from({ length: 2001 }, (_, i) => i / 2000)]) {
+      const visible = particleLayout('sparkle', phase, { propOutward, propSize }).particles.filter(p => p.alpha > .02)
+      for (let i = 0; i < visible.length; i++) for (let j = i + 1; j < visible.length; j++) {
+        const a = visible[i]!, b = visible[j]!
+        // These circles enclose the supplied star's actual rounded outline.
+        const gap = Math.hypot(a.x - b.x, a.y - b.y) - 42 * (a.scale + b.scale)
+        expect(gap).toBeGreaterThan(8)
+        if (propSize === 1 && propOutward === 1 && b.index - a.index === 1) expect(gap).toBeLessThan(30)
+      }
     }
   }
+})
+
+it('keeps the default star cloud compact and every zero-outward lane stationary', () => {
+  const layout = particleLayout('sparkle', .5)
+  expect(layout.bounds!.right).toBeLessThan(330)
+  expect(layout.bounds!.top).toBeGreaterThan(-100)
+  const early = particleLayout('sparkle', .1, { propOutward: 0 }).particles
+  const late = particleLayout('sparkle', .8, { propOutward: 0 }).particles
+  early.forEach((particle, i) => {
+    expect(late[i]!.x).toBe(particle.x)
+    expect(late[i]!.y).toBe(particle.y)
+  })
 })
 
 it('exposes phase-independent directional framing bounds without adding symmetric empty space', () => {
@@ -103,7 +125,7 @@ it('keeps particle resets invisible and all loops deterministic when seeking', (
   for (const prop of ['question', 'sparkle'] as const) for (const count of [1, 3, 6]) {
     const settings = { propCount: count, propSize: 2, propOutward: 3 }
     for (let i = 0; i < count; i++) {
-      const seam = prop === 'question' ? (1 - i / count) % 1 : i * .02
+      const seam = prop === 'question' ? (1 - i / count) % 1 : count > 1 ? i / (count - 1) * .04 : 0
       const before = particleLayout(prop, seam - 1e-7, settings).particles[i]!
       const after = particleLayout(prop, seam + 1e-7, settings).particles[i]!
       expect(before.alpha).toBeLessThan(1e-8)

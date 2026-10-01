@@ -9,23 +9,31 @@ const easeOut = (x: number) => 1 - (1 - Math.max(0, Math.min(1, x))) ** 3
 
 /** Seeded, independent lanes keep seeking, exports and reduced-motion previews reproducible. */
 function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefined, count: number, size: number, outward: number) {
-  const burst = prop === 'sparkle', radius = burst ? 74 : 82, maxScale = 1.15
+  const burst = prop === 'sparkle', radius = burst ? 59.2 : 65.6, maxScale = 1.15
   let halfExtent = 128
+  let launchDistance = 0, expansionDistance = 0
   const bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity }
   const particles = Array.from({ length: count }, (_, i) => {
     const index = count > 1 ? i * 2 / (count - 1) : 0
     const seed = Math.sin((i + 1) * 12.9898 + (burst ? 4 : 0))
     const seed2 = Math.sin((i + 1) * 29.173 + 1.2)
-    const startX = 64 + seed * 10, startY = 207 + seed2 * 10
     const rank = count > 1 ? i / (count - 1) : 1
     // A burst launches close together in time, but each star gets its own place:
     // smaller/closer stars lead into larger, farther stars along a spreading arc.
     const tier = burst ? .46 + rank * .54 : 1
-    const angle = Math.PI * (.2 + rank * .06) + seed2 * .055
-    const distance = 90 + rank * 240
-    const travelX = burst ? Math.cos(angle) * distance : 145 + seed2 * 15
-    const travelY = burst ? Math.sin(angle) * distance : 145 + seed * 18
-    const sway = 7
+    if (burst && i > 0) {
+      const previousTier = .46 + (i - 1) / (count - 1) * .54
+      // The rounded SVG's actual outline fits a 42px circle. Begin with a small
+      // air gap, then expand that gap with growth instead of adding extra travel.
+      // At zero outward movement, leave room for the fully grown silhouettes.
+      launchDistance += 42 * (maxScale - .85 * Math.min(1, outward)) * (previousTier + tier) * size + 14
+      expansionDistance += 42 * .85 * (previousTier + tier) * size
+    }
+    const startX = 64 + seed * (burst ? 2 : 10) + (burst ? launchDistance * .7 : 0)
+    const startY = 207 + seed2 * (burst ? 2 : 10) - (burst ? launchDistance * Math.sqrt(.51) : 0)
+    const travelX = burst ? .7 * (80 + expansionDistance) : 145 + seed2 * 15
+    const travelY = burst ? Math.sqrt(.51) * (80 + expansionDistance) : 145 + seed * 18
+    const sway = burst ? 2 : 7
     // Bound both ends and the small arc, independently of phase. The supplied SVGs
     // fit within these radii at every rotation, so no phase can resize the texture.
     const xBound = Math.max(Math.abs(startX - 128), Math.abs(startX + travelX * outward - 128)) + sway * outward
@@ -37,14 +45,18 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     bounds.top = Math.min(bounds.top, Math.min(startY, startY - travelY * outward) - sway * outward - growthRadius)
     bounds.bottom = Math.max(bounds.bottom, Math.max(startY, startY - travelY * outward) + sway * outward + growthRadius)
     const still = phase === undefined
-    const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62 : cycle(phase + (burst ? -i * .02 : i / count))
+    const delay = count > 1 ? i / (count - 1) * .04 : 0
+    const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62 : cycle(phase + (burst ? -delay : i / count))
     const progress = burst && !still ? easeOut(p) : .55 * p + .45 * smooth(p)
-    const arc = Math.sin(p * Math.PI) * sway
     const growth = burst && !still ? progress : smooth(p / .88)
+    // All stars share their compact burst's drift. Individual fades and growth
+    // remain staggered; their lanes never cross while the stars are visible.
+    const movement = burst ? still ? growth : easeOut(cycle(phase)) : progress
+    const arc = Math.sin((burst && !still ? cycle(phase) : p) * Math.PI) * sway
     return {
       index,
-      x: startX + (travelX * progress + arc * seed) * outward,
-      y: startY - (travelY * progress + arc * seed2) * outward,
+      x: startX + (travelX * movement + arc * (burst ? .3 : seed)) * outward,
+      y: startY - (travelY * movement + arc * (burst ? .4 : seed2)) * outward,
       scale: size * tier * (.3 + (maxScale - .3) * growth),
       alpha: still ? 1 : burst ? smooth(p / .065) * (1 - smooth((p - .18) / .76)) : smooth(p / .1) * (1 - smooth((p - .28) / .72)),
       rotation: (seed * 12 + Math.sin(p * Math.PI * 1.5 + seed2) * 9 + (p - .5) * seed2 * 8) * Math.PI / 180
