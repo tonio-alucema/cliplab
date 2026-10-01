@@ -203,6 +203,9 @@ export function mixFaceLayers(a: FaceLayer[], b: FaceLayer[], t: number): FaceLa
 export function mixPose(a: Pose, b: Pose, t: number): Pose {
   const result = { ...(t < .5 ? a : b) }
   for (const key of numericKeys) {
+    // Different props crossfade through zero opacity. Keep each one's layout
+    // intact until that switch instead of morphing the outgoing particle cloud.
+    if (a.prop !== b.prop && (key === 'propSize' || key === 'propCount' || key === 'propOutward')) continue
     let delta = (b[key] as number) - (a[key] as number)
     if (key.startsWith('rotation')) delta = ((delta + 180) % 360 + 360) % 360 - 180
     ;(result as unknown as Record<string, unknown>)[key] = (a[key] as number) + delta * t

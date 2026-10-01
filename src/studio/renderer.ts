@@ -478,7 +478,10 @@ export class CharacterRenderer {
     this.prop.renderOrder = foreground ? 4 : skeleton ? 3 : 0
     const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${propPhase?.toFixed(4) ?? 'still'}`
     if (!cyclingIcon && propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', propPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
-    this.prop.scale.setScalar(propFit * propSize * propLayout.extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
+    // Vector particles own their growth. A transition only fades them; scaling
+    // the whole cloud here would pull settled stars back toward their anchor.
+    const propEnvelope = cyclingIcon ? 1 : .7 + .3 * (sample.propAmount ?? 1)
+    this.prop.scale.setScalar(propFit * propSize * propLayout.extent / 256 * propEnvelope); this.prop.material.opacity = sample.propAmount ?? 1
     this.prop.position.set(cyclingIcon ? width * .38 : pose.prop === 'crown' ? 0 : width / 2 + .06, cyclingIcon ? height / 2 - .14 : pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
     if (propAnchor) this.prop.position.copy(this.root.worldToLocal(propAnchor.clone()))
     // Keep the sprite's layout as the shared SVG-export transform, while WebGL

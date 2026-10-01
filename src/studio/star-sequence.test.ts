@@ -47,3 +47,16 @@ it('uses linked face-expression timing and character speed for a fresh star entr
   def.character.speed = 2
   expect(starClock(def, 1.23, 'carrier')).toBeCloseTo(.01 * 3 / 6)
 })
+
+it('retains outgoing star size, count and travel until the effect is fully faded', () => {
+  const custom = expression('custom', [['sparkle', 2], ['none', 2]])
+  Object.assign(custom.beats[0]!.pose, { propSize: 1.7, propCount: 5, propOutward: 2.4 })
+  const def = definition([custom])
+  for (const time of [1.99, 2.05, 2.15, 2.224]) {
+    const sample = sampleDefinition(def, '', time, 'custom')
+    expect(sample.pose).toMatchObject({ prop: 'sparkle', propSize: 1.7, propCount: 5, propOutward: 2.4 })
+    expect(sample.propPhase).toBeCloseTo((time - .225) / 2)
+  }
+  const plain = sampleDefinition(def, '', 2.226, 'custom')
+  expect(plain.pose.prop).toBe('none')
+})

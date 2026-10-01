@@ -313,3 +313,22 @@ it('uses the fresh star-run clock in both the live mesh and SVG snapshot', () =>
     expect(renderer.snapshotScene().propPhase).toBeUndefined()
   } finally { renderer.dispose() }
 })
+
+it('fades a burst out without pulling the settled particles back toward the body', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 400, height: 400 })
+  const character = { ...defaultProject().characters[0]!, trueFront: true, lockPosition: true, followRotation: false }
+  try {
+    for (const prop of ['sparkle', 'question'] as const) {
+      renderer.render(character, { ...sampleFor(prop, .65), propAmount: 1 })
+      const initial = renderer.snapshotScene()
+      const position = initial.prop.getWorldPosition(new THREE.Vector3()), scale = initial.prop.getWorldScale(new THREE.Vector3())
+      for (const propAmount of [.8, .5, .1, 0]) {
+        renderer.render(character, { ...sampleFor(prop, .65), propAmount })
+        const state = renderer.snapshotScene()
+        expect(state.prop.getWorldPosition(new THREE.Vector3()).distanceTo(position)).toBeLessThan(1e-10)
+        expect(state.prop.getWorldScale(new THREE.Vector3()).distanceTo(scale)).toBeLessThan(1e-10)
+        expect(state.prop.material.opacity).toBe(propAmount)
+      }
+    }
+  } finally { renderer.dispose() }
+})
