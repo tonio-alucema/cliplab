@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.6.2** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.7.0** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -23,7 +23,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.6.2.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.0.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -97,6 +97,12 @@ Size is in CSS pixels, independently of display pixel density.
 At 12 px and below, the renderer shows the body only; 12 px is no longer a studio preset. At sizes of 24 px and below, end-cap bottom fillets are removed; the ghost keeps its scalloped hem. The 16px appearance replaces the old 16-A option.
 
 Reduced motion is respected by default and offscreen animation work pauses. Keep those behaviors enabled. Eye and body following are independent; front lock takes precedence over body turning. Toon lighting follows face orientation. JSON alone cannot render these behaviors without the matching player.
+
+## Question and sparkle particles
+
+Runtime 0.7.0 uses the supplied rounded SVG artwork for `pose.prop: "question"` and `"sparkle"`. Questions cycle continuously in an evenly staggered trail; stars use a tightly staggered burst with a fast outward launch and a slower fade. Both grow outward with repeatable, slight rotation variation and stay in front of the character near its upper-right edge. Their full motion is included in the runtime and media exports; SVG snapshots retain editable vector paths.
+
+`propCount: 0` (the automatic setting) now means three particles for both effects. Explicit counts and the existing `propSize` and `propOutward` controls remain supported. Existing definitions adopt the new behavior without a JSON migration. Reduced motion shows a static three-tier arrangement (or the authored count).
 
 ## Upgrade checklist for an integrating agent
 

@@ -161,7 +161,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   }
   if (prop.visible && prop.material.opacity > 0) {
     const art = new SvgCanvas('prop'), name = sample.pose.prop
-    drawProp(art as unknown as CanvasRenderingContext2D, name, name === 'heart' ? '#ff768c' : name === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase, sample.pose)
+    drawProp(art as unknown as CanvasRenderingContext2D, name, name === 'heart' ? '#ff768c' : name === 'sweat' ? '#b7e9ff' : '#ffd362', snapshot.propPhase, sample.pose)
     const center = project(prop.getWorldPosition(new THREE.Vector3())), scale = prop.getWorldScale(new THREE.Vector3())
     const w = scale.x * width / (camera.right - camera.left), h = scale.y * height / (camera.top - camera.bottom)
     const foreground = !prop.material.depthTest

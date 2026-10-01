@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
+import { drawParticleIcon } from './particle-art'
 import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyDimensions, bodyModification, bodySurfaceZ, disposeSkeleton, faceOffset, isPill, skeletonGeometry, SKELETON_BACK_OPACITY, SKELETON_BODY_OPACITY, SKELETON_INSET_OPACITY } from './body-geometry'
 export { bodyHeight, radiusAt } from './body-geometry'
 import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type BodyModification, type RotationTravel } from './model'
@@ -259,12 +260,12 @@ export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], colo
   for (const particle of layout.particles) {
     const i = particle.index
     ctx.save(); ctx.globalAlpha = particle.alpha
-    ctx.translate(particle.x, particle.y); ctx.scale(particle.scale, particle.scale)
+    ctx.translate(particle.x, particle.y); ctx.rotate(particle.rotation); ctx.scale(particle.scale, particle.scale)
     ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
     if (prop === 'zzz') { const r = 14 + i * 5; ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, -r); ctx.lineTo(-r, r); ctx.lineTo(r, r); ctx.stroke() }
-    else if (prop === 'sparkle') star(ctx, 0, 0, 23 + i * 4, 4)
+    else if (prop === 'sparkle') drawParticleIcon(ctx, prop)
     else if (prop === 'heart') heart(ctx, 0, 0, 17 + i * 3)
-    else if (prop === 'question') { ctx.font = 'bold 144px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('?', 0, 48) }
+    else if (prop === 'question') drawParticleIcon(ctx, prop)
     else if (prop === 'sweat') drop(ctx, 0, 0, 38)
     else if (prop === 'crown') { ctx.beginPath(); ctx.moveTo(-78, 42); ctx.lineTo(-94, -45); ctx.lineTo(-35, -3); ctx.lineTo(0, -67); ctx.lineTo(35, -3); ctx.lineTo(94, -45); ctx.lineTo(78, 42); ctx.closePath(); ctx.fill() }
     ctx.restore()
@@ -302,7 +303,7 @@ export class CharacterRenderer {
   private lastProp = ''
   private disposed = false
   private options: RenderOptions
-  private captured?: { character: Character; sample: Sample; gaze: Gaze; simpleEyes: boolean }
+  private captured?: { character: Character; sample: Sample; gaze: Gaze; simpleEyes: boolean; propPhase?: number }
   constructor(canvas: HTMLCanvasElement, options: RenderOptions) {
     this.canvas = canvas; this.options = options
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: 'low-power' })
@@ -417,6 +418,27 @@ export class CharacterRenderer {
       const safeHalf = (radius + this.root.position.length()) / .9 / zoom
       half = Math.max(half, safeHalf, safeHalf / aspect)
     }
+    const cyclingIcon = pose.prop === 'question' || pose.prop === 'sparkle'
+    const propPhase = cyclingIcon && this.options.reducedMotion ? undefined : sample.effectPhase
+    const propSize = cyclingIcon ? isPill(this.shape) ? .60 + .1 * (bodyHeight(this.shape) - 1) : .58 : isPill(this.shape) ? .32 + .1 * (bodyHeight(this.shape) - 1) : .32
+    const propLayout = particleLayout(pose.prop, propPhase, pose)
+    let propAnchor: THREE.Vector3 | undefined
+    if (cyclingIcon && detail === 'full') {
+      // These thoughts/celebrations occupy the upper-right camera plane even
+      // when the character turns away or rolls, like the supplied reference.
+      const bodyBounds = new THREE.Box3().setFromObject(this.body)
+      const anchor = propAnchor = new THREE.Vector3(bodyBounds.min.x + (bodyBounds.max.x - bodyBounds.min.x) * .88, bodyBounds.max.y - (bodyBounds.max.y - bodyBounds.min.y) * .10, .15)
+      // Use fixed cycle bounds, never the current frame, to avoid zoom pulsing
+      // as particles grow/fade and to preserve large/outward slider settings.
+      const bounds = propLayout.bounds
+      if (bounds) {
+        const sx = propSize * this.root.scale.x / 256, sy = propSize * this.root.scale.y / 256
+        const extentX = Math.max(Math.abs(anchor.x + (bounds.left - 128) * sx), Math.abs(anchor.x + (bounds.right - 128) * sx))
+        const extentY = Math.max(Math.abs(anchor.y + (128 - bounds.top) * sy), Math.abs(anchor.y + (128 - bounds.bottom) * sy))
+        const reservedHalf = Math.max(half, (extentX + .025) / aspect / zoom, (extentY + .025) / zoom)
+        half += (reservedHalf - half) * THREE.MathUtils.clamp(sample.propAmount ?? 1, 0, 1)
+      }
+    }
     this.camera.left = -half * aspect; this.camera.right = half * aspect; this.camera.top = half; this.camera.bottom = -half; this.camera.updateProjectionMatrix()
     this.camera.updateMatrixWorld(true)
     this.face.visible = detail !== 'body'
@@ -445,13 +467,14 @@ export class CharacterRenderer {
     }
     vertices.needsUpdate = true; valid.needsUpdate = true; this.face.geometry.computeBoundingSphere()
     this.prop.visible = detail === 'full' && pose.prop !== 'none'
-    this.prop.material.depthTest = pose.prop !== 'zzz'
-    this.prop.renderOrder = pose.prop === 'zzz' ? 4 : skeleton ? 3 : 0
-    const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${sample.effectPhase?.toFixed(2) ?? 'still'}`
-    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', sample.effectPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
-    const propSize = isPill(this.shape) ? .32 + .1 * (bodyHeight(this.shape) - 1) : .32
-    this.prop.scale.setScalar(propSize * particleLayout(pose.prop, sample.effectPhase, pose).extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
-    this.prop.position.set(pose.prop === 'crown' ? 0 : width / 2 + .06, pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
+    const foreground = pose.prop === 'zzz' || cyclingIcon
+    this.prop.material.depthTest = !foreground
+    this.prop.renderOrder = foreground ? 4 : skeleton ? 3 : 0
+    const propKey = `${pose.prop}:${pose.propSize}:${pose.propCount}:${pose.propOutward}:${propPhase?.toFixed(4) ?? 'still'}`
+    if (propKey !== this.lastProp) { drawProp(this.propCtx, pose.prop, pose.prop === 'heart' ? '#ff768c' : pose.prop === 'sweat' ? '#b7e9ff' : '#ffd362', propPhase, pose); this.propTexture.needsUpdate = true; this.lastProp = propKey }
+    this.prop.scale.setScalar(propSize * propLayout.extent / 256 * (.7 + .3 * (sample.propAmount ?? 1))); this.prop.material.opacity = sample.propAmount ?? 1
+    this.prop.position.set(cyclingIcon ? width * .38 : pose.prop === 'crown' ? 0 : width / 2 + .06, cyclingIcon ? height / 2 - .14 : pose.prop === 'crown' ? height / 2 + .08 : height * .29, .15)
+    if (propAnchor) this.prop.position.copy(this.root.worldToLocal(propAnchor.clone()))
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
     this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (isPill(this.shape) ? width : .95), .12, 1)
@@ -465,7 +488,7 @@ export class CharacterRenderer {
     this.gl.clearDepth()
     this.gl.render(this.scene, this.camera)
     this.gl.autoClear = true
-    this.captured = { character, sample, gaze: faceGaze, simpleEyes: appearance.simpleEyes }
+    this.captured = { character, sample, gaze: faceGaze, simpleEyes: appearance.simpleEyes, propPhase }
   }
   snapshotScene() {
     if (!this.captured) throw new Error('Render the character before taking a snapshot.')

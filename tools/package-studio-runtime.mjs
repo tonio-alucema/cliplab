@@ -18,7 +18,7 @@ const declarations = new Map()
 const program = ts.createProgram([entry], {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler,
   declaration: true, emitDeclarationOnly: true, skipLibCheck: true, strict: true, resolveJsonModule: true,
-  outDir: resolve(out, 'types'),
+  outDir: resolve(out, 'types'), types: ['vite/client'],
 })
 const diagnostics = ts.getPreEmitDiagnostics(program)
 if (diagnostics.some(d => d.category === ts.DiagnosticCategory.Error)) throw new Error(ts.formatDiagnosticsWithColorAndContext(diagnostics, { getCurrentDirectory: () => root, getCanonicalFileName: f => f, getNewLine: () => '\n' }))

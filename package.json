@@ -1,7 +1,7 @@
 {
   "name": "cliplab",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.7.0",
   "type": "module",
   "description": "A 3D character studio with illustrative toon shading, editable expressions, looping sequences, and app or media exports.",
   "license": "MIT",
