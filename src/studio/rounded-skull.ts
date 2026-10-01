@@ -51,7 +51,7 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
   for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * eyeX, socketY, radius * .24, radius * .24, ink, direction < 0 ? 'socket-left' : 'socket-right'))
   for (const direction of [-1, 1]) skull.add(surfaceMark(radius, direction * radius * .061, socketY - radius * .27, radius * .043, radius * .047, ink, direction < 0 ? 'nose-left' : 'nose-right'))
 
-  for (const direction of [-1, 1]) for (let row = 0; row < 2; row++) {
+  for (const direction of [-1, 1]) for (let row = 0; row < (shape === 'chunky-pill' ? 3 : 2); row++) {
     const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122
     const width = shape === 'chunky-pill' ? 1.12 : 1
     const curve = new THREE.CubicBezierCurve3(
@@ -79,6 +79,25 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
       cap.position.copy(curve.getPoint(t)); cap.name = 'rib-end'; rounded.add(cap)
     }
     group.add(rounded)
+  }
+  if (shape === 'chunky-pill') {
+    // Halve the visible gaps rather than the bone thickness: six chunky ribs
+    // stay separate. The existing row-by-row shortening gently tapers the cage.
+    for (const direction of [-1, 1]) {
+      let previousBottom = 0, previousOriginalBottom = 0
+      for (let row = 1; row <= 3; row++) {
+        const rib = group.getObjectByName(`rib-${direction < 0 ? 'left' : 'right'}-${row}`)!
+        const bounds = new THREE.Box3().setFromObject(rib)
+        const innerGap = direction < 0 ? -bounds.max.x : bounds.min.x
+        rib.position.x -= direction * innerGap * .5
+        if (row > 1) {
+          const originalGap = previousOriginalBottom - bounds.max.y
+          rib.position.y = previousBottom - originalGap * .5 - bounds.max.y
+        }
+        previousOriginalBottom = bounds.min.y
+        previousBottom = bounds.min.y + rib.position.y
+      }
+    }
   }
   return group
 }

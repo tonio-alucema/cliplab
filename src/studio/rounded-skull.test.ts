@@ -78,10 +78,11 @@ describe('spherical 3D skeleton', () => {
       } finally { disposeSkeleton(skeleton) }
     })
 
-    it(`keeps all bones inside ${shape}, with exactly four thicker ribs below the sphere`, () => {
+    it(`keeps all bones inside ${shape}, with ${shape === 'chunky-pill' ? 'six' : 'four'} thicker ribs below the sphere`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
-        expect(skeleton.children.map(child => child.name)).toEqual(['skull', 'rib-left-1', 'rib-left-2', 'rib-right-1', 'rib-right-2'])
+        const rows = shape === 'chunky-pill' ? 3 : 2
+        expect(skeleton.children.map(child => child.name)).toEqual(['skull', ...['left', 'right'].flatMap(side => Array.from({ length: rows }, (_, i) => `rib-${side}-${i + 1}`))])
         skeleton.updateMatrixWorld(true)
         const skull = skeleton.getObjectByName('skull') as THREE.Mesh
         const center = skull.getWorldPosition(new THREE.Vector3()), ribs: THREE.Mesh<THREE.TubeGeometry>[] = []
@@ -101,10 +102,10 @@ describe('spherical 3D skeleton', () => {
             if (isRib) expect(p.distanceTo(center)).toBeGreaterThan(radius)
           }
         })
-        expect(ribs).toHaveLength(4)
+        expect(ribs).toHaveLength(rows * 2)
         for (const rib of ribs) {
           expect(rib.geometry.parameters.radius).toBe(.032)
-          const direction = rib.name.includes('left') ? -1 : 1, row = rib.name.endsWith('2') ? 1 : 0
+          const direction = rib.name.includes('left') ? -1 : 1, row = Number(rib.name.slice(-1)) - 1
           const top = shape === 'chunky-pill' ? -.19 - row * .15 : -.21 - row * .122, width = shape === 'chunky-pill' ? 1.12 : 1
           const previous = new THREE.CubicBezierCurve3(
             new THREE.Vector3(direction * .065, top - .039, .13),
@@ -114,19 +115,39 @@ describe('spherical 3D skeleton', () => {
           )
           const current = rib.geometry.parameters.path
           expect(current.getLength() / previous.getLength()).toBeCloseTo(.5, 5)
-          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715])[row]!
+          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715, .130615])[row]!
           expect(current.getPoint(.5).x).toBeCloseTo(previous.getPoint(.5).x * .8 - direction * previousGap / 4, 5)
           expect(current.getPoint(.5).y).toBeCloseTo(previous.getPoint(.5).y - (shape === 'cap' ? row === 0 ? .05 : .025 : 0), 5)
           expect(current.getPoint(.5).z).toBeCloseTo(previous.getPoint(.5).z, 5)
         }
-        for (const row of [1, 2]) {
+        for (const row of Array.from({ length: rows }, (_, i) => i + 1)) {
           const left = new THREE.Box3().setFromObject(skeleton.getObjectByName(`rib-left-${row}`)!)
           const right = new THREE.Box3().setFromObject(skeleton.getObjectByName(`rib-right-${row}`)!)
-          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715])[row - 1]!
-          expect(right.min.x - left.max.x).toBeCloseTo(previousGap / 2, 5)
+          const previousGap = (shape === 'cap' ? [.121, .119125] : [.134815, .132715, .130615])[row - 1]!
+          expect(right.min.x - left.max.x).toBeCloseTo(previousGap / (shape === 'chunky-pill' ? 4 : 2), 5)
           expect(right.min.x).toBeCloseTo(-left.max.x, 5)
         }
       } finally { disposeSkeleton(skeleton) }
     })
   }
+})
+
+
+it('halves the chunky-pill vertical air gaps and tapers the six ribs from top to bottom', () => {
+  const skeleton = roundedSkeletonGeometry('chunky-pill')
+  try {
+    for (const side of ['left', 'right']) {
+      const ribs = [1, 2, 3].map(row => skeleton.getObjectByName(`rib-${side}-${row}`)!)
+      const boxes = ribs.map(rib => new THREE.Box3().setFromObject(rib))
+      for (let row = 1; row < 3; row++) {
+        const previous = boxes[row - 1]!, current = boxes[row]!
+        const gap = previous.min.y - current.max.y
+        const originalGap = previous.min.y - ribs[row - 1]!.position.y - (current.max.y - ribs[row]!.position.y)
+        expect(gap).toBeGreaterThan(.01)
+        expect(gap).toBeCloseTo(originalGap * .5, 6)
+        expect(current.getSize(new THREE.Vector3()).x).toBeLessThan(previous.getSize(new THREE.Vector3()).x)
+        expect(current.getSize(new THREE.Vector3()).x / previous.getSize(new THREE.Vector3()).x).toBeGreaterThan(.85)
+      }
+    }
+  } finally { disposeSkeleton(skeleton) }
 })
