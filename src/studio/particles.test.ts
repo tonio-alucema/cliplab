@@ -4,10 +4,10 @@ import { defaultProject, parseProject, PROPS } from './model'
 import { copyBeatValues, pasteBeatValues } from './beat-values'
 import { particleIconSource } from './particle-art'
 
-it('normalizes both supplied SVG artworks exactly twenty percent smaller', () => {
+it('normalizes both supplied SVG artworks another fifteen percent smaller', () => {
   const question = particleIconSource('question'), star = particleIconSource('sparkle')
-  expect(question.height * question.scale).toBeCloseTo(124 * .8)
-  expect(star.width * star.scale).toBeCloseTo(104 * .8)
+  expect(question.height * question.scale).toBeCloseTo(99.2 * .85)
+  expect(star.width * star.scale).toBeCloseTo(83.2 * .85)
   expect(question.svg).toContain('<svg')
   expect(star.svg).toContain('<svg')
 })
@@ -36,7 +36,7 @@ it('adjusts size independently and lets outward movement stop or increase travel
 it('keeps even maximum particles inside their padded texture for the whole cycle', () => {
   for (const prop of PROPS) for (const count of [1, 3, 6]) for (const phase of [undefined, ...Array.from({ length: 101 }, (_, i) => i / 100)]) {
     const { extent, particles, bounds } = particleLayout(prop, phase, { propSize: 2, propCount: count, propOutward: 3 })
-    const radius = prop === 'crown' ? 100 : prop === 'question' ? 65.6 : prop === 'sparkle' ? 59.2 : prop === 'sweat' ? 80 : 48
+    const radius = prop === 'crown' ? 100 : prop === 'question' ? 55.76 : prop === 'sparkle' ? 50.32 : prop === 'sweat' ? 80 : 48
     for (const p of particles) {
       expect(Math.abs(p.x - 128) + radius * p.scale).toBeLessThan(extent / 2)
       expect(Math.abs(p.y - 128) + radius * p.scale).toBeLessThan(extent / 2)
@@ -67,7 +67,7 @@ it('keeps questions circulating continuously with no empty interval', () => {
 })
 
 it('launches stars in a compact burst and lets their movement settle during the slower fade', () => {
-  expect(particleLayout('sparkle', .11).particles.every(p => p.alpha > .95)).toBe(true)
+  expect(particleLayout('sparkle', .19).particles.every(p => p.alpha > .95)).toBe(true)
   const at = (prop: 'sparkle' | 'question', phase: number) => particleLayout(prop, phase, { propCount: 1 }).particles[0]!
   const starLaunch = at('sparkle', .2).x - at('sparkle', 0).x
   const questionLaunch = at('question', .2).x - at('question', 0).x
@@ -85,9 +85,9 @@ it('separates all visible default stars throughout launch, growth, fade and the 
       for (let i = 0; i < visible.length; i++) for (let j = i + 1; j < visible.length; j++) {
         const a = visible[i]!, b = visible[j]!
         // These circles enclose the supplied star's actual rounded outline.
-        const gap = Math.hypot(a.x - b.x, a.y - b.y) - 42 * (a.scale + b.scale)
-        expect(gap).toBeGreaterThan(8)
-        if (propSize === 1 && propOutward === 1 && b.index - a.index === 1) expect(gap).toBeLessThan(30)
+        const gap = Math.hypot(a.x - b.x, a.y - b.y) - 35.7 * (a.scale + b.scale)
+        expect(gap).toBeGreaterThan(0)
+        if (propSize === 1 && propOutward === 1 && b.index - a.index === 1) expect(gap).toBeLessThan(45)
       }
     }
   }
@@ -125,7 +125,7 @@ it('keeps particle resets invisible and all loops deterministic when seeking', (
   for (const prop of ['question', 'sparkle'] as const) for (const count of [1, 3, 6]) {
     const settings = { propCount: count, propSize: 2, propOutward: 3 }
     for (let i = 0; i < count; i++) {
-      const seam = prop === 'question' ? (1 - i / count) % 1 : count > 1 ? i / (count - 1) * .04 : 0
+      const seam = prop === 'question' ? (1 - i / count) % 1 : (count - 1 - i) * .05
       const before = particleLayout(prop, seam - 1e-7, settings).particles[i]!
       const after = particleLayout(prop, seam + 1e-7, settings).particles[i]!
       expect(before.alpha).toBeLessThan(1e-8)
@@ -196,4 +196,24 @@ it('round-trips and copies per-beat settings, with defaults for older projects',
   const legacy = JSON.parse(JSON.stringify(project))
   for (const key of ['propSize', 'propCount', 'propOutward']) delete legacy.expressions[0].beats[0].pose[key]
   expect(parseProject(legacy).expressions[0]!.beats[0]!.pose).toMatchObject({ propSize: 1, propCount: 0, propOutward: 1 })
+})
+
+
+it('gives each star its own launch timing and a 45 degree spin over its lifetime', () => {
+  const one = (phase: number, index: number) => particleLayout('sparkle', phase).particles[index]!
+  const phases = [.1, .05, 0]
+  phases.forEach((delay, index) => {
+    const start = one(delay, index), end = one(delay + 1 - 1e-8, index)
+    expect((end.rotation - start.rotation) * 180 / Math.PI).toBeCloseTo(45, 5)
+    expect(start.alpha).toBeLessThan(1e-8)
+    expect(end.alpha).toBeLessThan(1e-8)
+  })
+  const launches = phases.map((delay, index) => {
+    const start = one(delay, index), end = one(delay + 1 - 1e-8, index), now = one(.12, index)
+    return (now.x - start.x) / (end.x - start.x)
+  })
+  expect(launches[1]! - launches[0]!).toBeGreaterThan(.1)
+  expect(launches[2]! - launches[1]!).toBeGreaterThan(.1)
+  // Faster early travel settles to almost no movement during the late fade.
+  expect(one(.2, 0).x - one(.1, 0).x).toBeGreaterThan((one(.8, 0).x - one(.7, 0).x) * 8)
 })

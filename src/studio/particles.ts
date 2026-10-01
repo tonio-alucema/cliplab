@@ -5,11 +5,11 @@ export const defaultParticleCount = (prop: Pose['prop']) => ['zzz', 'sparkle', '
 export const particleCount = (prop: Pose['prop'], count = 0) => prop === 'none' ? 0 : count > 0 ? Math.max(1, Math.min(6, Math.round(count))) : defaultParticleCount(prop)
 const smooth = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t) }
 const cycle = (phase: number) => ((phase % 1) + 1) % 1
-const easeOut = (x: number) => 1 - (1 - Math.max(0, Math.min(1, x))) ** 3
+const easeOut = (x: number) => 1 - (1 - Math.max(0, Math.min(1, x))) ** 5
 
 /** Seeded, independent lanes keep seeking, exports and reduced-motion previews reproducible. */
 function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefined, count: number, size: number, outward: number) {
-  const burst = prop === 'sparkle', radius = burst ? 59.2 : 65.6, maxScale = 1.15
+  const burst = prop === 'sparkle', radius = burst ? 50.32 : 55.76, maxScale = 1.15
   let halfExtent = 128
   let launchDistance = 0, expansionDistance = 0
   const bounds = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity }
@@ -23,11 +23,11 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     const tier = burst ? .46 + rank * .54 : 1
     if (burst && i > 0) {
       const previousTier = .46 + (i - 1) / (count - 1) * .54
-      // The rounded SVG's actual outline fits a 42px circle. Begin with a small
+      // The rounded SVG's actual outline fits a 35.7px circle. Begin with a small
       // air gap, then expand that gap with growth instead of adding extra travel.
       // At zero outward movement, leave room for the fully grown silhouettes.
-      launchDistance += 42 * (maxScale - .85 * Math.min(1, outward)) * (previousTier + tier) * size + 14
-      expansionDistance += 42 * .85 * (previousTier + tier) * size
+      launchDistance += 35.7 * (maxScale - .85 * Math.min(1, outward)) * (previousTier + tier) * size + 14
+      expansionDistance += 35.7 * .85 * (previousTier + tier) * size
     }
     const startX = 64 + seed * (burst ? 2 : 10) + (burst ? launchDistance * .7 : 0)
     const startY = 207 + seed2 * (burst ? 2 : 10) - (burst ? launchDistance * Math.sqrt(.51) : 0)
@@ -45,21 +45,22 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     bounds.top = Math.min(bounds.top, Math.min(startY, startY - travelY * outward) - sway * outward - growthRadius)
     bounds.bottom = Math.max(bounds.bottom, Math.max(startY, startY - travelY * outward) + sway * outward + growthRadius)
     const still = phase === undefined
-    const delay = count > 1 ? i / (count - 1) * .04 : 0
+    // Launch the outer stars first so independently moving lanes never collide.
+    const delay = (count - 1 - i) * .05
     const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62 : cycle(phase + (burst ? -delay : i / count))
     const progress = burst && !still ? easeOut(p) : .55 * p + .45 * smooth(p)
     const growth = burst && !still ? progress : smooth(p / .88)
-    // All stars share their compact burst's drift. Individual fades and growth
-    // remain staggered; their lanes never cross while the stars are visible.
-    const movement = burst ? still ? growth : easeOut(cycle(phase)) : progress
-    const arc = Math.sin((burst && !still ? cycle(phase) : p) * Math.PI) * sway
+    // Every star owns its launch clock: stagger its travel, growth and spin
+    // together, with a fast quintic launch and a long settling tail.
+    const movement = burst && still ? growth : progress
+    const arc = Math.sin(p * Math.PI) * sway
     return {
       index,
       x: startX + (travelX * movement + arc * (burst ? .3 : seed)) * outward,
       y: startY - (travelY * movement + arc * (burst ? .4 : seed2)) * outward,
       scale: size * tier * (.3 + (maxScale - .3) * growth),
       alpha: still ? 1 : burst ? smooth(p / .065) * (1 - smooth((p - .18) / .76)) : smooth(p / .1) * (1 - smooth((p - .28) / .72)),
-      rotation: (seed * 12 + Math.sin(p * Math.PI * 1.5 + seed2) * 9 + (p - .5) * seed2 * 8) * Math.PI / 180
+      rotation: burst ? (seed * 10 + 45 * (1 - (1 - p) ** 3)) * Math.PI / 180 : (seed * 12 + Math.sin(p * Math.PI * 1.5 + seed2) * 9 + (p - .5) * seed2 * 8) * Math.PI / 180
     }
   })
   return { extent: halfExtent * 2, particles, bounds }

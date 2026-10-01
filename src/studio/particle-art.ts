@@ -19,7 +19,7 @@ const icons = { question: compile(questionSvg), sparkle: compile(starSvg) }
 /** Shared normalization keeps the live vector meshes and SVG snapshots identical. */
 export function particleIconSource(prop: keyof typeof icons) {
   const icon = icons[prop]
-  return { svg: prop === 'question' ? questionSvg : starSvg, width: icon.width, height: icon.height, scale: prop === 'question' ? 99.2 / icon.height : 83.2 / icon.width }
+  return { svg: prop === 'question' ? questionSvg : starSvg, width: icon.width, height: icon.height, scale: prop === 'question' ? 84.32 / icon.height : 70.72 / icon.width }
 }
 
 export function drawParticleIcon(ctx: CanvasRenderingContext2D, prop: keyof typeof icons) {
