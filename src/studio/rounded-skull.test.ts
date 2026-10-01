@@ -4,20 +4,35 @@ import { roundedSkeletonGeometry } from './rounded-skull'
 import { bodyGeometry, disposeSkeleton, radiusAt } from './body-geometry'
 import { toonLightOffset } from './renderer'
 
-describe('spherical 3D skeleton', () => {
+describe('recessed 3D skeleton', () => {
   for (const shape of ['cap', 'chunky-pill'] as const) {
     const radius = shape === 'cap' ? .3132 : .36
-    it(`uses an undeformed perfect sphere with no jaw or teeth for ${shape}`, () => {
+    it(`uses a round dome, shallow underside and two forward teeth for ${shape}`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
-        const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry>
-        const size = skull.geometry.boundingBox!.getSize(new THREE.Vector3())
-        expect(size.x).toBeCloseTo(radius * 2); expect(size.y).toBeCloseTo(size.x); expect(size.z).toBeCloseTo(size.x)
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh
+        const bounds = skull.geometry.boundingBox!
+        expect(bounds.max.y).toBeCloseTo(radius)
+        expect(bounds.min.y).toBeCloseTo(-radius * .6)
+        expect(bounds.max.x - bounds.min.x).toBeCloseTo(radius * 2)
+        expect(bounds.max.z - bounds.min.z).toBeCloseTo(radius * 2, 2)
+        expect(skull.userData.recessedSkull).toBe(true)
         const vertices = skull.geometry.attributes.position!
-        for (let i = 0; i < vertices.count; i++) expect(new THREE.Vector3().fromBufferAttribute(vertices, i).length()).toBeCloseTo(radius, 6)
-        expect(skull.children.map(child => child.name)).toEqual(['socket-left', 'socket-right', 'nose-left', 'nose-right'])
+        for (let i = 0; i < vertices.count; i++) {
+          const vertex = new THREE.Vector3().fromBufferAttribute(vertices, i)
+          expect(vertex.length()).toBeLessThan(radius + .00001)
+          if (vertex.y >= 0) expect(vertex.length()).toBeCloseTo(radius, 3)
+        }
+        const teeth = skull.children.filter(child => child.name.startsWith('tooth-'))
+        expect(teeth).toHaveLength(2)
+        for (const tooth of teeth) {
+          expect(tooth.position.z).toBeGreaterThan(radius * .2)
+          const bounds = new THREE.Box3().setFromObject(tooth)
+          expect(bounds.min.y).toBeLessThan(-radius * .6)
+          expect(bounds.max.y).toBeGreaterThan(-radius * .6)
+        }
+        expect(teeth[0]!.position.x).toBeCloseTo(-teeth[1]!.position.x)
         expect(skeleton.getObjectByName('rounded-jaw')).toBeUndefined()
-        expect(skeleton.getObjectByName('tooth')).toBeUndefined()
       } finally { disposeSkeleton(skeleton) }
     })
 
@@ -51,34 +66,47 @@ describe('spherical 3D skeleton', () => {
       } finally { inset.dispose(); disposeSkeleton(skeleton) }
     })
 
-    it(`maps smooth two-tone marks onto the surface and hides them behind the ${shape} skull`, () => {
+    it(`cuts three openings with shaded rims and concave closed backing into the ${shape} skull`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
         skeleton.updateMatrixWorld(true)
-        const skull = skeleton.getObjectByName('skull') as THREE.Mesh<THREE.SphereGeometry>
-        for (const mark of skull.children as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[]) {
-          expect(mark.userData.surfaceOverlay).toBe(true)
-          expect(mark.material.type).toBe('MeshBasicMaterial')
-          expect(mark.material.color.getHexString()).toBe('b8a979')
-          expect(mark.material.map).toBeNull(); expect(mark.material.depthTest).toBe(true)
-          const position = mark.geometry.attributes.position!
-          for (let i = 0; i < position.count; i++) {
-            const p = new THREE.Vector3().fromBufferAttribute(position, i).add(mark.position)
-            expect(p.length()).toBeGreaterThan(radius)
-            expect(p.length()).toBeLessThan(radius + .002)
+        const skull = skeleton.getObjectByName('skull') as THREE.Mesh
+        for (const name of ['socket-left', 'socket-right', 'nose']) {
+          const patch = skeleton.getObjectByName(name) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial[]>
+          const rim = skeleton.getObjectByName(`${name}-rim`) as typeof patch
+          expect(patch.userData.skullLayer).toBe(0); expect(rim.userData.skullLayer).toBe(1)
+          expect(patch.userData.surfaceOverlay).toBeUndefined()
+          for (const material of patch.material) {
+            expect(material.type).toBe('MeshBasicMaterial')
+            expect(material.map).toBeNull(); expect(material.depthTest).toBe(true)
           }
-          // A forward ray hits the marking before the bone; a rear ray hits the
-          // sphere first, proving these markings are not camera-facing overlays.
-          const center = mark.getWorldPosition(new THREE.Vector3())
-          const frontRay = new THREE.Raycaster(new THREE.Vector3(center.x, center.y, 2), new THREE.Vector3(0, 0, -1))
-          const backRay = new THREE.Raycaster(new THREE.Vector3(center.x, center.y, -2), new THREE.Vector3(0, 0, 1))
-          expect(frontRay.intersectObjects([skull, mark], false)[0]!.object).toBe(mark)
-          expect(backRay.intersectObjects([skull, mark], false)[0]!.object).toBe(skull)
+          const position = patch.geometry.attributes.position!
+          // The center is physically deeper than the matching lip, so camera
+          // rotation reveals thickness rather than a decal above the surface.
+          const centerVertex = new THREE.Vector3().fromBufferAttribute(position, position.count - 1)
+          const edgeVertex = new THREE.Vector3().fromBufferAttribute(position, 0).add(new THREE.Vector3().fromBufferAttribute(position, 40)).multiplyScalar(.5)
+          expect(centerVertex.z).toBeLessThan(edgeVertex.z - radius * .03)
+          const center = patch.getWorldPosition(new THREE.Vector3())
+          // Offset slightly from the fan's duplicate central vertex.
+          const x = center.x + .0001, y = center.y + .0001
+          const frontRay = new THREE.Raycaster(new THREE.Vector3(x, y, 2), new THREE.Vector3(0, 0, -1))
+          const backRay = new THREE.Raycaster(new THREE.Vector3(x, y, -2), new THREE.Vector3(0, 0, 1))
+          expect(frontRay.intersectObject(skull, false)).toHaveLength(0)
+          expect(frontRay.intersectObject(skull, true)[0]!.object).toBe(patch)
+          expect(backRay.intersectObject(skull, true)[0]!.object).toBe(skull)
+          // The recess closes the shell: rays across each opening always find
+          // a backing surface, with no transparent pinholes around the rim.
+          for (const offset of [-.7, 0, .7]) {
+            const ray = new THREE.Raycaster(new THREE.Vector3(center.x + offset * radius * (name === 'nose' ? .05 : .24), center.y, 2), new THREE.Vector3(0, 0, -1))
+            expect(ray.intersectObject(skull, true).length).toBeGreaterThan(0)
+          }
         }
+        expect(skeleton.getObjectByName('nose-left')).toBeUndefined()
+        expect(skeleton.getObjectByName('nose-right')).toBeUndefined()
       } finally { disposeSkeleton(skeleton) }
     })
 
-    it(`keeps all bones inside ${shape}, with ${shape === 'chunky-pill' ? 'six' : 'four'} thicker ribs below the sphere`, () => {
+    it(`keeps all bones inside ${shape}, with ${shape === 'chunky-pill' ? 'six' : 'four'} thicker ribs below the skull`, () => {
       const skeleton = roundedSkeletonGeometry(shape)
       try {
         const rows = shape === 'chunky-pill' ? 3 : 2

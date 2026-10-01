@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.7.7** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.7.8** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -25,7 +25,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.7.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.8.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -78,9 +78,9 @@ For `shape: "cap"`, optional `character.bodyModification` selects exactly one of
 - `rotate-left` and `rotate-right` turn the End cap body 90° left or right, keeping the face upright.
 - `horizontal` lays either pill shape on its side, keeping the face upright and fitting its width within the output.
 - `ghost` adds a gently rippling scalloped hem. The wave uses the playback timeline, pauses with playback, and stays still with reduced motion. It is independent of the body-movement amount and position lock.
-- `skeleton` reveals a 3D skull and four ribs through the translucent gradient shell. The bones follow all body rotations and pose transforms. It does not add arms or a ghost hem. For End cap, set `character.roundedSkull: true` for a perfect spherical cranium, sized and lowered to sit inside the toon band, with flat toon socket/nose patches on its 3D surface and no jaw. The original End cap skull remains the default. Chunky pill always uses the updated spherical style, with a larger skull positioned above its four ribs; its `roundedSkull` value is ignored. Its default face anchor is raised to align with the sockets while retaining authored expression settings and `pose.faceY` offsets. The shape and surface patches turn together in 3D. Runtime 0.6.1 reduces both spherical skulls by 10%, lowers them for clearance inside the inner toon silhouette, aligns resting sockets with the eyes, and halves rib length while retaining bone thickness and bringing the rib centers 20% closer to the midline. Runtime 0.6.2 further halves the visible horizontal gap between the left and right rib pairs without changing their length, thickness, or vertical positions.
+- `skeleton` reveals a 3D skull and ribs through the translucent gradient shell. End cap keeps its classic skull and four ribs by default; set `character.roundedSkull: true` for the alternate domed skull. Chunky pill always uses the alternate skull, sized for its taller body, with three pairs of thick ribs tapering toward the bottom; its `roundedSkull` value is ignored. The alternate skull has a shallow underside, two short front teeth, and genuine eye/nose openings with toon bevels and closed concave backing. It sits inside the toon band and turns with the body. Resting sockets align with the default eyes; authored expression settings and `pose.faceY` offsets are preserved. All bones support the same orbit, cursor-follow, animation, and export paths as the body.
 
-Sideways body modifications require runtime 0.5.0 or newer. The revised spherical skull and Chunky pill skeleton require runtime 0.6.0 or newer. Preserve `bodyModification` and `roundedSkull` when copying definitions.
+Sideways body modifications require runtime 0.5.0 or newer. The recessed alternate skull requires runtime 0.7.8 or newer (Chunky pill skeleton support began in 0.6.0). Preserve `bodyModification` and `roundedSkull` when copying definitions.
 
 PNG/video exports use the same scene. SVG snapshots retain the wavy silhouette or a compact additional Inner skeleton group. Update the runtime as well as the character JSON when using these features; older runtimes do not support the new shape/modifications.
 
@@ -132,3 +132,5 @@ No change to the ClipLab source is required for each new custom expression. Comm
 ## Chunky pill skeleton
 
 Runtime 0.7.7 gives the chunky-pill skeleton three pairs of thick ribs, tapering slightly toward the bottom. Horizontal and vertical visible gaps are half their previous size. End-cap skeletons retain their existing four-rib layout. Existing character definitions adopt this geometry without changes.
+
+Runtime 0.7.8 reshapes the alternate skeleton skull into a rounded dome with a shallow underside and two short front teeth. Its two eye openings and single teardrop nose have recessed, closed concave backing and discrete toon bevels. This applies to the end-cap rounded-skull option and the chunky-pill skeleton, retaining the six tapered chunky-pill ribs. The same 3D geometry is used for motion, cursor tracking, image exports, and compact SVG snapshots. Existing character JSON needs no migration.

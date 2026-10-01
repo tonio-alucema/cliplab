@@ -96,34 +96,55 @@ it('exports the ghost hem as a filled silhouette without torn gaps or a convex-h
   } finally { renderer.dispose() }
 })
 
-it('keeps spherical skull toon patches visible and occluded exactly as the 3D surface turns', () => {
+it('keeps recessed skull bowls and toon rims occluded like the 3D geometry at every angle', () => {
   const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 512, height: 512, displaySize: 512 })
   const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: '', beatIndex: 0, stepIndex: 0 }
-  let checked = 0
+  let checked = 0, bowls = 0, rims = 0
+  const rotations = [
+    { x: 0, y: 0, z: 0 }, { x: 0, y: -55, z: 0 }, { x: 0, y: 55, z: 0 },
+    { x: 0, y: -90, z: 0 }, { x: 0, y: 90, z: 0 }, { x: 0, y: 110, z: 0 },
+    { x: 0, y: 180, z: 0 }, { x: 35, y: 45, z: 0 }, { x: -35, y: -45, z: 12 },
+    { x: 80, y: 30, z: 0 }, { x: -80, y: 30, z: 0 }, { x: 35, y: 145, z: 0 },
+  ]
   try {
-    for (const shape of ['cap', 'chunky-pill'] as const) for (const yaw of [0, 70, 110, 180]) {
-      renderer.render({ ...defaultProject().characters[1]!, shape, bodyModification: 'skeleton', roundedSkull: true, trueFront: false }, sample, { rotation: { x: 0, y: yaw, z: 0 } })
-      const scene = renderer.snapshotScene(), doc = new DOMParser().parseFromString(snapshotSvg(scene), 'image/svg+xml')
+    for (const shape of ['cap', 'chunky-pill'] as const) for (const rotation of rotations) {
+      renderer.render({ ...defaultProject().characters[1]!, shape, bodyModification: 'skeleton', roundedSkull: true, trueFront: false }, sample, { rotation })
+      const scene = renderer.snapshotScene(), text = snapshotSvg(scene), doc = new DOMParser().parseFromString(text, 'image/svg+xml')
       const skull = scene.skeleton!.getObjectByName('skull') as THREE.Mesh
       const center = new THREE.Box3().setFromObject(skull).getCenter(new THREE.Vector3())
       const paths = [...doc.querySelectorAll('[data-name="Inner skeleton"] path')]
-      const colorAt = (x: number, y: number) => {
+      expect(doc.querySelectorAll('[data-name="skull"] [data-name="socket-left"], [data-name="skull"] [data-name="socket-right"]')).toHaveLength(2)
+      expect(doc.querySelector('[data-name="skull"] [data-name="nose"]')).not.toBeNull()
+      expect(doc.querySelectorAll('path').length).toBeLessThan(85)
+      expect(text.length).toBeLessThan(150000)
+      const surfaceAt = (x: number, y: number) => {
         const hit = new THREE.Raycaster(new THREE.Vector3(x, y, 8), new THREE.Vector3(0, 0, -1)).intersectObject(scene.skeleton!, true)[0]
         if (!hit) return undefined
         const mesh = hit.object as THREE.Mesh
         const material = (Array.isArray(mesh.material) ? mesh.material[hit.face!.materialIndex] : mesh.material) as THREE.MeshBasicMaterial
-        return '#' + material.color.getHexString()
+        return { color: '#' + material.color.getHexString(), name: mesh.name }
       }
-      for (const x of [-.22, -.15, -.10, -.02, .02, .10, .15, .22]) for (const dy of [-.171, -.123, -.077, -.025, .05, .15]) {
-        const y = center.y + dy, expected = colorAt(x, y)
-        if (!expected || [colorAt(x - .001, y), colorAt(x + .001, y), colorAt(x, y - .001), colorAt(x, y + .001)].some(color => color !== expected)) continue
+      const points = [-.22, -.15, -.10, -.02, .02, .10, .15, .22].flatMap(x => [-.171, -.123, -.077, -.025, .05, .15].map(dy => ({ x, y: center.y + dy })))
+      if (Math.abs(rotation.x) >= 80 || rotation.y === 145) {
+        for (const name of ['socket-left', 'socket-right', 'nose', 'tooth-left', 'tooth-right']) {
+          const feature = skull.getObjectByName(name)!.getWorldPosition(new THREE.Vector3())
+          for (const dx of [-.02, 0, .02]) for (const dy of [-.02, 0, .02]) points.push({ x: feature.x + dx, y: feature.y + dy })
+        }
+      }
+      for (const { x, y } of points) {
+        const expected = surfaceAt(x, y)
+        if (!expected || [surfaceAt(x - .001, y), surfaceAt(x + .001, y), surfaceAt(x, y - .001), surfaceAt(x, y + .001)].some(hit => hit?.color !== expected.color)) continue
         const screen = new THREE.Vector3(x, y, 8).project(scene.camera)
         const point = { x: (screen.x + 1) * 256, y: (1 - screen.y) * 256 }
         const painted = paths.filter(path => contains(path.getAttribute('d')!, point)).at(-1)?.getAttribute('fill')
-        expect(painted, `${shape}, yaw ${yaw}, point ${x},${y}`).toBe(expected)
+        expect(painted, `${shape}, rotation ${JSON.stringify(rotation)}, point ${x},${y}`).toBe(expected.color)
+        if (expected.name === 'socket-left' || expected.name === 'socket-right' || expected.name === 'nose') bowls++
+        if (expected.name.endsWith('-rim')) rims++
         checked++
       }
     }
-    expect(checked).toBeGreaterThan(250)
+    expect(checked).toBeGreaterThan(500)
+    expect(bowls).toBeGreaterThan(5)
+    expect(rims).toBeGreaterThan(0)
   } finally { renderer.dispose() }
-}, 15000)
+}, 45000)

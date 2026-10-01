@@ -34,7 +34,7 @@ function observeDisposal(group: THREE.Group) {
 }
 
 describe('skeleton renderer shape lifecycle', () => {
-  it('aligns spherical skull sockets with default eye centers in the front view', () => {
+  it('aligns recessed skull sockets with default eye centers in the front view', () => {
     const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 256, height: 256, displaySize: 256, pixelRatio: 1 })
     renderers.push(renderer)
     for (const shape of ['cap', 'chunky-pill'] as const) {
@@ -69,7 +69,8 @@ describe('skeleton renderer shape lifecycle', () => {
     expect(roundedSkeleton).not.toBe(classicSkeleton)
     expect(classicSkeleton.parent).toBeNull(); classicEvents.forEach(event => expect(event).toHaveBeenCalledOnce())
     expect(roundedSkeleton.getObjectByName('rounded-jaw')).toBeUndefined()
-    expect(roundedSkeleton.getObjectByName('socket-left')?.userData.surfaceOverlay).toBe(true)
+    expect(roundedSkeleton.getObjectByName('socket-left')?.userData.skullLayer).toBe(0)
+    expect(roundedSkeleton.getObjectByName('skull')?.userData.recessedSkull).toBe(true)
 
     const priorGeometry = rounded.body.geometry, disposedBody = vi.fn(); priorGeometry.addEventListener('dispose', disposedBody)
     character.shape = 'chunky-pill'; character.roundedSkull = false
@@ -78,7 +79,9 @@ describe('skeleton renderer shape lifecycle', () => {
     roundedEvents.forEach(event => expect(event).toHaveBeenCalledOnce())
     expect(disposedBody).toHaveBeenCalledOnce()
     expect(chunkySkeleton.getObjectByName('rounded-jaw')).toBeUndefined()
-    expect((chunkySkeleton.getObjectByName('skull') as THREE.Mesh).geometry.type).toBe('SphereGeometry')
+    expect(chunkySkeleton.getObjectByName('skull')?.userData.recessedSkull).toBe(true)
+    expect(chunkySkeleton.getObjectByName('tooth-left')).toBeDefined()
+    expect(chunkySkeleton.getObjectByName('tooth-right')).toBeDefined()
     expect(chunky.backShell).toBe(backShell); expect(backShell.geometry).toBe(chunky.body.geometry)
     expect(chunky.body.material.uniforms.bodyHeight!.value).toBe(1.5)
     expect(chunky.body.material.transparent).toBe(true)

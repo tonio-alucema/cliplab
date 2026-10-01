@@ -73,8 +73,10 @@ describe('body shape geometry and modifications', () => {
     expect(bodyDimensions('chunky-pill', 'skeleton')).toEqual({ width: 1, height: 1.5, depth: 1 })
     const rounded = skeletonGeometry(false, 'chunky-pill')
     expect(rounded.getObjectByName('rounded-jaw')).toBeUndefined()
-    expect(rounded.getObjectByName('socket-left')?.userData.surfaceOverlay).toBe(true)
-    expect((rounded.getObjectByName('skull') as THREE.Mesh).geometry.type).toBe('SphereGeometry')
+    expect(rounded.getObjectByName('socket-left')?.userData.skullLayer).toBe(0)
+    expect(rounded.getObjectByName('skull')?.userData.recessedSkull).toBe(true)
+    expect(rounded.getObjectByName('tooth-left')).toBeDefined()
+    expect(rounded.getObjectByName('tooth-right')).toBeDefined()
     disposeSkeleton(rounded); plain.dispose(); skeleton.dispose()
   })
 

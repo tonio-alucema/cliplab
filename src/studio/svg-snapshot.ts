@@ -80,7 +80,9 @@ export function snapshotSvg(snapshot: Snapshot): string {
     const triangles: Triangle[] = []
     for (let i = 0; i < (index?.count ?? position.count); i += 3) {
       const indices = [0, 1, 2].map(j => index ? index.getX(i + j) : i + j), points = indices.map(i => vertices[i]!)
-      const materialIndex = geometry.groups.find(group => i >= group.start && i < group.start + group.count)?.materialIndex ?? 0
+      // Three.js ignores geometry groups when a mesh has one material (for
+      // example the six faces of a rounded tooth). Export every face as well.
+      const materialIndex = Array.isArray(mesh.material) ? geometry.groups.find(group => i >= group.start && i < group.start + group.count)?.materialIndex ?? 0 : 0
       const side = (Array.isArray(mesh.material) ? mesh.material[materialIndex] : mesh.material)?.side ?? THREE.FrontSide
       const area = cross(points[0]!, points[1]!, points[2]!)
       if (side === THREE.DoubleSide ? Math.abs(area) > 1e-8 : side === THREE.BackSide ? area > 1e-8 : area < -1e-8) triangles.push({ points, indices, materialIndex })
@@ -120,6 +122,83 @@ export function snapshotSvg(snapshot: Snapshot): string {
   if (snapshot.backShell?.visible) surface(snapshot.backShell, 'body-back')
   if (snapshot.skeleton?.visible) {
     const bones: { z: number; markup: string }[] = []
+    const recessedPieces = new Set<THREE.Mesh>()
+    const recessPaths = (skull: THREE.Mesh, pieces: THREE.Mesh[]) => {
+      type Occluder = { points: Vertex[]; minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number; mesh: THREE.Mesh }
+      const records: Occluder[] = [], pieceTriangles = new Map<THREE.Mesh, Triangle[]>()
+      const boundsOf = (points: Vertex[]) => ({ minX: Math.min(...points.map(p => p.x)), maxX: Math.max(...points.map(p => p.x)), minY: Math.min(...points.map(p => p.y)), maxY: Math.max(...points.map(p => p.y)), minZ: Math.min(...points.map(p => p.z)), maxZ: Math.max(...points.map(p => p.z)) })
+      skull.traverse(mesh => {
+        if (!(mesh instanceof THREE.Mesh) || !mesh.visible) return
+        const faces = triangles(mesh).triangles
+        if (pieces.includes(mesh)) pieceTriangles.set(mesh, faces)
+        for (const face of faces) records.push({ points: face.points, ...boundsOf(face.points), mesh })
+      })
+      const minX = Math.min(...records.map(t => t.minX)), maxX = Math.max(...records.map(t => t.maxX)), minY = Math.min(...records.map(t => t.minY)), maxY = Math.max(...records.map(t => t.maxY))
+      const cells = 64, cellX = (maxX - minX) / cells || 1, cellY = (maxY - minY) / cells || 1
+      const column = (x: number) => Math.max(0, Math.min(cells - 1, Math.floor((x - minX) / cellX)))
+      const row = (y: number) => Math.max(0, Math.min(cells - 1, Math.floor((y - minY) / cellY)))
+      const grid = Array.from({ length: cells * cells }, () => [] as number[])
+      records.forEach((face, index) => { for (let x = column(face.minX); x <= column(face.maxX); x++) for (let y = row(face.minY); y <= row(face.maxY); y++) grid[x + y * cells]!.push(index) })
+      const halfPlane = (polygon: Vertex[], distance: (p: Vertex) => number) => {
+        const result: Vertex[] = []
+        for (let i = 0; i < polygon.length; i++) {
+          const a = polygon[i]!, b = polygon[(i + 1) % polygon.length]!, da = distance(a), db = distance(b)
+          if (da >= 0) result.push(a)
+          if ((da >= 0) !== (db >= 0)) {
+            const f = da / (da - db)
+            result.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f, t: 0 })
+          }
+        }
+        return result
+      }
+      const polygonArea = (polygon: Vertex[]) => polygon.reduce((sum, a, i) => {
+        const b = polygon[(i + 1) % polygon.length]!
+        return sum + a.x * b.y - b.x * a.y
+      }, 0)
+      const subtract = (polygon: Vertex[], cutter: Vertex[]) => {
+        const fragments: Vertex[][] = []
+        let remaining = polygon
+        for (let i = 0; i < cutter.length && remaining.length >= 3; i++) {
+          const a = cutter[i]!, b = cutter[(i + 1) % cutter.length]!
+          const outside = halfPlane(remaining, p => -cross(a, b, p))
+          if (outside.length >= 3 && Math.abs(polygonArea(outside)) > 1e-8) fragments.push(outside)
+          remaining = halfPlane(remaining, p => cross(a, b, p))
+        }
+        return fragments
+      }
+      const output = new Map<THREE.Mesh, string>()
+      for (const piece of pieces) {
+        const materials = Array.isArray(piece.material) ? piece.material : [piece.material]
+        const visible = materials.map(() => [] as Vertex[][])
+        for (const face of pieceTriangles.get(piece) ?? []) {
+          const bounds = boundsOf(face.points), candidates = new Set<number>()
+          for (let x = column(bounds.minX); x <= column(bounds.maxX); x++) for (let y = row(bounds.minY); y <= row(bounds.maxY); y++) for (const index of grid[x + y * cells]!) candidates.add(index)
+          const [a, b, c] = face.points as [Vertex, Vertex, Vertex], area = cross(a, b, c)
+          const zx = ((b.z - a.z) * (c.y - a.y) - (c.z - a.z) * (b.y - a.y)) / area
+          const zy = ((b.x - a.x) * (c.z - a.z) - (c.x - a.x) * (b.z - a.z)) / area
+          const z0 = a.z - zx * a.x - zy * a.y
+          let fragments = [face.points]
+          for (const index of candidates) {
+            const other = records[index]!
+            if (other.mesh === piece || other.minZ >= bounds.maxZ || other.maxX <= bounds.minX || other.minX >= bounds.maxX || other.maxY <= bounds.minY || other.minY >= bounds.maxY) continue
+            // Only a nearer surface can hide a recess. The far side of the
+            // cranium sometimes projects into a socket but belongs behind it.
+            let cutter = halfPlane(other.points, p => z0 + zx * p.x + zy * p.y - p.z - 1e-9)
+            const cutterArea = polygonArea(cutter)
+            if (cutter.length < 3 || Math.abs(cutterArea) < 1e-8) continue
+            if (cutterArea < 0) cutter = [...cutter].reverse()
+            fragments = fragments.flatMap(fragment => subtract(fragment, cutter))
+            if (!fragments.length) break
+          }
+          for (const fragment of fragments) visible[face.materialIndex]!.push(fragment)
+        }
+        output.set(piece, materials.map((material, index) => {
+          if (!visible[index]!.length) return ''
+          return `<path fill="#${(material as THREE.MeshBasicMaterial).color.getHexString()}" d="${pathData(boundaryContours(visible[index]!))}"/>`
+        }).join(''))
+      }
+      return output
+    }
     const bonePaths = (object: THREE.Mesh) => {
       const data = triangles(object), materials = Array.isArray(object.material) ? object.material : [object.material]
       const pieces: string[] = []
@@ -133,14 +212,28 @@ export function snapshotSvg(snapshot: Snapshot): string {
       return pieces.join('')
     }
     snapshot.skeleton.traverse(object => {
-      if (!(object instanceof THREE.Mesh) || !object.visible || object.userData.surfaceOverlay) return
+      if (!(object instanceof THREE.Mesh) || !object.visible || object.userData.surfaceOverlay || recessedPieces.has(object)) return
+      let recesses = ''
+      if (object.userData.recessedSkull) {
+        const pieces: THREE.Mesh[] = []
+        object.traverse(child => {
+          if (child instanceof THREE.Mesh && child.visible && typeof child.userData.skullLayer === 'number') {
+            pieces.push(child); recessedPieces.add(child)
+          }
+        })
+        // Resolve occlusion against nearby projected triangles once, then merge
+        // the visible fragments into compact editable paths per toon color.
+        const visible = recessPaths(object, pieces)
+        recesses = pieces.sort((a, b) => a.userData.skullLayer - b.userData.skullLayer)
+          .map(piece => `<g data-name="${xml(piece.name)}">${visible.get(piece)}</g>`).join('')
+      }
       // Curved toon patches live on the sphere, so their front-facing triangles
       // cover it even when a patch's center has passed behind the silhouette.
       // Rear-facing triangles are culled by the same geometry as the renderer.
       const overlays = object.children.filter((child): child is THREE.Mesh => child instanceof THREE.Mesh && child.visible && child.userData.surfaceOverlay)
         .map(child => `<g data-name="${xml(child.name)}">${bonePaths(child)}</g>`).join('')
       const center = project(object.getWorldPosition(new THREE.Vector3()))
-      bones.push({ z: center.z, markup: `<g data-name="${xml(object.name || 'Bone')}">${bonePaths(object)}${overlays}</g>` })
+      bones.push({ z: center.z, markup: `<g data-name="${xml(object.name || 'Bone')}">${bonePaths(object)}${recesses}${overlays}</g>` })
     })
     // Bones are projected from their real 3D meshes before the translucent body.
     // Keep a compact semantic group rather than one layer per mesh triangle.

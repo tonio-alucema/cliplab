@@ -66,7 +66,7 @@ export const PILL_BODY_MODIFICATIONS: typeof BODY_MODIFICATIONS = [
 ]
 export const CHUNKY_PILL_BODY_MODIFICATIONS: typeof BODY_MODIFICATIONS = [
   ...PILL_BODY_MODIFICATIONS,
-  { id: 'skeleton', name: 'Skeleton', description: 'A spherical skull and ribs' }
+  { id: 'skeleton', name: 'Skeleton', description: 'A recessed skull and ribs' }
 ]
 export function bodyModificationsFor(shape: Shape) {
   return shape === 'cap' ? BODY_MODIFICATIONS : shape === 'chunky-pill' ? CHUNKY_PILL_BODY_MODIFICATIONS : shape === 'capsule' ? PILL_BODY_MODIFICATIONS : []
