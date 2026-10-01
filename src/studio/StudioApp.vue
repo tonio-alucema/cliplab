@@ -11,7 +11,8 @@ import BeatSectionMenu from './BeatSectionMenu.vue'
 import { copyBeatValues, pasteBeatValues, type BeatSection, type BeatValues } from './beat-values'
 import Stage from './CharacterStage.vue'
 import { FACE_SETS, expressionFromFace, facePose, type FacePreset } from './face-styles'
-import { BASE_POSE, bodyModificationsFor, beatEndRotation, rotationAxes, EYES, MOUTHS, PALETTES, PROPS, SHAPES, addLoadingAnimation, animationDuration, clone, defaultExpressions, defaultProject, definitionOf, expressionDuration, gradientTurns, removeExpression, isGradientExpression, parseProject, sampleDefinition, uid, upgradeStudioDefaults, type Animation, type Beat, type Character, type Expression, type Pose, type Project } from './model'
+import { BASE_POSE, bodyModificationsFor, beatEndRotation, rotationAxes, EYES, MOUTHS, PALETTES, PROPS, SHAPES, addLoadingAnimation, animationDuration, clone, defaultExpressions, definitionOf, expressionDuration, gradientTurns, removeExpression, isGradientExpression, parseProject, sampleDefinition, uid, type Animation, type Beat, type Character, type Expression, type Pose, type Project } from './model'
+import { loadStudioProject, publishedProject } from './published-project'
 import { CLIPTOON_PALETTES } from './color-palettes'
 import { demoZip, fileName, jsonBlob, renderMedia, renderSvg, saveBlob, setupInstructions } from './export'
 import type { EyeGazes } from './gaze'
@@ -20,7 +21,7 @@ type Tab = 'character' | 'expressions' | 'animations' | 'export' | 'favorites'
 type NumberKey = { [K in keyof Pose]: Pose[K] extends number ? K : never }[keyof Pose]
 const STORAGE = 'cliplab.studio.v1'
 let loadError = ''
-function load(): Project { try { const value = localStorage.getItem(STORAGE); return value ? upgradeStudioDefaults(parseProject(JSON.parse(value))) : defaultProject() } catch { loadError = 'Your saved project could not be loaded. The built-in characters are ready; import a saved project to restore it.'; return defaultProject() } }
+function load(): Project { try { return loadStudioProject(localStorage.getItem(STORAGE)) } catch { loadError = 'Your saved project could not be loaded. The published studio project is ready; import a saved project to restore your work.'; return publishedProject() } }
 const project = ref<Project>(load())
 const selectedCharacter = ref(project.value.characters[0]!.id)
 const selectedExpression = ref(project.value.expressions[0]!.id)

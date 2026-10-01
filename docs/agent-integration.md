@@ -14,7 +14,9 @@ To build from source, check out the intended release/commit, install dependencie
 
 ## Get the actual custom animation
 
-Custom studio expressions are saved in the user's browser, not in this repository. Ask for the exported `.character.json`; do not recreate the user's sleepy-to-wake expression from a screenshot or substitute the built-in Sleepy animation.
+Fresh studio sessions start with the published `tonio-set-02` project in `src/studio/defaults/tonio-set-02.cliplab.json`: 7 characters, 27 expressions, 15 animations, and 2 favorite beats. The snapshot is the exact supplied project, including its custom sleepy-to-wake expressions and animation. Existing browser projects remain intact.
+
+Further studio edits stay in the user's browser until exported and published. For integration, use the intended character's exported `.character.json`; do not recreate custom expressions from a screenshot or substitute the built-in Sleepy animation.
 
 In the studio:
 
