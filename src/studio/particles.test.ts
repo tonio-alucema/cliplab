@@ -217,3 +217,17 @@ it('gives each star its own launch timing and a 45 degree spin over its lifetime
   // Faster early travel settles to almost no movement during the late fade.
   expect(one(.2, 0).x - one(.1, 0).x).toBeGreaterThan((one(.8, 0).x - one(.7, 0).x) * 8)
 })
+
+
+it('gives neighboring marks contrasting seeded tilts without changing the star spin', () => {
+  for (const prop of ['question', 'sparkle'] as const) {
+    const tilts = [0, 1, 2].map(i => particleLayout(prop, prop === 'sparkle' ? (2 - i) * .05 : (1 - i / 3) % 1).particles[i]!.rotation * 180 / Math.PI)
+    expect(tilts[0]).toBeLessThan(-5)
+    expect(tilts[1]).toBeGreaterThan(5)
+    expect(tilts[2]).toBeLessThan(-5)
+  }
+  const question = particleLayout('question').particles
+  expect(question[2]!.x - question[0]!.x).toBeLessThan(85)
+  const star = particleLayout('sparkle').particles
+  expect(Math.hypot(star[2]!.x - star[0]!.x, star[2]!.y - star[0]!.y)).toBeLessThan(125)
+})

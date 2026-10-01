@@ -17,6 +17,8 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     const index = count > 1 ? i * 2 / (count - 1) : 0
     const seed = Math.sin((i + 1) * 12.9898 + (burst ? 4 : 0))
     const seed2 = Math.sin((i + 1) * 29.173 + 1.2)
+    // Stable, alternating tilts avoid parallel marks without jitter on replay.
+    const tilt = (i % 2 === 0 ? -1 : 1) * (9 + Math.abs(seed2) * 9)
     const rank = count > 1 ? i / (count - 1) : 1
     // A burst launches close together in time, but each star gets its own place:
     // smaller/closer stars lead into larger, farther stars along a spreading arc.
@@ -26,13 +28,13 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
       // The rounded SVG's actual outline fits a 35.7px circle. Begin with a small
       // air gap, then expand that gap with growth instead of adding extra travel.
       // At zero outward movement, leave room for the fully grown silhouettes.
-      launchDistance += 35.7 * (maxScale - .85 * Math.min(1, outward)) * (previousTier + tier) * size + 14
+      launchDistance += 35.7 * (maxScale - .85 * Math.min(1, outward)) * (previousTier + tier) * size + 7
       expansionDistance += 35.7 * .85 * (previousTier + tier) * size
     }
-    const startX = 64 + seed * (burst ? 2 : 10) + (burst ? launchDistance * .7 : 0)
-    const startY = 207 + seed2 * (burst ? 2 : 10) - (burst ? launchDistance * Math.sqrt(.51) : 0)
-    const travelX = burst ? .7 * (80 + expansionDistance) : 145 + seed2 * 15
-    const travelY = burst ? Math.sqrt(.51) * (80 + expansionDistance) : 145 + seed * 18
+    const startX = 64 + seed * (burst ? 1 : 3) + (burst ? launchDistance * .7 : 0)
+    const startY = 207 + seed2 * (burst ? 1 : 3) - (burst ? launchDistance * Math.sqrt(.51) : 0)
+    const travelX = burst ? .7 * (80 + expansionDistance) : 125 + seed2 * 6
+    const travelY = burst ? Math.sqrt(.51) * (80 + expansionDistance) : 125 + seed * 7
     const sway = burst ? 2 : 7
     // Bound both ends and the small arc, independently of phase. The supplied SVGs
     // fit within these radii at every rotation, so no phase can resize the texture.
@@ -48,7 +50,8 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
     // Launch the outer stars first so independently moving lanes never collide.
     const delay = (count - 1 - i) * .05
     const p = still ? burst ? .65 : count === 1 ? .5 : .12 + i / (count - 1) * .62 : cycle(phase + (burst ? -delay : i / count))
-    const progress = burst && !still ? easeOut(p) : .55 * p + .45 * smooth(p)
+    // A compact question trail opens up gradually as its marks grow.
+    const progress = burst ? (still ? .55 * p + .45 * smooth(p) : easeOut(p)) : .4 * p + .6 * p * p
     const growth = burst && !still ? progress : smooth(p / .88)
     // Every star owns its launch clock: stagger its travel, growth and spin
     // together, with a fast quintic launch and a long settling tail.
@@ -60,7 +63,7 @@ function floatingParticles(prop: 'question' | 'sparkle', phase: number | undefin
       y: startY - (travelY * movement + arc * (burst ? .4 : seed2)) * outward,
       scale: size * tier * (.3 + (maxScale - .3) * growth),
       alpha: still ? 1 : burst ? smooth(p / .065) * (1 - smooth((p - .18) / .76)) : smooth(p / .1) * (1 - smooth((p - .28) / .72)),
-      rotation: burst ? (seed * 10 + 45 * (1 - (1 - p) ** 3)) * Math.PI / 180 : (seed * 12 + Math.sin(p * Math.PI * 1.5 + seed2) * 9 + (p - .5) * seed2 * 8) * Math.PI / 180
+      rotation: burst ? (tilt + 45 * (1 - (1 - p) ** 3)) * Math.PI / 180 : (tilt + Math.sin(p * Math.PI * 1.5 + seed2) * 4 + (p - .5) * seed2 * 4) * Math.PI / 180
     }
   })
   return { extent: halfExtent * 2, particles, bounds }

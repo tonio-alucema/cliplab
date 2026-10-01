@@ -5,6 +5,8 @@ import { CharacterRenderer, drawProp } from './renderer'
 import { BASE_POSE, defaultProject, sampleDefinition, type Definition, type Prop, type Sample } from './model'
 import { particleLayout } from './particles'
 import { ParticleVectors } from './particle-vectors'
+import { particleIconSource } from './particle-art'
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js'
 import { SvgCanvas } from './svg-canvas'
 import { snapshotSvg } from './svg-snapshot'
 
@@ -249,4 +251,26 @@ it('reuses the particle mesh pool when count falls and disposes each cached icon
     for (const spy of dispose) expect(spy).toHaveBeenCalledTimes(1)
     expect(vectors.group.children).toHaveLength(0)
   } finally { vectors.dispose(); sprite.material.dispose() }
+})
+
+
+it('keeps a visible gap between the tighter, independently tilted question silhouettes throughout a cycle', () => {
+  const icon = particleIconSource('question')
+  const points = new SVGLoader().parse(icon.svg).paths.flatMap(path => path.subPaths.flatMap(sub => sub.getPoints(20)))
+    .map(point => ({ x: (point.x - icon.width / 2) * icon.scale, y: (point.y - icon.height / 2) * icon.scale }))
+  const axes = Array.from({ length: 12 }, (_, i) => ({ x: Math.cos(i * Math.PI / 12), y: Math.sin(i * Math.PI / 12) }))
+  for (const phase of [undefined, ...Array.from({ length: 501 }, (_, i) => i / 500)]) {
+    const visible = particleLayout('question', phase).particles.filter(p => p.alpha > .02).map(p => points.map(point => ({
+      x: p.x + p.scale * (point.x * Math.cos(p.rotation) - point.y * Math.sin(p.rotation)),
+      y: p.y + p.scale * (point.x * Math.sin(p.rotation) + point.y * Math.cos(p.rotation))
+    })))
+    for (let i = 0; i < visible.length; i++) for (let j = i + 1; j < visible.length; j++) {
+      // A separating projection proves the full vector silhouettes cannot touch.
+      const gap = Math.max(...axes.map(axis => {
+        const a = visible[i]!.map(p => p.x * axis.x + p.y * axis.y), b = visible[j]!.map(p => p.x * axis.x + p.y * axis.y)
+        return Math.max(Math.min(...a) - Math.max(...b), Math.min(...b) - Math.max(...a))
+      }))
+      expect(gap).toBeGreaterThan(3)
+    }
+  }
 })
