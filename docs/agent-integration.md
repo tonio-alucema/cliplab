@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.7.9** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.7.10** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -25,7 +25,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.9.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.10.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -136,3 +136,5 @@ Runtime 0.7.7 gives the chunky-pill skeleton three pairs of thick ribs, tapering
 Runtime 0.7.8 reshapes the alternate skeleton skull into a rounded dome with a shallow underside and two short front teeth. Its two eye openings and single teardrop nose have recessed, closed concave backing and discrete toon bevels. This applies to the end-cap rounded-skull option and the chunky-pill skeleton, retaining the six tapered chunky-pill ribs. The same 3D geometry is used for motion, cursor tracking, image exports, and compact SVG snapshots. Existing character JSON needs no migration.
 
 Runtime 0.7.9 refines the alternate skull with three integrated rounded tooth lobes, a uniformly shaded socket/nose interior, and a smoother cranium mesh at grazing camera angles. The entire rib group moves upward to halve the gap below the skull, without changing its internal spacing. Capsule and Chunky pill bodies now use a continuous-curvature cap profile instead of circular arcs; the analytic face projection and toon insets use that same profile. Dimensions remain 1:2 and 1:1.5, including horizontal modifications. Existing character JSON remains compatible.
+
+Runtime 0.7.10 increases the alternate skull's three tooth lobes' horizontal spacing and downward extension by 15%, retaining their smooth joins for both End cap and Chunky pill. Existing character JSON remains compatible.

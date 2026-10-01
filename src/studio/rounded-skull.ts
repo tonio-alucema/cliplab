@@ -71,13 +71,13 @@ export function roundedSkeletonGeometry(shape: SkeletonShape = 'cap'): THREE.Gro
   // teeth with it. The shoulders blend into the skull, with shallow valleys
   // between three small forward lobes and no separate join line. The depth
   // falloff finishes before the nose aperture, preserving its matching seam.
-  const teeth = [-.32, 0, .32]
+  const teeth = [-.32 * 1.15, 0, .32 * 1.15]
   const smooth = (value: number) => { const t = THREE.MathUtils.clamp(value, 0, 1); return t * t * t * (10 + t * (-15 + 6 * t)) }
   const positions = skull.geometry.attributes.position!
   const toothLift = (x: number, y: number, z: number) => {
     const lobes = teeth.reduce((sum, center) => sum + Math.exp(-.5 * ((x / radius - center) / .105) ** 2), 0)
     const front = smooth(z / radius / .18) * (1 - smooth((z / radius - .48) / .14)) * Math.exp(-.5 * ((z / radius - .40) / .20) ** 2)
-    return radius * .13 * lobes * front * smooth((-y / radius - .32) / .25)
+    return radius * .13 * 1.15 * lobes * front * smooth((-y / radius - .32) / .25)
   }
   for (let i = 0; i < positions.count; i++) positions.setY(i, positions.getY(i) - toothLift(positions.getX(i), positions.getY(i), positions.getZ(i)))
   positions.needsUpdate = true
