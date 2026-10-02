@@ -1,63 +1,17 @@
-/**
- * Carte sociale (`public/og.png`), 1200 x 630.
- *
- * Ecrit `public/og.svg`, la SOURCE. Le PNG s'en rasterise :
- *
- *   rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png
- *
- * Sans rasteriseur installe, le navigateur en est un : charger le SVG dans une
- * `Image`, la peindre sur un canvas de 1200 x 630, relire `toDataURL('image/png')`.
- * C'est le moteur qui affichera la carte, donc le rendu du texte est celui-la meme.
- *
- * Meme principe que `public/favicon.svg` : la boule n'est pas une approximation,
- * c'est ce que `engine.sample(1)` rend pour `idle`. Le fichier existe parce que
- * la carte porte du TEXTE, donc le nom du produit — au renommage suivant, elle
- * doit suivre, et sans source elle ne suit pas. Elle ne l'avait pas fait au
- * premier : la carte annoncait encore « BLOUB » longtemps apres.
- */
+/** Generate the 1200 × 630 social card. Rasterize og.svg to og.png after changes. */
 import { writeFileSync } from 'node:fs'
-import { BotEngine } from '@/bot/engine'
-import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
+import { characterArtwork } from './site-artwork'
 
-const L = 1200
-const H = 630
-const PAPIER = '#f9f9f9'
-const ENCRE = '#0a0a0c'
-const NUIT = '#17203a'
-const GRIS = '#6b7280'
-const NOM = 'CLIPLAB'
-const ACCROCHE = 'Studio de personnages SVG'
-const POLICE = "ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
-
-const f = new BotEngine(RAYON, 'idle', null, null).sample(1)
-
-/* La boule occupe la moitie gauche, centree sur 360 : meme cadrage que la carte
-   d'origine, dont seul le texte change.
-
-   L'echelle se calcule sur le DIAMETRE DE LA BOULE (2 x RAYON) et non sur le
-   viewBox : celui-ci est plus large que la boule — sa marge loge les anneaux des
-   etats animes — donc s'en servir rendait une boule un tiers trop petite. `idle`
-   n'a pas d'anneaux, rien ne deborde. */
-const k = 430 / (RAYON * 2)
-const yeux = f.eyes
-  .map((e) => `<path d="${e.d}" transform="${e.matrix}" opacity="${e.alpha}" fill="#000"/>`)
-  .join('')
-
-const svg =
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${L}" height="${H}" viewBox="0 0 ${L} ${H}">` +
-  `<rect width="${L}" height="${H}" fill="${PAPIER}"/>` +
-  `<defs><mask id="m" maskUnits="userSpaceOnUse" x="${-DEMI_VIEWBOX}" y="${-DEMI_VIEWBOX}"` +
-  ` width="${DEMI_VIEWBOX * 2}" height="${DEMI_VIEWBOX * 2}">` +
-  `<path d="${f.bodyPath}" fill="#fff"/>${yeux}</mask></defs>` +
-  `<g transform="translate(360 315) scale(${k})">` +
-  `<path d="${f.bodyPath}" fill="${PAPIER}"/>` +
-  `<g mask="url(#m)"><rect x="${-DEMI_VIEWBOX}" y="${-DEMI_VIEWBOX}" width="${DEMI_VIEWBOX * 2}"` +
-  ` height="${DEMI_VIEWBOX * 2}" fill="${ENCRE}"/></g></g>` +
-  `<text x="660" y="300" font-family="${POLICE}" font-size="86" font-weight="800"` +
-  ` letter-spacing="-2" fill="${NUIT}">${NOM}</text>` +
-  `<text x="660" y="352" font-family="${POLICE}" font-size="30" fill="${GRIS}">${ACCROCHE}</text>` +
-  `</svg>`
-
+const character = characterArtwork.replace('<svg ', '<svg x="90" y="80" ')
+  .replace('width="528" height="528"', 'width="470" height="470"')
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>ClipLab — Character Studio</title>
+<rect width="1200" height="630" fill="#f4f4f4"/>
+${character}
+<g font-family="Helvetica,Arial,sans-serif">
+<text x="620" y="300" font-size="80" font-weight="700" letter-spacing="-3" fill="#292929">CLIPLAB</text>
+<text x="624" y="355" font-size="30" fill="#727679">Character Studio</text>
+</g>
+</svg>`
 writeFileSync('public/og.svg', svg)
-console.log(`public/og.svg — ${L}x${H}, « ${NOM} »`)
-console.log('rasteriser : rsvg-convert -w 1200 -h 630 public/og.svg -o public/og.png')
+console.log('Updated public/og.svg from public/site-character.svg')

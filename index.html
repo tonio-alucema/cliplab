@@ -1,14 +1,6 @@
 <!doctype html>
-<!--
-  `lang` est reecrit au demarrage par src/i18n : la valeur ici est celle du
-  premier rendu, avant que la langue du visiteur soit connue. Les meta, elles,
-  restent en francais quoi qu'il arrive : les robots sociaux (X, Slack, Discord)
-  n'executent pas de JavaScript, donc l'apercu partage est toujours celui du
-  HTML servi. Une seule langue a choisir, autant que ce soit celle de l'auteur.
--->
 <html lang="en">
   <head>
-    <!-- doit tenir dans les 1024 premiers octets, donc en premier -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -18,67 +10,35 @@
       content="Create expressive 3D characters with crisp toon shading. Tune faces, sequence looping animations, and export for your app or marketing."
     />
 
-    <!--
-      Pas de <meta name="robots" content="index, follow"> : c'est la valeur par
-      defaut, et Google la documente comme sans effet. Cette balise ne sert qu'a
-      INTERDIRE quelque chose.
-    -->
 
-    <!-- Open Graph : attribut `property`, alors que les balises X prennent `name` -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="ClipLab — Character Studio" />
     <meta
       property="og:description"
-      content="Three simple shapes. Expressive faces. Looping animations for your app and beyond."
+      content="Create expressive 3D characters, customize faces, and sequence looping animations for your app and beyond."
     />
-    <meta property="og:site_name" content="Cliplab" />
+    <meta property="og:site_name" content="ClipLab" />
     <meta property="og:locale" content="en_US" />
 
-    <!--
-      `twitter:card` suffit : X reprend og:title, og:description et og:image.
-      Les dupliquer en twitter:* n'ajoute rien.
-    -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/og.png?v=milo-1" />
+    <meta name="twitter:image:alt" content="The gray Milo character beside the ClipLab Character Studio wordmark on a light background" />
 
-    <!--
-      URL ABSOLUE obligatoire (protocole + hote) : une URL relative est ignoree
-      par les robots sociaux, qui ne connaissent pas la page d'ou ils viennent.
-      Les trois URL ci-dessous sont donc a reprendre si le domaine change, elles
-      ne se deduisent de rien. A REPRENDRE : le domaine ci-dessous est presume,
-      aucun deploiement n'existe encore.
-    -->
     <link rel="canonical" href="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/" />
     <meta property="og:url" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/" />
-    <meta property="og:image" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/og.png" />
+    <meta property="og:image" content="https://cliplab-character-studio.paperclip-la-1425.chatgpt.site/og.png?v=milo-1" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Un personnage et le logotype CLIPLAB, sur fond clair"
+      content="The gray Milo character beside the ClipLab Character Studio wordmark on a light background"
     />
 
-    <!--
-      Le `.ico` d'abord et le SVG apres : a pertinence egale les navigateurs
-      retiennent le DERNIER, et on veut le vectoriel quand il est compris.
-      Le `.ico` reste necessaire en 2026 : Safari ne lit le SVG qu'a partir de
-      la version 26, et iOS pas du tout avant 18.7.
+    <link rel="icon" href="/favicon.ico?v=milo-1" sizes="16x16 32x32 48x48" />
+    <link rel="icon" href="/favicon.svg?v=milo-1" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=milo-1" />
 
-      Il embarque 16, 32 et 48 (48 pour les onglets a fort zoom et le raccourci
-      Windows), chaque taille rendue depuis le SVG plutot que reechantillonnee.
-      Les trois tailles sont declarees : avec `sizes="32x32"` seul, un
-      navigateur qui cherche une icone de 48 reechantillonne le 32 au lieu
-      d'ouvrir l'image de 48 qui est dans le fichier. Le `.ico` ignore
-      `prefers-color-scheme`, il porte la seule variante claire (corps #0a0a0c,
-      yeux troues), d'ou le SVG juste apres, qui lui s'inverse.
-    -->
-    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <!-- iOS aplatit la transparence en noir : celui-la est opaque, fond #f9f9f9 -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-
-    <!-- pas de site.webmanifest : il ne sert qu'a l'installation PWA, et
-         couterait trois icones de plus pour aucun gain de referencement -->
 
     <meta name="theme-color" content="#313131" />
   </head>
