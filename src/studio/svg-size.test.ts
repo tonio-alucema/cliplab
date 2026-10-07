@@ -318,3 +318,20 @@ it('locks the 24px eye positions to a leftward gaze despite cursor and animated 
     }
   } finally { renderer.dispose() }
 })
+
+it('captures the selected pill rounding in SVG geometry and snapshot metadata', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 256, height: 256 })
+  const sample = { pose: BASE_POSE, blink: 0, bob: 0, breathe: 0, expressionId: 'idle', beatIndex: 0, stepIndex: 0 }
+  try {
+    for (const shape of ['capsule', 'chunky-pill'] as const) {
+      const paths = [0, .5, 1].map(bodyRounding => {
+        renderer.render({ ...defaultProject().characters[0]!, shape, bodyRounding }, sample)
+        const doc = new DOMParser().parseFromString(snapshotSvg(renderer.snapshotScene()), 'image/svg+xml')
+        expect(doc.querySelector('parsererror')).toBeNull()
+        expect(JSON.parse(doc.querySelector('metadata')!.textContent!).character.bodyRounding).toBe(bodyRounding)
+        return doc.querySelector('[data-name="Outer body"] path')!.getAttribute('d')
+      })
+      expect(new Set(paths).size).toBe(3)
+    }
+  } finally { renderer.dispose() }
+})

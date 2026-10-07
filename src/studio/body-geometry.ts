@@ -17,9 +17,9 @@ export function bodyDimensions(shape: Shape, modification: BodyModification = 'n
 }
 export const faceOffset = (shape: Shape, modification: BodyModification = 'none') => shape === 'chunky-pill' && modification === 'skeleton' ? .13 : isPill(shape) && modification !== 'horizontal' ? -.14 * (bodyHeight(shape) - 1) : -.025
 
-export function radiusAt(shape: Shape, y: number, modification: BodyModification = 'none'): number {
+export function radiusAt(shape: Shape, y: number, modification: BodyModification = 'none', rounding = 1): number {
   if (shape === 'sphere') return Math.sqrt(Math.max(0, .25 - y * y))
-  if (isPill(shape)) return continuousPillRadius(y, .5, bodyHeight(shape) - 1)
+  if (isPill(shape)) return continuousPillRadius(y, .5, bodyHeight(shape) - 1, rounding)
   if (modification === 'upside-down') y = -y
   if (y >= 0) return Math.sqrt(Math.max(0, .25 - y * y))
   if (y >= -.43) return .5
@@ -27,18 +27,18 @@ export function radiusAt(shape: Shape, y: number, modification: BodyModification
 }
 
 /** Intersect an upright face point with the front surface of a body-only turn. */
-export function bodySurfaceZ(shape: Shape, x: number, y: number, modification: BodyModification = 'none'): number | undefined {
+export function bodySurfaceZ(shape: Shape, x: number, y: number, modification: BodyModification = 'none', rounding = 1): number | undefined {
   const angle = bodyAngle(shape, modification), cos = Math.cos(angle), sin = Math.sin(angle)
   const u = cos * x + sin * y, v = -sin * x + cos * y
   if (Math.abs(v) >= bodyHeight(shape) / 2) return undefined
-  const radius = radiusAt(shape, v)
+  const radius = radiusAt(shape, v, 'none', rounding)
   const square = radius * radius - u * u
   return square > 0 ? Math.sqrt(square) : undefined
 }
 
-export function bodyGeometry(shape: Shape, squareBottom = false, modification: BodyModification = 'none', inset = false): THREE.BufferGeometry {
+export function bodyGeometry(shape: Shape, squareBottom = false, modification: BodyModification = 'none', inset = false, rounding = 1): THREE.BufferGeometry {
   if (shape === 'sphere') return new THREE.SphereGeometry(.5, 80, 64)
-  if (isPill(shape)) return continuousPillGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1)).rotateZ(bodyAngle(shape, modification))
+  if (isPill(shape)) return continuousPillGeometry(inset ? .42 : .5, (bodyHeight(shape) - 1) * (inset ? .94 : 1), rounding).rotateZ(bodyAngle(shape, modification))
   const ghost = modification === 'ghost'
   // Radial rings let the draped underside deform smoothly from every camera angle.
   const corner = squareBottom && !ghost ? 0 : .07

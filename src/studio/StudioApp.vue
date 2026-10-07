@@ -434,6 +434,10 @@ watch(() => expression.value.beats.length, n => { selectedBeat.value = Math.min(
             <div class="control-section"><label class="field-label" for="character-name">Name</label><input id="character-name" class="text-field" maxlength="60" v-model="character.name" />
               <div class="section-heading"><h2>Body shape</h2></div><div class="shape-options"><button v-for="shape in SHAPES" :key="shape.id" :class="['shape-option', { active: character.shape === shape.id }]" :aria-pressed="character.shape === shape.id" @click="character.shape = shape.id"><Thumb :character="characterForShape(shape.id)" :size="62" /><strong>{{ shape.name }}</strong><span>{{ shape.ratio }}</span></button></div>
             </div>
+            <div v-if="character.shape === 'capsule' || character.shape === 'chunky-pill'" class="control-section">
+              <label class="range-control"><span>Continuous rounding<output>{{ Math.round((character.bodyRounding ?? 1) * 100) }}%</output></span><input aria-label="Continuous rounding" type="range" min="0" max="1" step="0.01" :value="character.bodyRounding ?? 1" @input="character.bodyRounding = Number(($event.target as HTMLInputElement).value)" /></label>
+              <p class="panel-hint">0% standard · 100% continuous. Smooth the curve where the rounded ends meet the sides.</p>
+            </div>
             <div v-if="bodyModifications.length" class="control-section">
               <div class="section-heading"><h2>Body Modification</h2></div>
               <div class="body-modification-options" role="group" aria-label="Body modification">

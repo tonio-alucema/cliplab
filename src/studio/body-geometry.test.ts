@@ -32,18 +32,18 @@ describe('body shape geometry and modifications', () => {
 
   it('keeps pill facial projection on the continuous surface, including the rounded shoulders', () => {
     const material = new THREE.MeshBasicMaterial()
-    for (const shape of ['capsule', 'chunky-pill'] as const) for (const modification of ['none', 'horizontal'] as const) {
-      const geometry = bodyGeometry(shape, false, modification), mesh = new THREE.Mesh(geometry, material)
+    for (const shape of ['capsule', 'chunky-pill'] as const) for (const modification of ['none', 'horizontal'] as const) for (const rounding of [0, .5, 1]) {
+      const geometry = bodyGeometry(shape, false, modification, false, rounding), mesh = new THREE.Mesh(geometry, material)
       mesh.updateMatrixWorld(true)
       for (const capY of [.02, .15, .3, .45]) for (const direction of [-1, 1]) for (const radialFraction of [0, .4, .8]) {
         const uprightY = direction * ((bodyHeight(shape) - 1) / 2 + capY)
-        const uprightX = radiusAt(shape, uprightY) * radialFraction
+        const uprightX = radiusAt(shape, uprightY, 'none', rounding) * radialFraction
         const x = modification === 'horizontal' ? -uprightY : uprightX
         const y = modification === 'horizontal' ? uprightX : uprightY
         const ray = new THREE.Raycaster(new THREE.Vector3(x, y, 3), new THREE.Vector3(0, 0, -1))
         const hit = ray.intersectObject(mesh)[0]
         expect(hit, `${shape} ${modification}: ${x}, ${y}`).toBeDefined()
-        expect(Math.abs(hit!.point.z - bodySurfaceZ(shape, x, y, modification)!)).toBeLessThan(.0015)
+        expect(Math.abs(hit!.point.z - bodySurfaceZ(shape, x, y, modification, rounding)!)).toBeLessThan(.0015)
       }
       geometry.dispose()
     }
@@ -51,8 +51,8 @@ describe('body shape geometry and modifications', () => {
   })
 
   it('keeps continuous pill toon insets contained and gives every vertex a finite unit normal', () => {
-    for (const shape of ['capsule', 'chunky-pill'] as const) {
-      const outer = bodyGeometry(shape), inset = bodyGeometry(shape, false, 'none', true)
+    for (const shape of ['capsule', 'chunky-pill'] as const) for (const rounding of [0, .5, 1]) {
+      const outer = bodyGeometry(shape, false, 'none', false, rounding), inset = bodyGeometry(shape, false, 'none', true, rounding)
       for (const geometry of [outer, inset]) {
         const normals = geometry.attributes.normal!
         for (let i = 0; i < normals.count; i++) expect(Math.hypot(normals.getX(i), normals.getY(i), normals.getZ(i))).toBeCloseTo(1, 5)
@@ -60,7 +60,7 @@ describe('body shape geometry and modifications', () => {
       const vertices = inset.attributes.position!
       for (let i = 0; i < vertices.count; i++) {
         expect(Math.abs(vertices.getY(i))).toBeLessThan(bodyHeight(shape) / 2)
-        expect(Math.hypot(vertices.getX(i), vertices.getZ(i))).toBeLessThan(radiusAt(shape, vertices.getY(i)))
+        expect(Math.hypot(vertices.getX(i), vertices.getZ(i))).toBeLessThan(radiusAt(shape, vertices.getY(i), 'none', rounding))
       }
       outer.dispose(); inset.dispose()
     }
@@ -209,4 +209,22 @@ describe('body shape geometry and modifications', () => {
     })
     disposeSkeleton(skeleton)
   })
+})
+
+it('blends from circular caps to continuous shoulders without changing body dimensions', () => {
+  for (const shape of ['capsule', 'chunky-pill'] as const) {
+    const join = (bodyHeight(shape) - 1) / 2
+    const radii = [0, .5, 1].map(rounding => radiusAt(shape, join + .25, 'none', rounding))
+    expect(radii[0]).toBeCloseTo(Math.sqrt(.25 - .25 ** 2), 10)
+    expect(radii[1]).toBeGreaterThan(radii[0]!)
+    expect(radii[2]).toBeGreaterThan(radii[1]!)
+    expect(radii[2]).toBe(radiusAt(shape, join + .25))
+    for (const rounding of [0, .5, 1]) {
+      const geometry = bodyGeometry(shape, false, 'none', false, rounding)
+      geometry.computeBoundingBox()
+      const size = geometry.boundingBox!.getSize(new THREE.Vector3())
+      expect(size.x).toBeCloseTo(1); expect(size.y).toBeCloseTo(bodyHeight(shape)); expect(size.z).toBeCloseTo(1)
+      geometry.dispose()
+    }
+  }
 })

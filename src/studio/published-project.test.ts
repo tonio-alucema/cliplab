@@ -3,9 +3,12 @@ import snapshot from './defaults/tonio-set-02.cliplab.json'
 import { loadStudioProject, publishedProject } from './published-project'
 import { definitionOf, sampleDefinition } from './model'
 
+// New controls receive their backward-compatible defaults without altering the supplied artwork.
+const expectedSnapshot = { ...snapshot, characters: snapshot.characters.map(character => ({ ...character, bodyRounding: 1 })) }
+
 it('opens the complete supplied Tonio Set 02 project in a fresh studio without changing its values', () => {
   const project = loadStudioProject(null)
-  expect(project).toEqual(snapshot)
+  expect(project).toEqual(expectedSnapshot)
   expect(project.name).toBe('tonio-set-02')
   expect(project.characters).toHaveLength(7)
   expect(project.expressions).toHaveLength(27)
@@ -18,7 +21,7 @@ it('keeps edits isolated from the published snapshot and from later fresh studio
   edited.characters[0]!.name = 'My private edit'
   edited.expressions[0]!.beats[0]!.pose.mouthStroke = 2
   edited.animations[0]!.steps.splice(0, 1)
-  expect(publishedProject()).toEqual(snapshot)
+  expect(publishedProject()).toEqual(expectedSnapshot)
 })
 
 it('preserves an existing local project instead of replacing it with the published default', () => {

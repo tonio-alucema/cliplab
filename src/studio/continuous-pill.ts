@@ -3,17 +3,20 @@ import * as THREE from 'three'
 // A restrained superellipse provides continuous curvature at the straight-side
 // joins, unlike circular capsule caps. This is an Apple-style approximation,
 // not an implementation of Apple's unpublished continuous-corner outline.
-const CURVE_POWER = 2.4
+export const pillRounding = (amount = 1) => Number.isFinite(amount) ? Math.max(0, Math.min(1, amount)) : 1
+const curvePower = (amount: number) => 2 + .4 * pillRounding(amount)
 
 /** Radius of the same surface of revolution used by continuousPillGeometry. */
-export function continuousPillRadius(y: number, radius: number, straightLength: number): number {
+export function continuousPillRadius(y: number, radius: number, straightLength: number, rounding = 1): number {
+  const exponent = curvePower(rounding)
   const capY = Math.max(0, Math.abs(y) - straightLength / 2)
   if (capY >= radius) return 0
-  return radius * Math.pow(1 - Math.pow(capY / radius, CURVE_POWER), 1 / CURVE_POWER)
+  return radius * Math.pow(1 - Math.pow(capY / radius, exponent), 1 / exponent)
 }
 
-export function continuousPillGeometry(radius: number, straightLength: number): THREE.BufferGeometry {
-  const points: THREE.Vector2[] = [], steps = 40, power = 2 / CURVE_POWER
+export function continuousPillGeometry(radius: number, straightLength: number, rounding = 1): THREE.BufferGeometry {
+  const exponent = curvePower(rounding)
+  const points: THREE.Vector2[] = [], steps = 40, power = 2 / exponent
   // Angular sampling resolves both the pole and the straight-side joins without
   // tiny, stretched rings near either end of the continuous cap.
   for (let i = 0; i <= steps; i++) {
@@ -39,8 +42,8 @@ export function continuousPillGeometry(radius: number, straightLength: number): 
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i), radial = Math.hypot(x, z)
     const capY = Math.max(0, Math.abs(y) - straightLength / 2)
-    const outward = Math.pow(radial / radius, CURVE_POWER - 1)
-    normal.set(radial ? x / radial * outward : 0, Math.sign(y) * Math.pow(capY / radius, CURVE_POWER - 1), radial ? z / radial * outward : 0).normalize()
+    const outward = Math.pow(radial / radius, exponent - 1)
+    normal.set(radial ? x / radial * outward : 0, Math.sign(y) * Math.pow(capY / radius, exponent - 1), radial ? z / radial * outward : 0).normalize()
     normals.setXYZ(i, normal.x, normal.y, normal.z)
   }
   return geometry

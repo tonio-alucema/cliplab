@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
 import { drawParticleIcon, PARTICLE_YELLOW } from './particle-art'
 import { ParticleVectors } from './particle-vectors'
+import { pillRounding } from './continuous-pill'
 import { animateGhostGeometry, bodyGeometry, bodyHeight, bodyDimensions, bodyModification, bodySurfaceZ, disposeSkeleton, faceOffset, isPill, skeletonGeometry, SKELETON_BACK_OPACITY, SKELETON_BODY_OPACITY, SKELETON_INSET_OPACITY } from './body-geometry'
 export { bodyHeight, radiusAt } from './body-geometry'
 import { BASE_POSE, detailAt, faceLayers, type Character, type Detail, type FaceLayer, type Pose, type Sample, type Shape, type BodyModification, type RotationTravel } from './model'
@@ -103,7 +104,7 @@ export function projectedEye(character: Character, pose: Pose, blink: number, si
     const ty = cy + faceAspect * (Math.sin(angle) * dx + Math.cos(angle) * dy * h)
     const x = (tx / 512 - .5) * .76 * pose.faceScale
     const y = (.5 - ty / 512) * .57 * pose.faceScale + faceOffset(character.shape, bodyModification(character)) + pose.faceY
-    const depth = bodySurfaceZ(character.shape, x / shell, y / shell, bodyModification(character))
+    const depth = bodySurfaceZ(character.shape, x / shell, y / shell, bodyModification(character), character.bodyRounding)
     return new THREE.Vector3(x, y, depth === undefined ? Math.sqrt(.001) : depth * shell).applyMatrix4(matrix).project(camera)
   }
   const center = project(0, 0)
@@ -294,6 +295,7 @@ export class CharacterRenderer {
   private particleVectors = new ParticleVectors()
   private shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
   private shape: Shape = 'capsule'
+  private rounding = 1
   private squareBottom = false
   private modification: BodyModification = 'none'
   private skeleton?: THREE.Group
@@ -347,10 +349,11 @@ export class CharacterRenderer {
     character = appearance.character; sample = appearance.sample
     const squareBottom = character.shape === 'cap' && displaySize <= 24
     const modification = bodyModification(character)
-    if (character.shape !== this.shape || squareBottom !== this.squareBottom || modification !== this.modification) {
-      this.shape = character.shape; this.squareBottom = squareBottom; this.modification = modification
-      this.body.geometry.dispose(); this.body.geometry = bodyGeometry(this.shape, squareBottom, modification)
-      this.lightFill.geometry.dispose(); this.lightFill.geometry = bodyGeometry(this.shape, false, modification, true)
+    const rounding = isPill(character.shape) ? pillRounding(character.bodyRounding) : 1
+    if (character.shape !== this.shape || squareBottom !== this.squareBottom || modification !== this.modification || rounding !== this.rounding) {
+      this.shape = character.shape; this.squareBottom = squareBottom; this.modification = modification; this.rounding = rounding
+      this.body.geometry.dispose(); this.body.geometry = bodyGeometry(this.shape, squareBottom, modification, false, rounding)
+      this.lightFill.geometry.dispose(); this.lightFill.geometry = bodyGeometry(this.shape, false, modification, true, rounding)
     }
     if (modification === 'ghost') {
       const phase = this.options.reducedMotion ? 0 : sample.effectPhase ?? 0
@@ -467,7 +470,7 @@ export class CharacterRenderer {
     for (let i = 0; i < vertices.count; i++) {
       const x = (uv.getX(i) - .5) * .76 * scale
       const y = (uv.getY(i) - .5) * .57 * scale + offset
-      const depth = bodySurfaceZ(this.shape, x / shell, y / shell, modification)
+      const depth = bodySurfaceZ(this.shape, x / shell, y / shell, modification, rounding)
       vertices.setXYZ(i, x, y, depth === undefined ? Math.sqrt(.001) : depth * shell)
       valid.setX(i, depth === undefined ? 0 : 1)
     }

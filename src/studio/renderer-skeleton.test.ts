@@ -148,3 +148,27 @@ describe('skeleton renderer shape lifecycle', () => {
     expect(compact.backShell!.geometry).toBe(compact.body.geometry)
   })
 })
+
+it('updates rounding live across body, inset, back shell and face without rebuilding unchanged frames', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 256, height: 256, displaySize: 256, pixelRatio: 1 })
+  renderers.push(renderer)
+  const character: Character = { ...defaultProject().characters[0]!, shape: 'chunky-pill', bodyModification: 'skeleton', bodyRounding: 1 }
+  // Lift the face onto a shoulder where the two cap profiles differ.
+  const shoulderSample = { ...sample, pose: { ...BASE_POSE, faceY: .25 } }
+  renderer.render(character, shoulderSample)
+  const previous = renderer.snapshotScene(), body = previous.body.geometry, inset = previous.lightFill.geometry
+  const face = Float32Array.from(previous.face.geometry.attributes.position!.array)
+  const bodyDisposed = vi.fn(), insetDisposed = vi.fn()
+  body.addEventListener('dispose', bodyDisposed); inset.addEventListener('dispose', insetDisposed)
+  character.bodyRounding = 0
+  renderer.render(character, shoulderSample)
+  const current = renderer.snapshotScene()
+  expect(current.body.geometry).not.toBe(body); expect(current.lightFill.geometry).not.toBe(inset)
+  expect(current.backShell!.geometry).toBe(current.body.geometry)
+  expect(current.character.bodyRounding).toBe(0)
+  expect(current.face.geometry.attributes.position!.array).not.toEqual(face)
+  expect(bodyDisposed).toHaveBeenCalledOnce(); expect(insetDisposed).toHaveBeenCalledOnce()
+  const reused = current.body.geometry
+  renderer.render(character, shoulderSample)
+  expect(renderer.snapshotScene().body.geometry).toBe(reused)
+})

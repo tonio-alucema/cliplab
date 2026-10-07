@@ -83,3 +83,17 @@ describe('body shapes and modifications', () => {
     }
   })
 })
+
+it('preserves continuous rounding in saved projects and app exports, with compatible defaults', () => {
+  const project = defaultProject()
+  const legacy = { ...project.characters[0]! }; delete legacy.bodyRounding
+  expect(parseCharacter(legacy).bodyRounding).toBe(1)
+  for (const value of [undefined, null, '0.5', NaN, Infinity]) expect(parseCharacter({ ...legacy, bodyRounding: value }).bodyRounding).toBe(1)
+  expect(parseCharacter({ ...legacy, bodyRounding: -1 }).bodyRounding).toBe(0)
+  expect(parseCharacter({ ...legacy, bodyRounding: 2 }).bodyRounding).toBe(1)
+  for (const bodyRounding of [0, .37, 1]) {
+    project.characters[0]!.bodyRounding = bodyRounding
+    expect(parseProject(JSON.parse(JSON.stringify(project))).characters[0]!.bodyRounding).toBe(bodyRounding)
+    expect(parseProject(JSON.parse(JSON.stringify(definitionOf(project, project.characters[0]!)))).characters[0]!.bodyRounding).toBe(bodyRounding)
+  }
+})
