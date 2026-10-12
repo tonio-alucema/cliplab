@@ -74,3 +74,57 @@ it('exports compact editable skin paths and hides front mask behind the body on 
     }
   } finally { renderer.dispose() }
 }, 30000)
+
+
+it('switches between soft 3D and toon without combining their lighting or losing settings', () => {
+  const renderer = new CharacterRenderer(document.createElement('canvas'), { width: 320, height: 320 })
+  const character = { ...defaultProject().characters[0]!, shape: 'sphere' as const, werewolf: true, shading3d: true, toon: true, trueFront: false }
+  try {
+    renderer.render(character, sample)
+    const scene = renderer.snapshotScene(), skin = scene.wolf!
+    expect(scene.body.material.uniforms.softLighting!.value).toBe(1)
+    expect(scene.body.material.uniforms.toonOn!.value).toBe(0)
+    expect(scene.lightFill.visible).toBe(false)
+    expect(skin.getObjectByName('muzzle')!.visible).toBe(true)
+    const geometry = (skin.children[0] as THREE.Mesh).geometry
+    const disposed = vi.fn(); geometry.addEventListener('dispose', disposed)
+    for (const y of [0, 55, 180, 720]) {
+      renderer.render(character, sample, { rotation: { x: 20, y, z: 25 } })
+      const current = renderer.snapshotScene()
+      let extent = 0
+      current.wolf!.traverse(object => {
+        if (!(object instanceof THREE.Mesh)) return
+        const positions = object.geometry.getAttribute('position')
+        for (let i = 0; i < positions.count; i++) {
+          const p = new THREE.Vector3().fromBufferAttribute(positions, i).applyMatrix4(object.matrixWorld).project(current.camera)
+          extent = Math.max(extent, Math.abs(p.x), Math.abs(p.y))
+        }
+      })
+      expect(extent).toBeLessThan(1)
+    }
+    const svg = snapshotSvg(renderer.snapshotScene())
+    expect(svg).toContain('soft-vector-approximation')
+    expect(svg).toContain('<radialGradient')
+    expect(svg).not.toMatch(/NaN|Infinity|<image/)
+    expect(svg.length).toBeLessThan(500000)
+    renderer.render({ ...character, shading3d: false }, sample)
+    expect(disposed).toHaveBeenCalledOnce()
+    const toon = renderer.snapshotScene()
+    expect(toon.body.material.uniforms.softLighting!.value).toBe(0)
+    expect(toon.body.material.uniforms.toonOn!.value).toBe(1)
+    expect(toon.lightFill.visible).toBe(true)
+    expect(toon.wolf!.getObjectByName('muzzle')).toBeUndefined()
+    expect(character.toon).toBe(true)
+    renderer.render(character, sample, { displaySize: 24 })
+    expect(renderer.snapshotScene().body.material.uniforms.softLighting!.value).toBe(0)
+    expect(character.shading3d).toBe(true)
+  } finally { renderer.dispose() }
+}, 30000)
+
+it('preserves 3D shading in saved definitions and defaults old definitions to toon', () => {
+  expect(parseCharacter({ shading3d: true }).shading3d).toBe(true)
+  expect(parseCharacter({ shading3d: 'yes' }).shading3d).toBe(false)
+  expect(parseCharacter({}).shading3d).toBe(false)
+  const project = defaultProject(); project.characters[0]!.shading3d = true
+  expect(parseProject(definitionOf(project, project.characters[0]!)).characters[0]!.shading3d).toBe(true)
+})

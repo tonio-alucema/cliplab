@@ -89,6 +89,13 @@ export function snapshotSvg(snapshot: Snapshot): string {
     }
     return { triangles, vertices }
   }
+  let softId = 0
+  const softOverlay = (path: string) => {
+    const id = `soft-studio-light-${softId++}`
+    defs.push(`<radialGradient id="${id}" cx=".33" cy=".23" r=".88" fx=".33" fy=".23"><stop stop-color="white" stop-opacity=".25"/><stop offset=".42" stop-color="white" stop-opacity="0"/><stop offset=".76" stop-color="black" stop-opacity=".18"/><stop offset="1" stop-color="black" stop-opacity=".50"/></radialGradient>`)
+    return `<path d="${path}" fill="url(#${id})"/>`
+  }
+  const visibleInTree = (object: THREE.Object3D): boolean => object.visible && (!object.parent || visibleInTree(object.parent))
   const shadedColor = (color: THREE.Color, shade: number) => '#' + color.clone().multiplyScalar(shade).getHexString()
   const outline = (vertices: Vertex[]) => pathData([{ points: hull(vertices), closed: true }])
   const surface = (mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, label: string) => {
@@ -111,13 +118,14 @@ export function snapshotSvg(snapshot: Snapshot): string {
       ? pathData(boundaryContours(data.triangles.map(triangle => triangle.points)))
       : outline(data.vertices)
     const opacity = u.bodyOpacity?.value ?? 1
-    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : label === 'body-back' ? 'Back body' : 'Inner body'}"${opacity < 1 ? ` opacity="${n(opacity)}"` : ''}><path fill="${fill}" d="${silhouette}"/></g>`)
+    contents.push(`<g id="${label}" data-name="${label === 'body' ? 'Outer body' : label === 'body-back' ? 'Back body' : 'Inner body'}"${opacity < 1 ? ` opacity="${n(opacity)}"` : ''}><path fill="${fill}" d="${silhouette}"/>${u.softLighting?.value ? softOverlay(silhouette) : ''}</g>`)
     return data
   }
   if (options.background) contents.push(`<rect width="${width}" height="${height}" fill="${xml(options.background)}"/>`)
   if (shadow.visible) {
     const material = shadow.material, data = triangles(shadow)
-    contents.push(`<g id="ground-shadow" data-name="Shadow"><path d="${outline(data.vertices)}" fill="#${material.color.getHexString()}" opacity="${n(material.opacity)}"/></g>`)
+    if (character.shading3d) defs.push(`<radialGradient id="soft-ground-shadow"><stop stop-color="#${material.color.getHexString()}"/><stop offset="1" stop-color="#${material.color.getHexString()}" stop-opacity="0"/></radialGradient>`)
+    contents.push(`<g id="ground-shadow" data-name="Shadow"><path d="${outline(data.vertices)}" fill="${character.shading3d ? 'url(#soft-ground-shadow)' : '#' + material.color.getHexString()}" opacity="${n(material.opacity)}"/></g>`)
   }
   if (snapshot.backShell?.visible) surface(snapshot.backShell, 'body-back')
     const recessPaths = (skull: THREE.Object3D, pieces: THREE.Mesh[], extras: THREE.Mesh[] = []) => {
@@ -127,7 +135,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
       const objects: THREE.Object3D[] = [...extras]
       skull.traverse(mesh => objects.push(mesh))
       objects.forEach(mesh => {
-        if (!(mesh instanceof THREE.Mesh) || !mesh.visible) return
+        if (!(mesh instanceof THREE.Mesh) || !visibleInTree(mesh)) return
         const faces = triangles(mesh).triangles
         if (pieces.includes(mesh)) pieceTriangles.set(mesh, faces)
         for (const face of faces) records.push({ points: face.points, ...boundsOf(face.points), mesh })
@@ -193,7 +201,8 @@ export function snapshotSvg(snapshot: Snapshot): string {
         }
         output.set(piece, materials.map((material, index) => {
           if (!visible[index]!.length) return ''
-          return `<path fill="#${(material as THREE.MeshBasicMaterial).color.getHexString()}" d="${pathData(boundaryContours(visible[index]!))}"/>`
+          const path = pathData(boundaryContours(visible[index]!))
+          return `<path fill="#${(material as THREE.MeshBasicMaterial).color.getHexString()}" d="${path}"/>${material.userData.softLighting?.value ? softOverlay(path) : ''}`
         }).join(''))
       }
       return output
@@ -245,7 +254,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
   if (lightFill.visible) surface(lightFill, 'candle-light')
   if (snapshot.wolf?.visible) {
     const pieces: THREE.Mesh[] = []
-    snapshot.wolf.traverse(object => { if (object instanceof THREE.Mesh && object.visible) pieces.push(object) })
+    snapshot.wolf.traverse(object => { if (object instanceof THREE.Mesh && visibleInTree(object)) pieces.push(object) })
     const paths = recessPaths(snapshot.wolf, pieces, [body])
     contents.push(`<g id="werewolf" data-name="Shaggy wolf skin">${pieces.map(piece => `<g data-name="${xml(piece.name)}">${paths.get(piece)}</g>`).join('')}</g>`)
   }
@@ -273,7 +282,7 @@ export function snapshotSvg(snapshot: Snapshot): string {
     transparent.push({ z: foreground ? -Infinity : center.z, markup: `<g id="supporting-elements" data-name="Supporting elements"${foreground ? '' : ' mask="url(#prop-occlusion)"'} opacity="${n(prop.material.opacity)}"><g transform="translate(${n(center.x - w / 2)} ${n(center.y - h / 2)}) scale(${n(w / 256)} ${n(h / 256)})">${art.markup()}</g></g>` })
   }
   if (transparent.length) contents.push(`<g id="face" data-name="Facial expression">${transparent.sort((a, b) => b.z - a.z).map(layer => layer.markup).join('')}</g>`)
-  const metadata = { format: 'cliplab-svg-snapshot', gradientProjection: 'planar-fit', character, pose: sample.pose, gradientRotation: sample.gradientRotation ?? 0, effectiveGradientAngle: character.gradientAngle + (sample.gradientRotation ?? 0), rotation: options.rotation, cursor: options.cursor }
+  const metadata = { format: 'cliplab-svg-snapshot', gradientProjection: 'planar-fit', lightingProjection: character.shading3d ? 'soft-vector-approximation' : 'toon', character, pose: sample.pose, gradientRotation: sample.gradientRotation ?? 0, effectiveGradientAngle: character.gradientAngle + (sample.gradientRotation ?? 0), rotation: options.rotation, cursor: options.cursor }
   // Multiple downloaded characters can safely be placed inline in the same page.
   const prefix = `cliplab-${crypto.randomUUID()}-`
   const artwork = (`<defs>${defs.join('')}</defs>${contents.join('')}`)
