@@ -120,14 +120,13 @@ export function snapshotSvg(snapshot: Snapshot): string {
     contents.push(`<g id="ground-shadow" data-name="Shadow"><path d="${outline(data.vertices)}" fill="#${material.color.getHexString()}" opacity="${n(material.opacity)}"/></g>`)
   }
   if (snapshot.backShell?.visible) surface(snapshot.backShell, 'body-back')
-  if (snapshot.skeleton?.visible) {
-    const bones: { z: number; markup: string }[] = []
-    const recessedPieces = new Set<THREE.Mesh>()
-    const recessPaths = (skull: THREE.Mesh, pieces: THREE.Mesh[]) => {
+    const recessPaths = (skull: THREE.Object3D, pieces: THREE.Mesh[], extras: THREE.Mesh[] = []) => {
       type Occluder = { points: Vertex[]; minX: number; maxX: number; minY: number; maxY: number; minZ: number; maxZ: number; mesh: THREE.Mesh }
       const records: Occluder[] = [], pieceTriangles = new Map<THREE.Mesh, Triangle[]>()
       const boundsOf = (points: Vertex[]) => ({ minX: Math.min(...points.map(p => p.x)), maxX: Math.max(...points.map(p => p.x)), minY: Math.min(...points.map(p => p.y)), maxY: Math.max(...points.map(p => p.y)), minZ: Math.min(...points.map(p => p.z)), maxZ: Math.max(...points.map(p => p.z)) })
-      skull.traverse(mesh => {
+      const objects: THREE.Object3D[] = [...extras]
+      skull.traverse(mesh => objects.push(mesh))
+      objects.forEach(mesh => {
         if (!(mesh instanceof THREE.Mesh) || !mesh.visible) return
         const faces = triangles(mesh).triangles
         if (pieces.includes(mesh)) pieceTriangles.set(mesh, faces)
@@ -199,6 +198,9 @@ export function snapshotSvg(snapshot: Snapshot): string {
       }
       return output
     }
+  if (snapshot.skeleton?.visible) {
+    const bones: { z: number; markup: string }[] = []
+    const recessedPieces = new Set<THREE.Mesh>()
     const bonePaths = (object: THREE.Mesh) => {
       const data = triangles(object), materials = Array.isArray(object.material) ? object.material : [object.material]
       const pieces: string[] = []
@@ -241,6 +243,12 @@ export function snapshotSvg(snapshot: Snapshot): string {
   }
   const bodyData = surface(body, 'body')
   if (lightFill.visible) surface(lightFill, 'candle-light')
+  if (snapshot.wolf?.visible) {
+    const pieces: THREE.Mesh[] = []
+    snapshot.wolf.traverse(object => { if (object instanceof THREE.Mesh && object.visible) pieces.push(object) })
+    const paths = recessPaths(snapshot.wolf, pieces, [body])
+    contents.push(`<g id="werewolf" data-name="Shaggy wolf skin">${pieces.map(piece => `<g data-name="${xml(piece.name)}">${paths.get(piece)}</g>`).join('')}</g>`)
+  }
   const transparent: { z: number; markup: string }[] = []
   if (face.visible) {
     const art = new SvgCanvas('face', faceProjector(face, project))

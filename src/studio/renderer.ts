@@ -1,3 +1,4 @@
+import { hasWolfSkin, wolfFaceShell, werewolfGeometry, colorWerewolf } from './werewolf'
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
 import { drawParticleIcon, PARTICLE_YELLOW } from './particle-art'
@@ -98,7 +99,7 @@ export function projectedEye(character: Character, pose: Pose, blink: number, si
   const cy = 197 - (side < 0 ? pose.leftY : pose.rightY)
   const angle = (pose.eyeTilt * side + (side < 0 ? pose.leftRotation : pose.rightRotation)) * Math.PI / 180
   const h = Math.max(.12, 1 - blink) * pose.eyeHeight * (1 - .35 * (layers ? traitWeight(layers, t => t.eye === 'soft') : pose.eye === 'soft' ? 1 : 0))
-  const shell = character.elevated ? 1 + character.elevation : 1.003
+  const shell = Math.max(character.elevated ? 1 + character.elevation : 1.003, wolfFaceShell(character))
   const project = (dx: number, dy: number) => {
     const tx = cx + Math.cos(angle) * dx - Math.sin(angle) * dy * h
     const ty = cy + faceAspect * (Math.sin(angle) * dx + Math.cos(angle) * dy * h)
@@ -213,9 +214,26 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   if (detail === 'eyes') return
   const mouthX = effects.mouthFollowsEyes ? 256 + gx * (1 - pupilAmount) + (pose.leftX + pose.rightX) / 2 : 256 + gx * .25
   const mouthY = (effects.mouthFollowsEyes ? 275 + gy : 293 + gy * .25) + (effects.mouthOffset ?? 0)
+  const wolf = hasWolfSkin(character) && detail === 'full'
+  if (wolf) {
+    ctx.save(); ctx.translate(mouthX, mouthY - 12); ctx.scale(1, faceAspect)
+    ctx.fillStyle = '#f0ece3'; ctx.beginPath(); ctx.ellipse(-27, -5, 47, 31, -.12, 0, Math.PI * 2); ctx.ellipse(27, -5, 47, 31, .12, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(-20, -35); ctx.quadraticCurveTo(0, -44, 20, -35); ctx.quadraticCurveTo(20, -21, 0, -13); ctx.quadraticCurveTo(-20, -21, -20, -35); ctx.fill(); ctx.restore()
+  }
+  const fangs = () => {
+    if (!wolf || !['smile', 'u-smile', 'open', 'grin'].includes(pose.mouth)) return
+    const broad = pose.mouth === 'open' || pose.mouth === 'grin'
+    const w = (broad ? 124 : 61) * pose.mouthWidth
+    ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect); ctx.fillStyle = '#fffdf4'
+    for (const side of [-1, 1]) {
+      const x = side * w * (broad ? .68 : .7), y = broad ? -5 : 31
+      ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.quadraticCurveTo(x, y + 35, x + 10, y); ctx.closePath(); ctx.fill()
+    }
+    ctx.restore()
+  }
   if (layers) {
     ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect)
-    drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); return
+    drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); fangs(); return
   }
   const x = mouthX, y = pose.mouth === 'cry' ? 329 + gy * .25 : mouthY
   const broad = ['open', 'grin', 'cry'].includes(pose.mouth), w = (broad ? 124 : pose.mouth === 'oh' ? 51 : 61) * pose.mouthWidth
@@ -252,7 +270,7 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
     if (pose.mouth === 'cry') anchor.y -= 27
     drawDrool(ctx, anchor)
   }
-  ctx.restore()
+  ctx.restore(); fangs()
 }
 
 export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number, settings: Partial<ParticleSettings> = {}) {
@@ -298,6 +316,7 @@ export class CharacterRenderer {
   private rounding = 1
   private squareBottom = false
   private modification: BodyModification = 'none'
+  private wolf?: THREE.Group
   private skeleton?: THREE.Group
   private skeletonShape?: Shape
   private roundedSkull = false
@@ -359,6 +378,9 @@ export class CharacterRenderer {
       const phase = this.options.reducedMotion ? 0 : sample.effectPhase ?? 0
       animateGhostGeometry(this.body.geometry, phase); animateGhostGeometry(this.lightFill.geometry, phase)
     }
+    const wolf = hasWolfSkin(character)
+    if (wolf && !this.wolf) { this.wolf = werewolfGeometry(); this.root.add(this.wolf) }
+    if (this.wolf) { this.wolf.visible = wolf; if (wolf) colorWerewolf(this.wolf, character) }
     const skeleton = modification === 'skeleton'
     const roundedSkull = this.shape === 'chunky-pill' || !!character.roundedSkull
     if (skeleton && (!this.skeleton || this.skeletonShape !== this.shape || this.roundedSkull !== roundedSkull)) {
@@ -380,7 +402,7 @@ export class CharacterRenderer {
     // writes depth, so the face cannot show through the back of the character.
     this.body.material.transparent = skeleton; this.lightFill.material.transparent = skeleton
     this.body.renderOrder = skeleton ? 1 : 0; this.lightFill.renderOrder = skeleton ? 2 : 1
-    this.face.renderOrder = skeleton ? 3 : 0
+    this.face.renderOrder = skeleton || wolf ? 3 : 0
     this.body.material.uniforms.bodyOpacity!.value = skeleton ? character.toon ? SKELETON_BODY_OPACITY : 1 - (1 - SKELETON_BODY_OPACITY) * (1 - SKELETON_INSET_OPACITY) : 1
     this.lightFill.material.uniforms.bodyOpacity!.value = skeleton ? SKELETON_INSET_OPACITY : 1
     const { pose } = sample
@@ -423,6 +445,10 @@ export class CharacterRenderer {
       const safeHalf = (radius + this.root.position.length()) / .9 / zoom
       half = Math.max(half, safeHalf, safeHalf / aspect)
     }
+    if (wolf) {
+      const safeHalf = .77 * Math.max(1, this.root.scale.x, this.root.scale.y, this.root.scale.z) / zoom
+      half = Math.max(half, safeHalf, safeHalf / aspect)
+    }
     const cyclingIcon = pose.prop === 'question' || pose.prop === 'sparkle'
     const propPhase = cyclingIcon && this.options.reducedMotion ? undefined : pose.prop === 'sparkle' && sample.effectPhase !== undefined ? sample.propPhase ?? sample.effectPhase : sample.effectPhase
     const propSize = cyclingIcon ? isPill(this.shape) ? .60 + .1 * (bodyHeight(this.shape) - 1) : .58 : isPill(this.shape) ? .32 + .1 * (bodyHeight(this.shape) - 1) : .32
@@ -459,12 +485,12 @@ export class CharacterRenderer {
     const faceGaze = displaySize <= 32 ? { x: 0, y: 0 } : irisRestGaze(character, local, reduced)
     this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? (!reduced ? this.options.eyeGazes : undefined) ?? resolveEyeGazes(character, reduced ? { ...pose, gazeX: 0, gazeY: 0 } : pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, !reduced && character.followCursor ? this.options.pointerLook : undefined, sample.faceLayers) : undefined
     const mouthOffset = compactMouthOffset(displaySize, pose.faceScale, half * 2, displaySize)
-    const key = JSON.stringify([mouthOffset, pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
+    const key = JSON.stringify([hasWolfSkin(character), mouthOffset, pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
     if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes, mouthOffset, mouthFollowsEyes: displaySize >= 16 && displaySize <= 32 }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!
-    const shell = character.elevated ? 1 + character.elevation : 1.003
+    const shell = Math.max(character.elevated ? 1 + character.elevation : 1.003, wolfFaceShell(character))
     const scale = pose.faceScale
     const offset = faceOffset(this.shape, modification) + pose.faceY
     for (let i = 0; i < vertices.count; i++) {
@@ -509,7 +535,7 @@ export class CharacterRenderer {
   }
   snapshotScene() {
     if (!this.captured) throw new Error('Render the character before taking a snapshot.')
-    return { ...this.captured, options: this.options, camera: this.camera, body: this.body, lightFill: this.lightFill, ...(this.skeleton?.visible ? { skeleton: this.skeleton } : {}), ...(this.backShell?.visible ? { backShell: this.backShell } : {}), face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
+    return { ...this.captured, options: this.options, camera: this.camera, ...(this.wolf?.visible ? { wolf: this.wolf } : {}), body: this.body, lightFill: this.lightFill, ...(this.skeleton?.visible ? { skeleton: this.skeleton } : {}), ...(this.backShell?.visible ? { backShell: this.backShell } : {}), face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
   }
   orientation() { return this.root.quaternion.clone() }
   eyeGazes() { return this.resolvedEyes ? { left: { ...this.resolvedEyes.left }, right: { ...this.resolvedEyes.right } } : undefined }
@@ -517,6 +543,7 @@ export class CharacterRenderer {
     if (this.disposed) return
     this.disposed = true
     this.body.geometry.dispose(); this.body.material.dispose(); this.lightFill.geometry.dispose(); this.lightFill.material.dispose(); this.face.geometry.dispose(); this.face.material.dispose()
+    if (this.wolf) disposeSkeleton(this.wolf)
     if (this.skeleton) disposeSkeleton(this.skeleton)
     // backShell shares body.geometry; only its material is independently owned.
     this.backShell?.material.dispose()

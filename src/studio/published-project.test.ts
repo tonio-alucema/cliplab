@@ -4,7 +4,7 @@ import { loadStudioProject, publishedProject } from './published-project'
 import { definitionOf, sampleDefinition } from './model'
 
 // New controls receive their backward-compatible defaults without altering the supplied artwork.
-const expectedSnapshot = { ...snapshot, characters: snapshot.characters.map(character => ({ ...character, bodyRounding: 1 })) }
+const expectedSnapshot = { ...snapshot, characters: snapshot.characters.map(character => ({ ...character, bodyRounding: 1, werewolf: false })) }
 
 it('opens the complete supplied Tonio Set 02 project in a fresh studio without changing its values', () => {
   const project = loadStudioProject(null)
