@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest'
 import snapshot from './defaults/tonio-set-02.cliplab.json'
 import { loadStudioProject, publishedProject } from './published-project'
-import { definitionOf, sampleDefinition } from './model'
+import { definitionOf, parseProject, sampleDefinition } from './model'
 
 // New controls receive their backward-compatible defaults without altering the supplied artwork.
-const expectedSnapshot = { ...snapshot, characters: snapshot.characters.map(character => ({ ...character, bodyRounding: 1, werewolf: false, shading3d: false })) }
+const expectedSnapshot = { ...snapshot, characters: snapshot.characters.map(character => ({ ...character, bodyRounding: 1 })) }
 
 it('opens the complete supplied Tonio Set 02 project in a fresh studio without changing its values', () => {
   const project = loadStudioProject(null)
@@ -43,4 +43,21 @@ it('validates every published animation and linked expression for all saved char
       expect(Number.isFinite(sample.pose.faceScale)).toBe(true)
     }
   }
+})
+
+
+it('restores standard rendering for projects saved with the retired wolf and 3D shader experiments', () => {
+  const project = publishedProject()
+  project.characters[0]!.shape = 'sphere'
+  project.characters[0]!.toon = true
+  project.characters[0]!.color = '#847bba'
+  const saved = { ...project, characters: project.characters.map(character => ({ ...character, werewolf: true, shading3d: true })) }
+  // Reloading browser storage and importing an app definition both discard only
+  // the retired appearance flags, retaining every authored clip and beat.
+  expect(loadStudioProject(JSON.stringify(saved))).toEqual(project)
+  const definition = definitionOf(project, project.characters[0]!)
+  const restored = parseProject({ ...definition, character: { ...definition.character, werewolf: true, shading3d: true } })
+  expect(restored.characters[0]).toEqual(definition.character)
+  expect(restored.expressions).toEqual(definition.expressions)
+  expect(restored.animations).toEqual(definition.animations)
 })

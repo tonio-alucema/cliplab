@@ -1,5 +1,3 @@
-import { SOFT_LIGHT_GLSL, softLightMaterial } from './soft-lighting'
-import { hasWolfSkin, wolfFaceShell, werewolfGeometry, colorWerewolf, positionWolfMuzzle } from './werewolf'
 import * as THREE from 'three'
 import { particleLayout, type ParticleSettings } from './particles'
 import { drawParticleIcon, PARTICLE_YELLOW } from './particle-art'
@@ -43,7 +41,7 @@ export function faceForSize(character: Character, sample: Sample, size: number) 
   const smallerSpacedEyes = size === 24 || size === 32
   if (size === 16) sample = { ...sample, pose: { ...sample.pose, faceScale: sample.pose.faceScale * 1.2 } }
   return {
-    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false, shading3d: false } : {}), ...(size < 40 ? { shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
+    character: simpleEyes || flatFill ? { ...character, ...(simpleEyes ? { iris: false } : {}), ...(flatFill ? { toon: false } : {}), ...(size < 40 ? { shadow: false } : {}), ...(frontOnly ? { trueFront: true, lockPosition: true, followRotation: false } : {}) } : character,
     sample: simpleEyes || frontOnly ? { ...sample, ...(frontOnly ? { faceLayers: undefined } : {}), pose: { ...sample.pose, faceScale: sample.pose.faceScale * (simpleEyes ? 1.3 : 1), eyeSize: sample.pose.eyeSize * (size === 24 ? 1.2 : 1) * (size >= 16 && size <= 32 ? 1.1664 : 1) * (smallerSpacedEyes ? .8 : 1), ...(frontOnly ? { squash: 1 } : {}), ...(frontOnly ? { mouth: 'smile' as const, prop: 'none' as const, drool: false, tears: false, blush: 0, brows: 'none' as const, mouthWidth: BASE_POSE.mouthWidth * (size >= 16 ? 1.44 : 1), mouthStroke: BASE_POSE.mouthStroke * (size >= 16 ? 1.44 : 1), gazeX: -4, gazeY: 0, leftX: 0, rightX: 0, leftY: 0, rightY: 0, spacing: BASE_POSE.spacing * .77 * (smallerSpacedEyes ? 1.2 : 1), faceY: BASE_POSE.faceY + (size === 32 ? .025 * bodyDimensions(character.shape, bodyModification(character)).height : 0) } : {}) } } : sample,
     simpleEyes
   }
@@ -52,20 +50,12 @@ const vertexShader = `
   uniform vec3 fillScale;
   uniform vec3 fillOffset;
   varying vec3 vPosition;
-  varying vec3 vStudioNormal;
-  varying vec3 vStudioView;
   void main() {
-    vStudioNormal = normalize(normalMatrix * normal);
-    vStudioView = -(modelViewMatrix * vec4(position, 1.0)).xyz;
     vPosition = position * fillScale + fillOffset;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
 const fragmentShader = `
-  ${SOFT_LIGHT_GLSL}
-  uniform float softLighting;
-  varying vec3 vStudioNormal;
-  varying vec3 vStudioView;
   uniform vec3 colorA;
   uniform vec3 colorB;
   uniform float gradientOn;
@@ -81,8 +71,7 @@ const fragmentShader = `
     vec3 color = mix(colorA, mix(colorB, colorA, t), gradientOn);
     // The light fill uses an inset copy of the silhouette, with one crisp shade step.
     float shade = mix(0.82, 1.0, insetFill);
-    color = mix(color * mix(1.0, shade, toonOn), studioLight(color, vStudioNormal, vStudioView), softLighting);
-    gl_FragColor = vec4(color, bodyOpacity);
+    gl_FragColor = vec4(color * mix(1.0, shade, toonOn), bodyOpacity);
     #include <colorspace_fragment>
   }
 `
@@ -109,7 +98,7 @@ export function projectedEye(character: Character, pose: Pose, blink: number, si
   const cy = 197 - (side < 0 ? pose.leftY : pose.rightY)
   const angle = (pose.eyeTilt * side + (side < 0 ? pose.leftRotation : pose.rightRotation)) * Math.PI / 180
   const h = Math.max(.12, 1 - blink) * pose.eyeHeight * (1 - .35 * (layers ? traitWeight(layers, t => t.eye === 'soft') : pose.eye === 'soft' ? 1 : 0))
-  const shell = Math.max(character.elevated ? 1 + character.elevation : 1.003, wolfFaceShell(character))
+  const shell = character.elevated ? 1 + character.elevation : 1.003
   const project = (dx: number, dy: number) => {
     const tx = cx + Math.cos(angle) * dx - Math.sin(angle) * dy * h
     const ty = cy + faceAspect * (Math.sin(angle) * dx + Math.cos(angle) * dy * h)
@@ -224,26 +213,9 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
   if (detail === 'eyes') return
   const mouthX = effects.mouthFollowsEyes ? 256 + gx * (1 - pupilAmount) + (pose.leftX + pose.rightX) / 2 : 256 + gx * .25
   const mouthY = (effects.mouthFollowsEyes ? 275 + gy : 293 + gy * .25) + (effects.mouthOffset ?? 0)
-  const wolf = hasWolfSkin(character) && detail === 'full'
-  if (wolf && !character.shading3d) {
-    ctx.save(); ctx.translate(mouthX, mouthY - 12); ctx.scale(1, faceAspect)
-    ctx.fillStyle = '#f0ece3'; ctx.beginPath(); ctx.ellipse(-27, -5, 47, 31, -.12, 0, Math.PI * 2); ctx.ellipse(27, -5, 47, 31, .12, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(-20, -35); ctx.quadraticCurveTo(0, -44, 20, -35); ctx.quadraticCurveTo(20, -21, 0, -13); ctx.quadraticCurveTo(-20, -21, -20, -35); ctx.fill(); ctx.restore()
-  }
-  const fangs = () => {
-    if (!wolf || !['smile', 'u-smile', 'open', 'grin'].includes(pose.mouth)) return
-    const broad = pose.mouth === 'open' || pose.mouth === 'grin'
-    const w = (broad ? 124 : 61) * pose.mouthWidth
-    ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect); ctx.fillStyle = '#fffdf4'
-    for (const side of [-1, 1]) {
-      const x = side * w * (broad ? .68 : .7), y = broad ? -5 : 31
-      ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.quadraticCurveTo(x, y + 35, x + 10, y); ctx.closePath(); ctx.fill()
-    }
-    ctx.restore()
-  }
   if (layers) {
     ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(1, faceAspect)
-    drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); fangs(); return
+    drawMorphMouth(ctx, pose, layers, ink); ctx.restore(); return
   }
   const x = mouthX, y = pose.mouth === 'cry' ? 329 + gy * .25 : mouthY
   const broad = ['open', 'grin', 'cry'].includes(pose.mouth), w = (broad ? 124 : pose.mouth === 'oh' ? 51 : 61) * pose.mouthWidth
@@ -280,7 +252,7 @@ export function drawFace(ctx: CanvasRenderingContext2D, pose: Pose, character: C
     if (pose.mouth === 'cry') anchor.y -= 27
     drawDrool(ctx, anchor)
   }
-  ctx.restore(); fangs()
+  ctx.restore()
 }
 
 export function drawProp(ctx: CanvasRenderingContext2D, prop: Pose['prop'], color: string, phase?: number, settings: Partial<ParticleSettings> = {}) {
@@ -326,9 +298,6 @@ export class CharacterRenderer {
   private rounding = 1
   private squareBottom = false
   private modification: BodyModification = 'none'
-  private wolf?: THREE.Group
-  private wolf3d = false
-  private softShadow = { value: 0 }
   private skeleton?: THREE.Group
   private skeletonShape?: Shape
   private roundedSkull = false
@@ -351,7 +320,7 @@ export class CharacterRenderer {
     this.propCanvas.width = this.propCanvas.height = 256; this.propCtx = this.propCanvas.getContext('2d')!
     this.propTexture = new THREE.CanvasTexture(this.propCanvas); this.propTexture.colorSpace = THREE.SRGBColorSpace
     const material = new THREE.ShaderMaterial({
-      uniforms: { softLighting: { value: 0 }, colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 }, bodyWidth: { value: 1 }, bodyOpacity: { value: 1 } }, vertexShader, fragmentShader
+      uniforms: { colorA: { value: new THREE.Color() }, colorB: { value: new THREE.Color() }, gradientOn: { value: 1 }, toonOn: { value: 1 }, insetFill: { value: 0 }, fillScale: { value: new THREE.Vector3(1, 1, 1) }, fillOffset: { value: new THREE.Vector3() }, angle: { value: 0 }, bodyHeight: { value: 2 }, bodyWidth: { value: 1 }, bodyOpacity: { value: 1 } }, vertexShader, fragmentShader
     })
     this.body = new THREE.Mesh(bodyGeometry('capsule'), material)
     const fillMaterial = material.clone(); fillMaterial.depthTest = false; fillMaterial.depthWrite = false; fillMaterial.uniforms.insetFill!.value = 1
@@ -364,11 +333,6 @@ export class CharacterRenderer {
     }
     this.prop = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.propTexture, transparent: true, depthWrite: false, toneMapped: false }))
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(.35, 64), new THREE.MeshBasicMaterial({ color: '#809299', transparent: true, opacity: .2, depthWrite: false }))
-    this.shadow.material.onBeforeCompile = shader => {
-      shader.uniforms.softShadow = this.softShadow
-      shader.vertexShader = 'varying vec2 vShadowUv;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvShadowUv = uv;')
-      shader.fragmentShader = 'uniform float softShadow; varying vec2 vShadowUv;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= mix(1.0, (1.0 - smoothstep(0.10, 0.5, length(vShadowUv - 0.5))), softShadow);\n#include <opaque_fragment>')
-    }
     this.root.add(this.body, this.lightFill, this.face, this.prop); this.scene.add(this.root, this.particleVectors.group); this.shadowScene.add(this.shadow)
     this.camera.position.set(0, 0, 8); this.camera.lookAt(0, 0, 0)
     this.resize(options.width, options.height, options.displaySize)
@@ -395,12 +359,6 @@ export class CharacterRenderer {
       const phase = this.options.reducedMotion ? 0 : sample.effectPhase ?? 0
       animateGhostGeometry(this.body.geometry, phase); animateGhostGeometry(this.lightFill.geometry, phase)
     }
-    const wolf = hasWolfSkin(character)
-    if (wolf && (!this.wolf || this.wolf3d !== !!character.shading3d)) {
-      if (this.wolf) { this.root.remove(this.wolf); disposeSkeleton(this.wolf) }
-      this.wolf3d = !!character.shading3d; this.wolf = werewolfGeometry(this.wolf3d); this.root.add(this.wolf)
-    }
-    if (this.wolf) { this.wolf.visible = wolf; if (wolf) colorWerewolf(this.wolf, character) }
     const skeleton = modification === 'skeleton'
     const roundedSkull = this.shape === 'chunky-pill' || !!character.roundedSkull
     if (skeleton && (!this.skeleton || this.skeletonShape !== this.shape || this.roundedSkull !== roundedSkull)) {
@@ -422,25 +380,22 @@ export class CharacterRenderer {
     // writes depth, so the face cannot show through the back of the character.
     this.body.material.transparent = skeleton; this.lightFill.material.transparent = skeleton
     this.body.renderOrder = skeleton ? 1 : 0; this.lightFill.renderOrder = skeleton ? 2 : 1
-    this.face.renderOrder = skeleton || wolf ? 3 : 0
-    this.body.material.uniforms.bodyOpacity!.value = skeleton ? character.toon && !character.shading3d ? SKELETON_BODY_OPACITY : 1 - (1 - SKELETON_BODY_OPACITY) * (1 - SKELETON_INSET_OPACITY) : 1
+    this.face.renderOrder = skeleton ? 3 : 0
+    this.body.material.uniforms.bodyOpacity!.value = skeleton ? character.toon ? SKELETON_BODY_OPACITY : 1 - (1 - SKELETON_BODY_OPACITY) * (1 - SKELETON_INSET_OPACITY) : 1
     this.lightFill.material.uniforms.bodyOpacity!.value = skeleton ? SKELETON_INSET_OPACITY : 1
-    this.skeleton?.traverse(object => {
-      if (object instanceof THREE.Mesh) for (const m of Array.isArray(object.material) ? object.material : [object.material]) if (m instanceof THREE.MeshBasicMaterial) softLightMaterial(m, !!character.shading3d)
-    })
     const { pose } = sample
     const { width, height } = bodyDimensions(this.shape, modification)
     const detail = detailAt(displaySize)
     const u = this.body.material.uniforms
     ;(u.colorA!.value as THREE.Color).set(character.color); (u.colorB!.value as THREE.Color).set(character.color2)
-    u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon && !character.shading3d ? 1 : 0; u.softLighting!.value = character.shading3d ? 1 : 0
+    u.gradientOn!.value = character.gradient ? 1 : (sample.gradientMix ?? (sample.gradientRotation !== undefined ? 1 : 0)); u.toonOn!.value = character.toon ? 1 : 0
     u.angle!.value = (character.gradientAngle + (sample.gradientRotation ?? 0)) * Math.PI / 180; u.bodyHeight!.value = height; u.bodyWidth!.value = width
     const rotation = characterRotation(this.options.reducedMotion ? { ...character, followRotation: false } : character, pose, this.options.rotation, this.options.cursor, sample.rotationTravel)
     this.root.rotation.set(rotation.x * Math.PI / 180, rotation.y * Math.PI / 180, rotation.z * Math.PI / 180, 'YXZ')
     this.root.position.y = character.lockPosition ? 0 : sample.bob * .025 * height
     const stretch = pose.squash + (character.lockPosition ? 0 : sample.breathe * .008)
     this.root.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch))
-    this.lightFill.visible = character.toon && !character.shading3d
+    this.lightFill.visible = character.toon
     const fillScale = isPill(this.shape) ? 1 : .85
     this.lightFill.scale.setScalar(fillScale)
     this.root.updateMatrixWorld(true)
@@ -466,10 +421,6 @@ export class CharacterRenderer {
       const sphere = this.body.geometry.boundingSphere!
       const radius = (sphere.radius + sphere.center.length()) * Math.max(1, this.root.scale.x, this.root.scale.y, this.root.scale.z)
       const safeHalf = (radius + this.root.position.length()) / .9 / zoom
-      half = Math.max(half, safeHalf, safeHalf / aspect)
-    }
-    if (wolf) {
-      const safeHalf = .77 * Math.max(1, this.root.scale.x, this.root.scale.y, this.root.scale.z) / zoom
       half = Math.max(half, safeHalf, safeHalf / aspect)
     }
     const cyclingIcon = pose.prop === 'question' || pose.prop === 'sparkle'
@@ -506,15 +457,14 @@ export class CharacterRenderer {
     const turnGaze = !reduced && !character.followCursor && character.followRotation && !character.trueFront ? this.options.cursor ?? { x: 0, y: 0 } : { x: 0, y: 0 }
     const local = character.iris ? new THREE.Vector3(screenGaze.x + turnGaze.x * .575, screenGaze.y + turnGaze.y * .575, 0).applyQuaternion(this.root.quaternion.clone().invert()) : screenGaze
     const faceGaze = displaySize <= 32 ? { x: 0, y: 0 } : irisRestGaze(character, local, reduced)
-    if (this.wolf?.visible) positionWolfMuzzle(this.wolf, pose, character, faceGaze, detail === 'full')
     this.resolvedEyes = !appearance.simpleEyes && detail === 'full' && (character.iris || pose.eye === 'pupil' || sample.faceLayers?.some(l => l.traits.eye === 'pupil')) ? (!reduced ? this.options.eyeGazes : undefined) ?? resolveEyeGazes(character, reduced ? { ...pose, gazeX: 0, gazeY: 0 } : pose, sample.blink, this.root.matrixWorld, this.camera, faceGaze, !reduced && character.followCursor ? this.options.pointerLook : undefined, sample.faceLayers) : undefined
     const mouthOffset = compactMouthOffset(displaySize, pose.faceScale, half * 2, displaySize)
-    const key = JSON.stringify([hasWolfSkin(character), character.shading3d, mouthOffset, pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
+    const key = JSON.stringify([mouthOffset, pose, sample.faceLayers, character.eyeColor, character.iris, appearance.simpleEyes, sample.blink.toFixed(3), pose.tears ? sample.effectPhase?.toFixed(2) : 0, sample.tearAmount, detail, faceGaze.x.toFixed(3), faceGaze.y.toFixed(3), this.resolvedEyes])
     if (key !== this.lastFaceKey) { drawFace(this.faceCtx, pose, character, sample.blink, detail, faceGaze, { phase: sample.effectPhase, tearAmount: sample.tearAmount, eyeGazes: this.resolvedEyes, faceLayers: sample.faceLayers, simpleEyes: appearance.simpleEyes, mouthOffset, mouthFollowsEyes: displaySize >= 16 && displaySize <= 32 }); this.faceTexture.needsUpdate = true; this.lastFaceKey = key }
     const vertices = this.face.geometry.attributes.position!
     const uv = this.face.geometry.attributes.uv!
     const valid = this.face.geometry.attributes.faceValid!
-    const shell = Math.max(character.elevated ? 1 + character.elevation : 1.003, wolfFaceShell(character))
+    const shell = character.elevated ? 1 + character.elevation : 1.003
     const scale = pose.faceScale
     const offset = faceOffset(this.shape, modification) + pose.faceY
     for (let i = 0; i < vertices.count; i++) {
@@ -542,9 +492,6 @@ export class CharacterRenderer {
     this.prop.material.visible = !cyclingIcon
     this.particleVectors.group.visible = false
     if ((pose.prop === 'question' || pose.prop === 'sparkle') && this.prop.visible) this.particleVectors.update(pose.prop, propLayout, this.prop, this.camera)
-    this.softShadow.value = character.shading3d ? 1 : 0
-    this.shadow.material.color.set(character.shading3d ? '#080a0d' : '#809299')
-    this.shadow.material.opacity = character.shading3d ? .30 : .2
     this.shadow.visible = character.shadow && detail === 'full'
     this.shadow.position.set(0, -height * .58, -.2)
     this.shadow.scale.set((1 - (character.lockPosition ? 0 : sample.bob) * .06) * (isPill(this.shape) ? width : .95), .12, 1)
@@ -562,7 +509,7 @@ export class CharacterRenderer {
   }
   snapshotScene() {
     if (!this.captured) throw new Error('Render the character before taking a snapshot.')
-    return { ...this.captured, options: this.options, camera: this.camera, ...(this.wolf?.visible ? { wolf: this.wolf } : {}), body: this.body, lightFill: this.lightFill, ...(this.skeleton?.visible ? { skeleton: this.skeleton } : {}), ...(this.backShell?.visible ? { backShell: this.backShell } : {}), face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
+    return { ...this.captured, options: this.options, camera: this.camera, body: this.body, lightFill: this.lightFill, ...(this.skeleton?.visible ? { skeleton: this.skeleton } : {}), ...(this.backShell?.visible ? { backShell: this.backShell } : {}), face: this.face, prop: this.prop, shadow: this.shadow, eyeGazes: this.resolvedEyes }
   }
   orientation() { return this.root.quaternion.clone() }
   eyeGazes() { return this.resolvedEyes ? { left: { ...this.resolvedEyes.left }, right: { ...this.resolvedEyes.right } } : undefined }
@@ -570,7 +517,6 @@ export class CharacterRenderer {
     if (this.disposed) return
     this.disposed = true
     this.body.geometry.dispose(); this.body.material.dispose(); this.lightFill.geometry.dispose(); this.lightFill.material.dispose(); this.face.geometry.dispose(); this.face.material.dispose()
-    if (this.wolf) disposeSkeleton(this.wolf)
     if (this.skeleton) disposeSkeleton(this.skeleton)
     // backShell shares body.geometry; only its material is independently owned.
     this.backShell?.material.dispose()

@@ -2,7 +2,7 @@
 
 ## Use this release
 
-Use **ClipLab runtime 0.7.13** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
+Use **ClipLab runtime 0.7.14** or newer with a fresh `.character.json` exported from the studio. The runtime uses the same renderer and animation sampler as ClipLab. It includes the mouth-stroke playback fix, interpolated expressions, brow controls, particle size/count/outward movement, gradient turns per beat, face-anchored toon lighting, cursor tracking, and current size adaptations.
 
 - Repository: https://github.com/tonio-alucema/cliplab
 - Latest runtime package: https://github.com/tonio-alucema/cliplab/releases/latest
@@ -25,7 +25,7 @@ In the studio:
 3. Turn off **Loop** for a one-shot sleepy-to-wake transition.
 4. In **Export → App**, select this animation and download JSON. Only expressions referenced by the selected animations (and linked face-motion expressions) are included.
 
-The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.13.
+The `.character.json` contains `version: 1`, one `character`, `expressions`, and `animations`. Use the actual `animations[].id` from this file, not its display name. Preserve all numeric pose fields, gradient actions/turns, linked face motion, and particle fields. Do not replace missing fields manually; the runtime's parser supplies defaults for older definitions. Schema version 1 is separate from runtime package version 0.7.14.
 
 A `.cliplab.json` is the full editable project backup, including saved clips and favorites. Use the App export for integration. Favorites and timeline copy/paste are authoring tools; the exported beat settings contain their resulting animation data.
 
@@ -141,6 +141,5 @@ Runtime 0.7.10 increases the alternate skull's three tooth lobes' horizontal spa
 
 Runtime 0.7.11 adds `character.bodyRounding` for Capsule and Chunky pill: 0 gives circular caps, 1 preserves the continuous curve introduced in 0.7.9, and values between blend the cap profile. Missing values default to 1; imported values are clamped to 0–1. It applies to upright/horizontal bodies, toon insets, facial surface projection and all exports. End cap and Circle ignore it. Preserve this field in character definitions.
 
-Runtime 0.7.12 adds `character.werewolf` (boolean, default false). It enables the Shaggy wolf skin only on Circle (`shape: "sphere"`), retaining the flag when another shape is selected. The skin uses real 3D ears, cheek fur, forehead tufts and a curved face mask. Existing colors, expressions, cursor/orbit behavior and exports are preserved. SVG exports include editable, depth-occluded skin paths. Preserve this field when passing character definitions to the runtime.
 
-Runtime 0.7.13 adds `character.shading3d` (boolean, default false). This alternative shader uses soft studio lighting on all body shapes. While enabled it replaces the toon inset, preserving the saved `toon` preference for when it is turned off. The wolf uses rounded fur volumes, a sculpted muzzle/nose and smooth lighting. Small flat-detail sizes still bypass shading. PNG and video capture the full lighting; SVG uses compact editable paths with an explicitly approximate vector lighting treatment.
+Runtime 0.7.14 removes the experimental wolf skin and alternate 3D shader, restoring the standard body shapes and toon renderer from 0.7.11. Definitions saved by 0.7.12–0.7.13 remain compatible: importing ignores the retired `werewolf` and `shading3d` fields, while preserving the saved toon setting, colors, expressions, animations, body rounding and other controls.
